@@ -5,6 +5,30 @@ import os
 import pandas
 from pprint import pprint
 
+def checkDir(path, full = False):
+	""" Creates a folder if it doesn't already exist.
+		Parameters
+		----------
+			path: string
+				Path to a folder.
+			full: bool; default False
+				If true, will create any parent folders
+				if they do not already exists.
+		Returns
+		-------
+			status: bool
+				Whether the folder was successfully created.
+	"""
+
+	if not os.path.exists(path):
+		if full:
+			os.makedirs(path)
+		else:
+			os.mkdir(path)
+
+	return os.path.exists(path)
+
+
 def generateFileMd5(filename, blocksize=2**20):
 	""" Generates the md5sum of a file. Does
 		not require a lot of memory.
@@ -28,25 +52,28 @@ def generateFileMd5(filename, blocksize=2**20):
 			m.update( buf )
 	return m.hexdigest()
 
-def readCSV(filename, **kwargs):
+def readCSV(filename, headers = False, **kwargs):
 	""" Returns a csvfile as a list of dictionaries,
 		where the csv header acts as the keys.
 		Parameters
 		----------
 			filename: string
 				Path to the file
+			headers: bool; default False
+				Whether to return the headers of the csv file as a list.
 		Keyword Arguments
 		-----------------
 			'delimiter', 'sep': character; default '\t'
 				The character that separated the fields in the csv file.
 			'fields': bool; default False
 				Whether to return the headers of the csv file as a list.
+				identical to the 'headers' positional argument
 		Returns
 		-------
 			reader: list<dict> or list<dict>, list<string>
 				The contents of the file.
 	"""
-	fields = kwargs.get('fields', False)
+	fields = kwargs.get('fields', headers)
 	delimiter = kwargs.get('delimiter', kwargs.get('sep', '\t'))
 
 	if os.path.exists(filename):
@@ -229,7 +256,9 @@ def searchForDuplicateFiles(folder, by = 'name'):
 
 
 if __name__ == "__main__":
-	folder = "D:\\Proginoskes\\Documents\\Data\\"
+	folder = "D:\\Proginoskes\\Documents\\Data\\table.tsv"
 
-	duplicates = searchForDuplicateFiles(folder)
-	pprint(duplicates)
+	#duplicates = searchForDuplicateFiles(folder)
+	#pprint(duplicates)
+	for key, value in sorted(os.environ.items()):
+		print(key, value)
