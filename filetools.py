@@ -1,5 +1,32 @@
-import os
+
 import csv
+import hashlib
+import os
+import pandas
+from pprint import pprint
+
+def generateFileMd5(filename, blocksize=2**20):
+	""" Generates the md5sum of a file. Does
+		not require a lot of memory.
+		Parameters
+		----------
+			filename: string
+				The file to generate the md5sum for.
+			blocksize: int; default 2**20
+				The amount of memory to use when
+				generating the md5sum string.
+		Returns
+		-------
+			md5sum: string
+				The md5sum string.
+	"""
+	m = hashlib.md5()
+	with open( filename , "rb" ) as f:
+		while True:
+			buf = f.read(blocksize)
+			if not buf: break
+			m.update( buf )
+	return m.hexdigest()
 
 def readCSV(filename, **kwargs):
 	""" Returns a csvfile as a list of dictionaries,
@@ -36,6 +63,72 @@ def readCSV(filename, **kwargs):
 	else:
 		return reader
 
+def openTable(filename, **kwargs):
+	""" Reads a file and returns an appropriate data type.
+		Parameters
+		----------
+			filename: string
+				Path to a file.
+		Keyword Arguments
+		-----------------
+			'return_type': {'dataframe', 'list'}; default 'dataframe'
+			'skiprows': int; default 0
+				The number of rows to skip.
+	"""
+	return_type = kwargs.get('return_type', 'dataframe')
+	skiprows = kwargs.get('skiprows', 0)
+	basename, ext = os.path.splitext(filename)
+
+	if ext in {'.xls', '.xlsx'}:
+		data = pandas.read_excel(filename)
+	
+	elif ext in {'.csv', '.tsv'}:
+		delimiter = '\t' if ext == '.tsv' else ','
+		
+		if return_type == 'dataframe':
+			data = pandas.read_csv(filename, sep = delimiter)
+		
+		elif return_type == 'list':
+			data, fieldnames = readCSV(
+				filename, 
+				sep = delimiter, 
+				fields = True)
+		else:
+			message = "The variable 'return_type' has an unsupported_value: {0}".format(return_type)
+	else:
+		message = "The filename did not have a supported extension: '{0}'".format(ext)
+		print(message)
+
+	return data
+
+def saveTable(table, filename, **kwargs):
+	""" Saves a table to a file. The filetype will 
+		be determined from the extension.
+		Parameters
+		----------
+			table: list<dict<>>
+				The table to save.
+			filename: string
+				Path to the file that will be saved.
+		Keyword Arguments
+		-----------------
+			'append': bool; default True
+				Whether to overwrite a file, if it already exists.
+		Returns
+		-------
+			filename: string
+				The filename that the table was saved to.
+	"""
+
+	ext = os.path.splitext(filename)
+	if ext in {'.xls', 'xlsx'}:
+		#Will probably use pandas.
+		pass
+	elif ext in {'.csv', '.tsv'}:
+		writeCSV(table, filename, **kwargs)
+
+	return filename
+
 def writeCSV(table, filename, **kwargs):
 	""" Writes a csv file from a list of dictionaries.
 		Parameters
@@ -66,8 +159,8 @@ def writeCSV(table, filename, **kwargs):
 	empty_value = kwargs.get('empty', kwargs.get('restval', ""))
 	
 	with open(filename, opentype, newline = "") as csv_file:
-		writer = csv.Writer(
-			file1, 
+		writer = csv.DictWriter(
+			csv_file, 
 			delimiter = delimiter, 
 			fieldnames = fieldnames,
 			restval = empty_value)
@@ -77,3 +170,66 @@ def writeCSV(table, filename, **kwargs):
 		writer.writerows(table)
 
 	return filename
+
+def listAllFiles(folder):
+	""" Lists all files in a folder. Includes subfolders.
+		Parameters
+		----------
+			folder: string
+				The folder to search through.
+		Returns
+		-------
+			list<string>
+				A list of all files that were found.
+	"""
+	file_list = list()
+	for fn in os.listdir(folder):
+		abs_path = os.path.join(folder, fn)
+		if os.path.isdir(abs_path):
+			file_list += listAllFiles(abs_path)
+		elif os.path.isfile(abs_path): #Explicit check
+			file_list.append(abs_path)
+	return file_list
+
+
+def searchForDuplicateFiles(folder, by = 'name'):
+	""" Searches for duplicate files in a folder.
+		Parameters
+		----------
+			folder: path
+				The folder to search through. subfolders will be included.
+			by: {'md5', 'name', 'size'}; default 'md5'
+				The method to qualify two files as being the same.
+		Return
+		------
+			duplicates: list<list<string>>
+				A list of paired filenames representing identical files.
+	"""
+	all_files = listAllFiles(folder)
+
+	checked_files = dict()
+	_duplicate_keys = list()
+	for filename in all_files:
+		if by == 'md5':
+			file_key = generateFileMd5(filename)
+		elif by == 'name':
+			file_key = os.path.basename(filename)
+		elif by == 'size':
+			file_key = os.path.getsize(filename)
+
+		if file_key in checked_files:
+			checked_files[file_key].append(filename)
+			_duplicate_keys.append(file_key)
+		else:
+			checked_files[file_key] = [filename]
+	_duplicates = list()
+	for key in _duplicate_keys:
+		_duplicates.append(checked_files[key])
+	return _duplicates
+
+
+if __name__ == "__main__":
+	folder = "D:\\Proginoskes\\Documents\\Data\\"
+
+	duplicates = searchForDuplicateFiles(folder)
+	pprint(duplicates)
