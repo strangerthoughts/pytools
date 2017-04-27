@@ -40,7 +40,8 @@ def flattenTable(filename, **kwargs):
 	basename, ext = os.path.splitext(filename)
 	new_filename = kwargs.get('saveas', basename + '.flattened.tsv')
 	static_columns = kwargs.get('static', [])
-	static_columns += ['regionCode', 'regionName', 'source', 'url', 'baseYear', 'customCode']
+	static_columns += ['regionCode', 'regionName', 
+		'source', 'url', 'baseDate', 'baseYear', 'customCode']
 	
 	data = filetools.openTable(filename, return_type = 'dataframe')
 	table_columns = [i for i in data.columns if i not in static_columns]
@@ -637,7 +638,7 @@ class Database:
 
 
 if __name__ == "__main__":
-	filename = "D:\\Proginoskes\\Documents\\Data\\Harmonized Data\\Region Information\\1790-2010_MASTER.xlsx"
-	static_columns = ['stateCode', 'cityName']
+	filename = "D:\\Proginoskes\\Documents\\Data\\Original Data\\United States\\Population\\Population Projections\\US State Population Projections.xlsx"
+	static_columns = ['stateCode', 'stateName', 'report', 'source']
 	new_filename = flattenTable(filename, static = static_columns)
 	print(new_filename)
