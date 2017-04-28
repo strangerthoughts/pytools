@@ -37,7 +37,15 @@ def findSimilarNames(code):
 
 	similar_names = similar_names.get(code)
 	return similar_names
-
+def _isCode(string):
+	""" Determines if a string represents a form of regional code """
+	tests = [
+		"-" in string,
+		not any(c.isdigit() for c in string),
+		string.isupper()
+	]
+	is_code = any(tests)
+	return is_code
 def lookup(label, **kwargs):
 	""" Searches for a region code.
 		Parameters
@@ -54,7 +62,7 @@ def lookup(label, **kwargs):
 				or a '-' character are assumed to be region codes.
 	"""
 	region_type = kwargs.get('region_type', 'countries')
-	label_type = "regionCodes" if ('-' in label or any(c.isdigit() for c in label)) else "regionNames"
+	label_type = "regionCodes" if _isCode(label) else "regionNames"
 	label_type = kwargs.get('label_type', label_type)
 	subcode = kwargs.get('subcode')
 	
@@ -62,17 +70,44 @@ def lookup(label, **kwargs):
 	if subcode is not None:
 		super_regions = FILE_CACHE[region_type].get("contains", [])
 		names = [s for c, s in zip(super_regions, names) if c == subcode]
-	
-	match = process.extractOne(label, names)
+	if label_type == "regionCodes":
+		match = [i for i in names if i == label]
+		if len(match) == 0:
+			match = None
+		else:
+			match = match[0]
+	else:
+		match = process.extractOne(label, names)
+		match, score = match
+	if match is not None:
+		index = FILE_CACHE[region_type][label_type].index(match)
 
-	match, score = match
-	index = FILE_CACHE[region_type][label_type].index(match)
-
-	label_type = "regionNames" if label_type == "regionCodes" else "regionCodes"
-	result = FILE_CACHE[region_type]["table"].iloc[index]
-	result = result.to_dict()
-
+		label_type = "regionNames" if label_type == "regionCodes" else "regionCodes"
+		result = FILE_CACHE[region_type]["table"].iloc[index]
+		result = result.to_dict()
+	else:
+		result = match
 	return result
+
+def parseTable(io, column = "countryCode"):
+	""" Loops through a table with either region codes or names
+		and prints any missing names and/or codes.
+		Parameters
+		----------
+			io: string, pandas.DataFrame, list<dict<>>
+				Table to loop through.
+			column: string
+				The column to parse.
+			region_type: {"countries"}
+	"""
+	import tabletools
+	table = tabletools.Table(io, skiprows = 1).df
+	for index, row in table.iterrows():
+		key_label = row[column]
+		info = lookup(key_label)
+		
+		print(info['iso3Code'], '\t', info['countryName'])
+
 
 FILE_CACHE = {
 	"subdivisions": {
@@ -89,9 +124,9 @@ FILE_CACHE = {
 }
 
 if __name__ == "__main__":
-	test_region = 'United States of America'
+	filename = "D:\\Proginoskes\\Documents\\Data\\Original Data\\World\\International Tourism\\Tourists.xlsx"
 
-	result = lookup(test_region)
+	parseTable(filename, column = 'Country Code')
 
-	pprint(result)
+
 	
