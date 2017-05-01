@@ -628,6 +628,35 @@ def isNull(value):
 		return math.isnan(value)
 	else:
 		return value is None
+def _isNumber(value):
+	if isinstance(value, str):
+
+def getTableType(self, filename, skiprows = 0):
+	""" Determines what the general layout of the
+		table is based on the header.
+		Parameters
+		----------
+			filename: string
+			skiprows: int
+		Returns
+		-------
+			table_type: {'timeseries', 'verbose'}
+				*'timeseries': The table is formatted with years
+					as column names
+				* 'verbose': Each variable in the table has its own row.
+	"""
+	ext = os.path.splitext(filename)[-1]
+	if ext == '.csv': delimiter = ','
+	else: delimiter = '\t'
+
+	with open(filename, 'r') as file1:
+		while i < skiprows:
+			file1.readline()
+		header_line = file1.readline().strip() #removes the newline character at the end
+
+	headers = header_line.split(delimiter)
+	headers = [i for i in headers if ]
+
 
 
 def flattenTable(filename, **kwargs):
