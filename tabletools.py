@@ -2,87 +2,32 @@ import filetools
 import os
 import pandas
 import math
-def isNull(value):
-	if isinstance(value, str):
-		return value == ""
-	elif isinstance(value, float):
-		return math.isnan(value)
-	else:
-		return value is None
 
-
-def flattenTable(filename, **kwargs):
-	""" Flattens a dataset. The flattened dataset will
-		automatically be saved as [basename].flattened.tsv.
-		Parameters
-		----------
-			filename: string [PATH]
-				A dataset formatted with variables
-				as column names.
-		Keyword Arguments
-		-----------------
-			'static': list<string, int> (list of column names); default []
-				A list of columns to exclude from the
-				flattening process. These columns will be
-				included in the flattened dataset as additional columns.
-				The following columns are automatically included:
-					'baseYear'
-					'regionCode'
-					'regionName'
-			'saveas': string [PATH]
-				if provided, will save the flattened table with 
-				the filename given to 'saveas'.
-		Returns
-		-------
-			new_filename: string [PATH]
-				The filename the table was saved to.
-	"""
-	basename, ext = os.path.splitext(filename)
-	new_filename = kwargs.get('saveas', basename + '.flattened.tsv')
-	static_columns = kwargs.get('static', [])
-	static_columns += ['regionCode', 'regionName', 'source', 'url', 'baseYear', 'customCode']
-	
-	data = filetools.openTable(filename, return_type = 'dataframe')
-	table_columns = [i for i in data.columns if i not in static_columns]
-	static_columns = [i for i in static_columns if i in data.columns]
-
-	table = list()
-	for index, row in data.iterrows():
-		current_line = {c:row[c] for c in static_columns}
-		for column in table_columns:
-			current_value = row[column]
-			if isNull(current_value): continue
-
-			new_line = current_line.copy()
-			new_line['subject'] = column
-			new_line['value'] = current_value
-			table.append(new_line)
-
-	filetools.writeCSV(table, new_filename)
-
-	return new_filename
-
-class Database:
-	def __init__(self, io, ID = 0, sortby = None):
+class Table:
+	def __init__(self, io, **kwargs):
 		""" Parameters
 			----------
 				io: string, pandas.DataFrame, pandas.Series
 					The database to load. If a directory is given,
 					will load all valid files in that directory
-				ID: string, int; default 0
+			Keyword Arguments
+			-----------------
+				Any valid pandas keyword arguments are supported.qa	
+				sheetname: string, int; default 0
 					Indicates a specific sheet to load when loading
 					an Excel spreadsheet
-				sortby: string, list[string]; default None
-					Sorts the database according to the indicated
-					columns
+				
 		"""
-		if isinstance(io, pd.DataFrame):
+		kwargs['sheetname'] = kwargs.get('sheetname', 0)
+		kwargs['skiprows'] = kwargs.get('skiprows')
+
+		if isinstance(io, pandas.DataFrame):
 			self.df = io
 			self.filename = 'Pandas.DataFrame'
 		elif isinstance(io, str):
-			self.df = self.load(io, ID = ID)
+			self.df = self.load(io, **kwargs)
 			self.filename = io
-		elif isinstance(io, pd.Series):
+		elif isinstance(io, pandas.Series):
 			self.df = io.to_frame().transpose()
 			self.filename = 'Pandas.Series'
 		else:
@@ -92,8 +37,7 @@ class Database:
 		#Holds the indicies of specific groups within the database.
 		#This is much faster than finding the indices on the fly
 		self.index_map = dict()
-		self.sortby = sortby
-		self.refresh()  
+		#self.refresh()  
 	def __len__(self):
 		return len(self.df)
 	def __call__(self, on, where = None, column = None, value = None, flag = False):
@@ -132,9 +76,9 @@ class Database:
 			self.put_value(on, where, column, value)
 			element = value
 
-		#if isinstance(element, pd.DataFrame) and len(element) == 1:
+		#if isinstance(element, pandas.DataFrame) and len(element) == 1:
 		#    element = element.iloc[0]
-		#elif isinstance(element, pd.Series) and len(element) == 1:
+		#elif isinstance(element, pandas.Series) and len(element) == 1:
 		#    element = element.iloc[0]
 		return element
 
@@ -205,12 +149,12 @@ class Database:
 		"""
 		if isinstance(io, str):
 			newdf = self.load(io)
-		elif isinstance(io, pd.DataFrame):
+		elif isinstance(io, pandas.DataFrame):
 			newdf = io
 		else:
 			raise ValueError("{0} cannot be concatenated with the current DataFrame!".format(type(io)))
 			   
-		self.df = pd.concat([self.df, newdf], ignore_index = True)
+		self.df = pandas.concat([self.df, newdf], ignore_index = True)
 		self.refresh() 
 	def merge(self, right_df, left_on, right_on = None, how = 'left'):
 		""" Merges a pandas.DataFrame object with the current database
@@ -236,7 +180,7 @@ class Database:
 			raise ValueError("Cannot merge pandas.DataFrame and pandas.Series, use self.add_row() instead.")
 		if right_on is None:
 			right_on = left_on
-		self.df = pd.merge(self.df, right_df, how = how, left_on = left_on, 
+		self.df = pandas.merge(self.df, right_df, how = how, left_on = left_on, 
 			right_on = right_on, left_index = False, right_index = False)
 	
 	def head(self, rows = 5):
@@ -282,13 +226,13 @@ class Database:
 		"""
 		for index, row in enumerate(self.items(columns)):
 			yield index, row
-	def load(self, io, ID = 0, na_values = [':', '--', '', '..','---', 'n/a', 'N/A']):
-		""" Loads a file from the hdd
+	def load(self, io, **kwargs):
+		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
 			Parameters
 			----------
-				io: string, pandas.DataFrame, pandas.Series
-					The database file. If a directory is given, will load all
-					valid database files in the directory
+				io: string [PATH]
+					The database file. If a directory is given, will attempt to
+					load all valid database files in the directory
 					Available filetypes: .xlsx, .pkl, .csv, .db
 				ID: sheet name, sheet index; default 0
 					The sheet to load (currently only works in Excel spreadsheets)
@@ -299,36 +243,34 @@ class Database:
 			----------
 				self._load_file : pandas.DataFrame or dict(sheetname: pandas.DataFrame)
 		"""
-		if '.' in io:
-			df = self._load_file(io, ID, na_values)
-		else:
+		if os.path.isfile(io):
+			df = self._load_file(io, **kwargs)
+		else: #path is a folder
 			directory = io
 			_load_dfs = list()
-			if directory[-1] != '/': directory += "/"
 			for fn in os.listdir(directory):
 				if '~' in fn: continue
-				filename = directory + fn
-				#try:
-				_load_dfs.append(self._load_file(filename, ID, na_values))
-				#except:
-				#    print("Could not load", filename)
-			df = pd.concat(_load_dfs)
+				filename = os.path.join(directory, fn)
+				_load_dfs.append(self._load_file(filename, **kwargs))
+			df = pandas.concat(_load_dfs)
 
 		return df
 	@staticmethod
-	def _load_file(filename, ID = 0, na_values = None):
+	def _load_file(filename, **kwargs):
 		""" Returns a dataframe of the suppled file
 		"""
-		extension = filename.split('.').pop()
-		if extension == 'xlsx':
-			df = pd.read_excel(filename, sheetname = ID, na_values = na_values)
-		elif extension == 'pkl':
-			df = pd.read_pickle(filename)
-		elif extension in ['txt', 'csv', 'tsv']:
-			sep = {'txt':',', 'csv':',', 'tsv':'\t', 'fsv':'\f'}[extension]
-			df = pd.read_csv(filename, sep = sep)
-		elif extension == 'db':
-			df = pd.read_sql(filename)
+
+		extension = os.path.splitext(filename)[-1]
+		if extension == '.xlsx':
+			df = pandas.read_excel(filename, **kwargs)
+		elif extension == '.pkl':
+			df = pandas.read_pickle(filename)
+		elif extension in ['.txt', '.csv', '.tsv']:
+			sep = {'.txt':',', '.csv':',', '.tsv':'\t', 'fsv':'\f'}[extension]
+			kwargs['delimiter'] = sep
+			df = pandas.read_csv(filename, **kwargs)
+		elif extension == '.db':
+			df = pandas.read_sql(filename)
 		else:
 			raise NameError("{0} does not have a valid extension!".format(filename))
 		return df
@@ -390,8 +332,8 @@ class Database:
 				if len(return_this) == 1:
 					return_this = return_this[0]
 				else:
-					return_this = pd.Series(return_this, index = indices)
-		if to_frame and isinstance(return_this, pd.Series):
+					return_this = pandas.Series(return_this, index = indices)
+		if to_frame and isinstance(return_this, pandas.Series):
 			return_this = return_this.to_frame().transpose()
 		return return_this
 	def get_column(self, column):
@@ -421,7 +363,7 @@ class Database:
 		value = self.df[on].iloc[r]
 		return value
 
-	def refresh(self):
+	def refresh(self, sortby = None):
 		""" Updates the sorted order and index of the database after changes
 			are made
 			Parameters
@@ -431,7 +373,7 @@ class Database:
 			----------
 				function : None
 		"""
-		if self.sortby is not None:
+		if sortby is not None:
 			self.df.sort_values(by = self.sortby, inplace = True)
 		self.df.reset_index(drop = True, inplace = True)  
 		self.index_map = dict()
@@ -547,7 +489,7 @@ class Database:
 			elements = self.df[on].isin(where)
 		elif comparison == '~':
 			elements = ~self.df[on].isin(where)
-		elif isinstance(where, pd.Series):
+		elif isinstance(where, pandas.Series):
 			elements = where
 		elif comparison == '==':
 			elements = self.df[on] == where
@@ -629,15 +571,205 @@ class Database:
 			----------
 				function: None
 		"""
-		rows = [(pd.Series(row) if isinstance(row, dict) else row) for row in rows]
-		rows = [(row.to_frame().transpose() if isinstance(row, pd.Series) else row)
+		rows = [(pandas.Series(row) if isinstance(row, dict) else row) for row in rows]
+		rows = [(row.to_frame().transpose() if isinstance(row, pandas.Series) else row)
 					for row in rows]
-		self.df = pd.concat([self.df] + rows, ignore_index = False)
+		self.df = pandas.concat([self.df] + rows, ignore_index = False)
 		self.refresh()
+
+def isNull(value):
+	if isinstance(value, str):
+		return value == ""
+	elif isinstance(value, float):
+		return math.isnan(value)
+	else:
+		return value is None
+
+
+def flattenTable(filename, **kwargs):
+	""" Flattens a dataset. The flattened dataset will
+		automatically be saved as [basename].flattened.tsv.
+		Parameters
+		----------
+			filename: string [PATH]
+				A dataset formatted with variables
+				as column names.
+		Keyword Arguments
+		-----------------
+			'static': list<string, int> (list of column names); default []
+				A list of columns to exclude from the
+				flattening process. These columns will be
+				included in the flattened dataset as additional columns.
+				The following columns are automatically included:
+					'baseYear'
+					'regionCode'
+					'regionName'
+			'saveas': string [PATH]
+				if provided, will save the flattened table with 
+				the filename given to 'saveas'.
+		Returns
+		-------
+			new_filename: string [PATH]
+				The filename the table was saved to.
+	"""
+	basename, ext = os.path.splitext(filename)
+	new_filename = kwargs.get('saveas', basename + '.flattened.tsv')
+	static_columns = kwargs.get('static', [])
+	static_columns += ['regionCode', 'regionName', 
+		'source', 'url', 'baseDate', 'baseYear', 'customCode']
+	
+	data = filetools.openTable(filename, return_type = 'dataframe')
+	table_columns = [i for i in data.columns if i not in static_columns]
+	static_columns = [i for i in static_columns if i in data.columns]
+
+	table = list()
+	for index, row in data.iterrows():
+		current_line = {c:row[c] for c in static_columns}
+		for column in table_columns:
+			current_value = row[column]
+			if isNull(current_value): continue
+
+			new_line = current_line.copy()
+			new_line['subject'] = column
+			new_line['value'] = current_value
+			table.append(new_line)
+
+	filetools.writeCSV(table, new_filename)
+
+	return new_filename
+
+
+def readCSV(filename, headers = False, **kwargs):
+	""" Returns a csvfile as a list of dictionaries,
+		where the csv header acts as the keys.
+		Parameters
+		----------
+			filename: string
+				Path to the file
+			headers: bool; default False
+				Whether to return the headers of the csv file as a list.
+		Keyword Arguments
+		-----------------
+			'delimiter', 'sep': character; default '\t'
+				The character that separated the fields in the csv file.
+			'fields': bool; default False
+				Whether to return the headers of the csv file as a list.
+				identical to the 'headers' positional argument
+		Returns
+		-------
+			reader: list<dict> or list<dict>, list<string>
+				The contents of the file.
+	"""
+	fields = kwargs.get('fields', headers)
+	delimiter = kwargs.get('delimiter', kwargs.get('sep', '\t'))
+
+	if os.path.exists(filename):
+		with open(filename, 'r') as file1:
+			reader = csv.DictReader(file1, delimiter = delimiter)
+			fieldnames = reader.fieldnames
+			reader = list(reader)
+	else:
+		reader = []
+		fieldnames = []
+
+	if fields:
+		return reader, fieldnames
+	else:
+		return reader
+
+def readTable(filename, **kwargs):
+	""" Reads a file and returns an appropriate data type.
+		Parameters
+		----------
+			filename: string
+				Path to a file.
+		Keyword Arguments
+		-----------------
+			'return_type': {'dataframe', 'list'}; default 'dataframe'
+			'skiprows': int; default 0
+				The number of rows to skip.
+	"""
+	return_type = kwargs.get('return_type', 'dataframe')
+	skiprows = kwargs.get('skiprows', 0)
+
+
+		
+
+	return data
+
+def writeTable(table, filename, **kwargs):
+	""" Saves a table to a file. The filetype will 
+		be determined from the extension.
+		Parameters
+		----------
+			table: list<dict<>>
+				The table to save.
+			filename: string
+				Path to the file that will be saved.
+		Keyword Arguments
+		-----------------
+			'append': bool; default True
+				Whether to overwrite a file, if it already exists.
+		Returns
+		-------
+			filename: string
+				The filename that the table was saved to.
+	"""
+
+	ext = os.path.splitext(filename)
+	if ext in {'.xls', 'xlsx'}:
+		#Will probably use pandas.
+		pass
+	elif ext in {'.csv', '.tsv'}:
+		writeCSV(table, filename, **kwargs)
+
+	return filename
+
+def writeCSV(table, filename, **kwargs):
+	""" Writes a csv file from a list of dictionaries.
+		Parameters
+		----------
+			table: list<dict>
+				The table to write to the file.
+			filename: string [PATH]
+				The file to write.
+		Keyword Arguments
+		-----------------
+			'delimiter', 'sep': character
+				The character to separate each field with.
+			'empty', 'restval': string; default ""
+				The value to use for rows with missing values.
+			'fields', 'fieldnames': list<string>; default None
+				The fieldnames to use. If none are provided, the
+				sorted keys of the first element in the table
+				will be used.
+			'append': bool; default False
+				If true, will append the table to an existing
+				file rather than overwriting any existing one.
+	"""
+	if len(table) == 0: return None
+	fieldnames = kwargs.get('fieldnames', kwargs.get('fields'))
+	if fieldnames is None:fieldnames = sorted(table[0].keys())
+	opentype = 'a' if kwargs.get('append', False) else 'w'
+	delimiter = kwargs.get('delimiter', kwargs.get('sep', '\t'))
+	empty_value = kwargs.get('empty', kwargs.get('restval', ""))
+	
+	with open(filename, opentype, newline = "") as csv_file:
+		writer = csv.DictWriter(
+			csv_file, 
+			delimiter = delimiter, 
+			fieldnames = fieldnames,
+			restval = empty_value)
+		if opentype != 'a' or os.path.getsize(filename) == 0:
+			writer.writeheader()
+
+		writer.writerows(table)
+
+	return filename
 
 
 if __name__ == "__main__":
-	filename = "D:\\Proginoskes\\Documents\\Data\\Harmonized Data\\Region Information\\1790-2010_MASTER.xlsx"
-	static_columns = ['stateCode', 'cityName']
+	filename = "D:\\Proginoskes\\Documents\\Data\\Original Data\\United States\\Population\\Population Projections\\US State Population Projections.xlsx"
+	static_columns = ['stateCode', 'stateName', 'report', 'source']
 	new_filename = flattenTable(filename, static = static_columns)
 	print(new_filename)
