@@ -2,8 +2,18 @@ import filetools
 import os
 import pandas
 import math
+import csv
 
 class Table:
+	""" Wrapper around a pandas.DataFrame object that allows convienient handling
+		of tabular data.
+
+		Examples
+		--------
+			iteration:
+				for row in Table():
+					pass
+	"""
 	def __init__(self, io, **kwargs):
 		""" Parameters
 			----------
@@ -68,13 +78,23 @@ class Table:
 				if on, where, column, and value are given, 
 					calls self.put_value(on, where, column, value)
 		"""
+		if where is not None:
+			if value is None:
+				element = self.get_value(on, where, column, to_frame = flag)
+			else:
+				element = self.put_value(on, where, column, value)
+		else:
+			element = self[on].values
+
+		"""
 		if where is None:
-			element = self.df[on]
+			element = self.df[on].values
 		elif value is None:
 			element = self.get_value(on, where, column, to_frame = flag)
 		else:
 			self.put_value(on, where, column, value)
 			element = value
+		"""
 
 		#if isinstance(element, pandas.DataFrame) and len(element) == 1:
 		#    element = element.iloc[0]
@@ -84,17 +104,30 @@ class Table:
 
 	def __iter__(self):
 		for i in self.df.iterrows(): 
-			yield i
+			yield i[1]
 	def __getitem__(self, index):
 		#Try return self.df.__getitem__(index)
 		return self.df.iloc[index]
 	def __repr__(self):
-		return "Database(source = {source}, shape = ({x}x{y}))".format(
+		return "Table(source = {source}, shape = ({x}x{y}))".format(
 			source = self.filename,
 			x = len(self),
 			y = len(self.df.columns))  
 	def __str__(self):
 		return self.__repr__()
+
+	def _generate_index(self, column):
+		if False:
+			groups = self.df.groupby(column)
+			indexed_series = {key: group.index for key, group in groups}
+		else:
+			indexed_series = {}
+			for index, value in self.df[column].items():
+				try: 	indexed_series[value].append(index)
+				except: indexed_series[value] = [index]
+			indexed_series = {k:pandas.Index(v) for k, v in indexed_series.items()}
+		return indexed_series
+
 	def _get_indices(self, on, where):
 		""" Gets the row indices corresponding to rows with a value of 
 			'where' in column 'on'.
@@ -109,8 +142,9 @@ class Table:
 				self.index_map : pandas.Index
 		"""
 		if on not in self.index_map.keys():
-			groups = self.df.groupby(on)
-			self.index_map[on] = {key: group.index for key, group in groups}
+			indexed_series = self._generate_index(on)
+			self.index_map[on] = indexed_series
+
 		return self.index_map[on][where]
 	
 	def lab(self, index):
@@ -259,14 +293,14 @@ class Table:
 	def _load_file(filename, **kwargs):
 		""" Returns a dataframe of the suppled file
 		"""
-
 		extension = os.path.splitext(filename)[-1]
 		if extension == '.xlsx':
 			df = pandas.read_excel(filename, **kwargs)
 		elif extension == '.pkl':
 			df = pandas.read_pickle(filename)
 		elif extension in ['.txt', '.csv', '.tsv']:
-			sep = {'.txt':',', '.csv':',', '.tsv':'\t', 'fsv':'\f'}[extension]
+			kwargs.pop('sheetname')
+			sep = {'.txt':',', '.csv':',', '.tsv':'\t', '.fsv':'\f'}[extension]
 			kwargs['delimiter'] = sep
 			df = pandas.read_csv(filename, **kwargs)
 		elif extension == '.db':
@@ -348,12 +382,12 @@ class Table:
 					The column values
 		"""
 		return self.df[column].values
-	def random_value(self, on):
+	def getRandomValue(self, on):
 		""" Returns a random value from the selected column
 			Parameters
 			----------
 				on: column label
-					The column to choose a value from
+					The column to choose a value from.
 			Returns
 			----------
 				value : scalar
@@ -402,39 +436,35 @@ class Table:
 			----------
 				function : None
 		"""
-	def save(self, filename, extension = None, na_rep = ''):
-		""" Saves the database to the hdd
+	def save(self, filename, **kwargs):
+		""" Saves the database. Keyword arguements will be passed to pandas.
 			Parameters
 			----------
 				filename: string
 					The location on the disk to save the database to
 					Supports .xlsx, .pkl, .csv, .db
-				extension: string; default None
-					Specifies the filetype to save the database as, 
-					if different from the one given in filename
-				na_rep: string, list-like; default ''
-					The value to save nan values as. Currently non-working
 			Returns
 			---------
 				function : None
 		"""
-		if extension is not None:
-			filename = '.'.join(filename.split('.')[:-1] + [extension])
+		file_format = os.path.splitext(filename)[1]
 
 		if '.' not in filename:
 			raise NameError("The file type was not specified!")
 		
-		file_format = filename.split('.').pop()
-		if file_format == 'xlsx':
+		if file_format == '.xlsx':
 			self.df.to_excel(filename)
 			
-		elif file_format == 'pkl':
+		elif file_format == '.pkl':
 			self.df.to_pickle(filename)
 
-		elif file_format == 'csv':
-			self.df.to_csv(filename)
+		elif file_format in {'.csv', '.tsv', '.fsv'}:
+			if extension == '.csv': sep = ','
+			elif extension == '.tsv': sep = '\t'
+			elif extension == '.fsv': sep = '\f'
+			self.df.to_csv(filename, encoding = 'utf-8', sep = sep)
 
-		elif file_format == 'db':
+		elif file_format == '.db':
 			from sqlalchemy import create_engine
 			engine = create_engine('sqlite:///{0}'.format(filename))
 			self.df.to_sql('Patient Database', engine)
@@ -769,7 +799,7 @@ def writeCSV(table, filename, **kwargs):
 
 
 if __name__ == "__main__":
-	filename = "D:\\Proginoskes\\Documents\\Data\\Original Data\\United States\\Population\\Population Projections\\US State Population Projections.xlsx"
-	static_columns = ['stateCode', 'stateName', 'report', 'source']
-	new_filename = flattenTable(filename, static = static_columns)
-	print(new_filename)
+	filename = os.path.join(os.getcwd(), 'data', "country-codes.xlsx")
+	df = Table(filename)
+	for row in df:
+		print(row['iso3Code'])
