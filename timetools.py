@@ -415,6 +415,10 @@ class Duration:
         
         return (years, months, days, hours, minutes, seconds, microseconds)
 
+class HDuration(datetime.timedelta):
+    def __init__(self):
+        super().__init__(self)
+
 class Timestamp:
     def __init__(self, value):
         self._define_regexes()

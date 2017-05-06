@@ -3,6 +3,7 @@ import os
 import pandas
 import math
 import csv
+from numpy import ndarray
 
 class Table:
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
@@ -28,6 +29,7 @@ class Table:
 					an Excel spreadsheet
 				
 		"""
+		self.use_old_index = kwargs.get('use_old_index', False)
 		kwargs['sheetname'] = kwargs.get('sheetname', 0)
 		kwargs['skiprows'] = kwargs.get('skiprows')
 
@@ -117,14 +119,17 @@ class Table:
 		return self.__repr__()
 
 	def _generate_index(self, column):
-		if False:
+		#Switchable for debugging purposes.
+		if self.use_old_index:
+			#Old method, !7.7s for 50k records.
 			groups = self.df.groupby(column)
 			indexed_series = {key: group.index for key, group in groups}
 		else:
+			#New method, ~3s for 50k records.
 			indexed_series = {}
 			for index, value in self.df[column].items():
 				try: 	indexed_series[value].append(index)
-				except: indexed_series[value] = [index]
+				except KeyError: indexed_series[value] = [index]
 			indexed_series = {k:pandas.Index(v) for k, v in indexed_series.items()}
 		return indexed_series
 
@@ -354,7 +359,7 @@ class Table:
 					as a pandas.Series object.
 		"""
 		indices = self._get_indices(on, where)
-
+		"""
 		if column is None:
 			return_this = self.df.loc[indices]
 			if len(return_this) == 1:
@@ -362,13 +367,22 @@ class Table:
 		else:
 			column_location = self.df.columns.get_loc(column)
 			return_this = self.df.get_value(indices, column_location, takeable = True)
-			if isinstance(return_this, numpy.ndarray):
+			
+			if isinstance(return_this, ndarray):
 				if len(return_this) == 1:
 					return_this = return_this[0]
 				else:
 					return_this = pandas.Series(return_this, index = indices)
+			
 		if to_frame and isinstance(return_this, pandas.Series):
 			return_this = return_this.to_frame().transpose()
+		"""
+		if column is None:
+			return_this = self.df.loc[indices]
+			if len(return_this) == 1:
+				return_this = return_this.iloc[0]
+		else:
+			return_this = self.df[column].loc[indices]
 		return return_this
 	def get_column(self, column):
 		""" Retrieves all values in one of the database columns
