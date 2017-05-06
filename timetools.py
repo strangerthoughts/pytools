@@ -3,11 +3,6 @@ import re
 import datetime
 import time
 import math
-"""
-        if index % 5000 < 1:
-            print("{0:<6}{1:>6.1%} {2}".format(index, index / len(patients), 
-                timer.togo(index, len(patients), iso = True)), flush = True)
-"""
 
 def elapsed(loop_number, loop_block, total_loops, timer):
     """ Prints a line indicating the elapsed progress of the loop described
@@ -102,7 +97,18 @@ class Timer:
             string = "Finished {0} in {1}".format(label, self.to_iso())
         print(string, flush = True)
         self.reset()
-    def timeit(self, value):
+    def benchmark(self, loops = 1):
+        """ Returns a dictionary with information on the loop timing"""
+        duration = self.duration()
+        per_loop = duration / loops
+
+        result = {
+            'duration': duration,
+            'perLoop': per_loop,
+            'loops': loops
+        }
+        return result
+    def timeit(self, value = 1):
         """ Calculates the time for a loop to execute
             Parameters
             ----------
@@ -408,6 +414,10 @@ class Duration:
         minutes, seconds=divmod(seconds, 60)
         
         return (years, months, days, hours, minutes, seconds, microseconds)
+
+class HDuration(datetime.timedelta):
+    def __init__(self):
+        super().__init__(self)
 
 class Timestamp:
     def __init__(self, value):
