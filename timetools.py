@@ -122,6 +122,7 @@ class Timer:
         string = "{0:.2f} us per loop, ".format(duration * 1000000 / value)
         string += "total of {0:.2f} seconds ".format(duration) 
         string +="and {0:n} loops.".format(value)
+        print(string)
         return string
     def to_iso(self):
         """Returns an ISO duration of the elapsed time"""
