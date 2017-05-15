@@ -55,8 +55,9 @@ class Table:
 	def __call__(self, on, where = None, column = None, value = None, flag = False):
 		""" Parameters
 			----------
-				on: column label; default None
-					The column to look in
+				on: column label, list<tuple<string:value>>
+					The column to look in or a list of criteria to use
+					when selecting rows.
 				where: any; default None
 					The value to look for in the column indicated by on.
 					If given, will find all rows with the value of 'where'
@@ -81,27 +82,23 @@ class Table:
 					calls self.put_value(on, where, column, value)
 		"""
 		if where is not None:
+
 			if value is None:
+				#Retrieve a specific column
 				element = self.get_value(on, where, column, to_frame = flag)
 			else:
+				#Replace a value 
 				element = self.put_value(on, where, column, value)
+		elif isinstance(on, list):
+			#Assume chainSelect
+			element = self.chainSelect(on)
 		else:
 			element = self[on].values
 
-		"""
-		if where is None:
-			element = self.df[on].values
-		elif value is None:
-			element = self.get_value(on, where, column, to_frame = flag)
-		else:
-			self.put_value(on, where, column, value)
-			element = value
-		"""
-
-		#if isinstance(element, pandas.DataFrame) and len(element) == 1:
-		#    element = element.iloc[0]
-		#elif isinstance(element, pandas.Series) and len(element) == 1:
-		#    element = element.iloc[0]
+		if isinstance(element, pandas.DataFrame) and len(element) == 1:
+		    element = element.iloc[0]
+		elif isinstance(element, pandas.Series) and len(element) == 1:
+		    element = element.iloc[0]
 		return element
 
 	def __iter__(self):
@@ -222,6 +219,28 @@ class Table:
 		self.df = pandas.merge(self.df, right_df, how = how, left_on = left_on, 
 			right_on = right_on, left_index = False, right_index = False)
 	
+	def chainSelect(self, keys):
+		""" Retrieves data from the database based on several 
+			different criteria.
+			Parameters
+			----------
+				keys: list<tuple<string,value>>
+					A list of key-value pairs specifing multiple columns
+					and values to use a selection criteria.
+					Ex. [(column1, value1), (column2, value2)] selects
+					the rows where column1 contains value1 and column2 contains value2.
+		"""
+		boolindex = None
+		for column, value in keys:
+			indicies = self._get_indices(column, value)
+			if boolindex is None:
+				boolindex = indicies
+			else:
+				boolindex = boolindex & indicies
+		#print(self.df.index)
+		#print(boolindex)
+		series = self.df.loc[boolindex]
+		return series
 	def head(self, rows = 5):
 		return self.df.head(rows)   
 	def info(self, verbose = True):
@@ -628,6 +647,33 @@ def isNull(value):
 		return math.isnan(value)
 	else:
 		return value is None
+
+def getTableType(self, filename, skiprows = 0):
+	""" Determines what the general layout of the
+		table is based on the header.
+		Parameters
+		----------
+			filename: string
+			skiprows: int
+		Returns
+		-------
+			table_type: {'timeseries', 'verbose'}
+				*'timeseries': The table is formatted with years
+					as column names
+				* 'verbose': Each variable in the table has its own row.
+	"""
+	ext = os.path.splitext(filename)[-1]
+	if ext == '.csv': delimiter = ','
+	else: delimiter = '\t'
+
+	with open(filename, 'r') as file1:
+		while i < skiprows:
+			file1.readline()
+		header_line = file1.readline().strip() #removes the newline character at the end
+
+	headers = header_line.split(delimiter)
+	headers = [i for i in headers if i.isdigit()]
+
 
 
 def flattenTable(filename, **kwargs):

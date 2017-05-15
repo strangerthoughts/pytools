@@ -19,6 +19,43 @@ def memoryUsage(show = True, units = 'MB'):
 	else:
 		return usage
 
+class Terminal:
+	""" Wrapper around python system modules.
+		Makes it easy to run a command and save any output.
+	"""
+	def __init__(self, command, label = "", filename = None):
+		self.label = label
+		terminal_label = self._getLabel(label)
+		self.output = self._runCommand(command, terminal_label)
+		if filename is not None:
+			self.updateConsoleLog(filename, command, self.output, label)
+
+	def _getLabel(self, command, label, filename):
+		if label == "": return label
+		char = "#"
+		max_len = 180
+		edge = char * max_len
+		edgelen = int(max_len/2 - int(len(label) / 2))
+		middle = edgelen * char + label + edgelen*char
+
+		return "\n".join(edge, middle, edge)
+
+	def _runCommand(self, command, label):
+		if label != "":
+			print(label)
+		command = shlex.split(command)
+		process = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+		output = str(process.stdout.read(),'utf-8')
+		return output
+
+	def updateConsoleLog(filename, command, output, label = ""):
+		if os.path.exists(filename): opentype = 'a'
+		else: opentype = 'w'
+		with open(filename, opentype) as console_file:
+			console_file.write(now().isoformat() + ': ' + label + '\n')
+			console_file.write(' '.join(command) + '\n')
+			console_file.write(output + '\n\n')
+
 def Terminal(command, label = "", filename = None):
 	""" Calls the system shell.
 		Parameters
@@ -55,10 +92,3 @@ def Terminal(command, label = "", filename = None):
 
 	return output
 
-def updateConsoleLog(filename, command, output, label = ""):
-	if os.path.exists(filename): opentype = 'a'
-	else: opentype = 'w'
-	with open(filename, opentype) as console_file:
-		console_file.write(now().isoformat() + ': ' + label + '\n')
-		console_file.write(' '.join(command) + '\n')
-		console_file.write(output + '\n\n')
