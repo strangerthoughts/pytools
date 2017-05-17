@@ -188,15 +188,19 @@ class Table:
 		""" Returns a dataframe of the suppled file
 		"""
 		extension = os.path.splitext(filename)[-1]
-		if extension == '.xlsx':
+		if extension in {'.xlsx', '.xlsx'}:
 			df = pandas.read_excel(filename, **kwargs)
-		elif extension == '.pkl':
-			df = pandas.read_pickle(filename)
-		elif extension in ['.txt', '.csv', '.tsv']:
-			kwargs.pop('sheetname')
-			sep = {'.txt':',', '.csv':',', '.tsv':'\t', '.fsv':'\f'}[extension]
+		elif extension in {'.txt', '.csv', '.tsv', '.fsv'}:
+			if 'sheetname' in kwargs: kwargs.pop('sheetname')
+			sep = {'.csv':',', '.tsv':'\t', '.fsv':'\f'}[extension]
 			kwargs['delimiter'] = sep
 			df = pandas.read_csv(filename, **kwargs)
+		elif extension == '.txt':
+			#Text file formatted as a table
+			if 'sheetname' in kwargs: kwargs.pop('sheetname')
+			df = pandas.read_table(filename, **kwargs)
+		elif extension == '.pkl':
+			df = pandas.read_pickle(filename)
 		elif extension == '.db':
 			df = pandas.read_sql(filename)
 		else:
@@ -214,11 +218,8 @@ class Table:
 				function : None
 		"""
 		file_format = os.path.splitext(filename)[1]
-
-		if '.' not in filename:
-			raise NameError("The file type was not specified!")
 		
-		if file_format == '.xlsx':
+		if file_format in {'.xls', '.xlsx'}:
 			self.df.to_excel(filename)
 			
 		elif file_format == '.pkl':
@@ -236,8 +237,7 @@ class Table:
 			self.df.to_sql('Patient Database', engine)
 
 		else:
-			print("Could not save the database to", filename)
-		print("Saved the database to", filename)
+			print("ERROR: Could not save the database to", filename)
 	
 	#Index Rows from the table
 	def lab(self, index):
