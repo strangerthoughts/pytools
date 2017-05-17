@@ -2,24 +2,32 @@ import math
 
 def humanReadable(value):
 
-	if value <10E6:
+	if value < 1E-6:
 		suffix = 'n'
-	elif value < 10E3:
+		multiplier = 1E9
+	elif value < 1E-3:
 		suffix = 'u'
+		multiplier = 1E6
 	elif value < 1:
 		suffix = 'm'
+		multiplier = 1E3
 	elif value < 1000:
 		suffix = ''
+		multiplier = 1
 	elif value < 1E6:
 		suffix = 'K'
+		multiplier = 1E-3
 	elif value < 1E9:
 		suffix = 'M'
+		multiplier = 1E-6
 	elif value < 1E12:
 		suffix = 'B'
+		multiplier = 1E-9
 	else:
 		suffix = 'T'
+		multiplier = 1E-12
 
-	string = '{0:.2f}{1}'.format(value, suffix)
+	string = '{0:.2f}{1}'.format(value*multiplier, suffix)
 	return string
 
 def toNumber(value):
