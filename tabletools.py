@@ -52,13 +52,13 @@ class Table:
 		#self.refresh()  
 	def __len__(self):
 		return len(self.df)
-	def __call__(self, on, where = None, column = None, value = None, flag = False):
+	def __call__(self, on, where, column = None, value = None, **kwargs):
 		""" Parameters
 			----------
 				on: column label, list<tuple<string:value>>
 					The column to look in or a list of criteria to use
 					when selecting rows.
-				where: any; default None
+				where: scalar
 					The value to look for in the column indicated by on.
 					If given, will find all rows with the value of 'where'
 					in the column 'on'.
@@ -69,10 +69,14 @@ class Table:
 				value: any; default None
 					If given, replaces the values in the columns of the rows
 					found with 'on' and 'where'.
-				flag: bool; default False
+			Keyword Arguments
+			-----------------
+				single_value: bool; default True
 					if passed to self.get_value(). If True, will return a 
 					pandas.DataFrame object, else will return a pandas.Series
 					object
+				default_value: default None
+					Value to return if the on/where/column criteria does not exist.
 			Notes
 			----------
 				If only 'on' is given, will return self.df[on]
@@ -81,24 +85,20 @@ class Table:
 				if on, where, column, and value are given, 
 					calls self.put_value(on, where, column, value)
 		"""
-		if where is not None:
-
-			if value is None:
-				#Retrieve a specific column
-				element = self.get_value(on, where, column, to_frame = flag)
-			else:
-				#Replace a value 
-				element = self.put_value(on, where, column, value)
-		elif isinstance(on, list):
+		kwargs['extract_one'] = kwargs.get('extract_one', True)
+		if 'default_value' not in kwargs:
+			kwargs['default_value'] = None
+		if isinstance(on, list):
 			#Assume chainSelect
 			element = self.chainSelect(on)
 		else:
-			element = self[on].values
+			if value is None:
+				#Retrieve a specific column
+				element = self.get_value(on, where, column, **kwargs)
+			else:
+				#Replace a value 
+				element = self.put_value(on, where, column, value, **kwargs)
 
-		if isinstance(element, pandas.DataFrame) and len(element) == 1:
-		    element = element.iloc[0]
-		elif isinstance(element, pandas.Series) and len(element) == 1:
-		    element = element.iloc[0]
 		return element
 
 	def __iter__(self):
@@ -115,6 +115,9 @@ class Table:
 	def __str__(self):
 		return self.__repr__()
 
+	#Private Methods
+	def _boolselect(self, boolarray):
+		return self.df[boolarray]
 	def _generate_index(self, column):
 		#Switchable for debugging purposes.
 		if self.use_old_index:
@@ -129,7 +132,6 @@ class Table:
 				except KeyError: indexed_series[value] = [index]
 			indexed_series = {k:pandas.Index(v) for k, v in indexed_series.items()}
 		return indexed_series
-
 	def _get_indices(self, on, where):
 		""" Gets the row indices corresponding to rows with a value of 
 			'where' in column 'on'.
@@ -148,7 +150,96 @@ class Table:
 			self.index_map[on] = indexed_series
 
 		return self.index_map[on][where]
+	def _set_dtype(self, column, dtype):
+		self.df[column] = self.df[column].astype(dtype)
 	
+	#Load and Save data to the filesystem
+	def load(self, io, **kwargs):
+		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
+			Parameters
+			----------
+				io: string [PATH]
+					The database file. If a directory is given, will attempt to
+					load all valid database files in the directory
+					Available filetypes: .xlsx, .pkl, .csv, .db
+				ID: sheet name, sheet index; default 0
+					The sheet to load (currently only works in Excel spreadsheets)
+					To get a dict of dataframes for all sheets, pass 'all'
+				na_values: list-like
+					The values in io that indicate nan values
+			Returns
+			----------
+				self._load_file : pandas.DataFrame or dict(sheetname: pandas.DataFrame)
+		"""
+		if os.path.isfile(io):
+			df = self._load_file(io, **kwargs)
+		else: #path is a folder
+			directory = io
+			_load_dfs = list()
+			for fn in os.listdir(directory):
+				if '~' in fn: continue
+				filename = os.path.join(directory, fn)
+				_load_dfs.append(self._load_file(filename, **kwargs))
+			df = pandas.concat(_load_dfs)
+
+		return df
+	@staticmethod
+	def _load_file(filename, **kwargs):
+		""" Returns a dataframe of the suppled file
+		"""
+		extension = os.path.splitext(filename)[-1]
+		if extension == '.xlsx':
+			df = pandas.read_excel(filename, **kwargs)
+		elif extension == '.pkl':
+			df = pandas.read_pickle(filename)
+		elif extension in ['.txt', '.csv', '.tsv']:
+			kwargs.pop('sheetname')
+			sep = {'.txt':',', '.csv':',', '.tsv':'\t', '.fsv':'\f'}[extension]
+			kwargs['delimiter'] = sep
+			df = pandas.read_csv(filename, **kwargs)
+		elif extension == '.db':
+			df = pandas.read_sql(filename)
+		else:
+			raise NameError("{0} does not have a valid extension!".format(filename))
+		return df
+	def save(self, filename, **kwargs):
+		""" Saves the database. Keyword arguements will be passed to pandas.
+			Parameters
+			----------
+				filename: string
+					The location on the disk to save the database to
+					Supports .xlsx, .pkl, .csv, .db
+			Returns
+			---------
+				function : None
+		"""
+		file_format = os.path.splitext(filename)[1]
+
+		if '.' not in filename:
+			raise NameError("The file type was not specified!")
+		
+		if file_format == '.xlsx':
+			self.df.to_excel(filename)
+			
+		elif file_format == '.pkl':
+			self.df.to_pickle(filename)
+
+		elif file_format in {'.csv', '.tsv', '.fsv'}:
+			if extension == '.csv': sep = ','
+			elif extension == '.tsv': sep = '\t'
+			elif extension == '.fsv': sep = '\f'
+			self.df.to_csv(filename, encoding = 'utf-8', sep = sep)
+
+		elif file_format == '.db':
+			from sqlalchemy import create_engine
+			engine = create_engine('sqlite:///{0}'.format(filename))
+			self.df.to_sql('Patient Database', engine)
+
+		else:
+			print("Could not save the database to", filename)
+		print("Saved the database to", filename)
+	
+	#Index Rows from the table
 	def lab(self, index):
 		""" label-based indexing. labels may be numbers or strings.
 			Parameters
@@ -219,6 +310,8 @@ class Table:
 		self.df = pandas.merge(self.df, right_df, how = how, left_on = left_on, 
 			right_on = right_on, left_index = False, right_index = False)
 	
+	#Select data from the table
+
 	def chainSelect(self, keys):
 		""" Retrieves data from the database based on several 
 			different criteria.
@@ -241,122 +334,7 @@ class Table:
 		#print(boolindex)
 		series = self.df.loc[boolindex]
 		return series
-	def head(self, rows = 5):
-		return self.df.head(rows)   
-	def info(self, verbose = True):
-		print(self.df.info(verbose = verbose))
-	def isin(self, on, value):
-		""" Checks whether a value is in one of the database columns.
-			Parameters
-			----------
-				on: column label
-					The column to search in
-				value:
-					The value to search for
-			Returns
-			---------
-				isin : bool
-					Whether the selected value was found
-		"""
-		return value in self.df[on].values
-	def items(self, *columns):
-		""" Returns a generator that iterates over the selected columns
-			Parameters
-			----------
-				*columns: string
-					The columns to return
-			Returns
-			----------
-				row: generator 
-		"""
-		columns_to_iterate = [self.df[column] for column in columns]
-		for i, row in enumerate(zip(*columns_to_iterate)):
-			yield row  
-	def iteritems(self, *columns):
-		""" Returns an indexed generator that iterates over the selected columns
-			Parameters
-			----------
-				*columns: string
-					The columns to return
-			Returns
-			----------
-				row: index, generator 
-		"""
-		for index, row in enumerate(self.items(columns)):
-			yield index, row
-	def load(self, io, **kwargs):
-		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
-			Parameters
-			----------
-				io: string [PATH]
-					The database file. If a directory is given, will attempt to
-					load all valid database files in the directory
-					Available filetypes: .xlsx, .pkl, .csv, .db
-				ID: sheet name, sheet index; default 0
-					The sheet to load (currently only works in Excel spreadsheets)
-					To get a dict of dataframes for all sheets, pass 'all'
-				na_values: list-like
-					The values in io that indicate nan values
-			Returns
-			----------
-				self._load_file : pandas.DataFrame or dict(sheetname: pandas.DataFrame)
-		"""
-		if os.path.isfile(io):
-			df = self._load_file(io, **kwargs)
-		else: #path is a folder
-			directory = io
-			_load_dfs = list()
-			for fn in os.listdir(directory):
-				if '~' in fn: continue
-				filename = os.path.join(directory, fn)
-				_load_dfs.append(self._load_file(filename, **kwargs))
-			df = pandas.concat(_load_dfs)
-
-		return df
-	@staticmethod
-	def _load_file(filename, **kwargs):
-		""" Returns a dataframe of the suppled file
-		"""
-		extension = os.path.splitext(filename)[-1]
-		if extension == '.xlsx':
-			df = pandas.read_excel(filename, **kwargs)
-		elif extension == '.pkl':
-			df = pandas.read_pickle(filename)
-		elif extension in ['.txt', '.csv', '.tsv']:
-			kwargs.pop('sheetname')
-			sep = {'.txt':',', '.csv':',', '.tsv':'\t', '.fsv':'\f'}[extension]
-			kwargs['delimiter'] = sep
-			df = pandas.read_csv(filename, **kwargs)
-		elif extension == '.db':
-			df = pandas.read_sql(filename)
-		else:
-			raise NameError("{0} does not have a valid extension!".format(filename))
-		return df
-	def put_value(self, on, where, column, value, refresh_db = False):        
-		""" Parameters
-			----------
-				on: column label
-					The column to search
-				where: any
-					The value to find in 'on'
-				column: column label
-					The column to modify
-				value: any
-					The new value to place in the selected column
-				refresh_db: bool; default False
-					Whether to refresh the database after the value is changed
-			Returns
-			----------
-			function: None
-		"""
-		selected_indices = self._get_indices(on = on, where = where)
-		column_index = self.df.columns.get_loc(column)
-		self.df.set_value(  selected_indices,
-							column_index,
-							value,
-							takeable = True)
-		if refresh_db: self.refresh()
-	def get_value(self, on, where, column = None, to_frame = False):
+	def get_value(self, on, where, column = None, **kwargs):
 		""" Retrieves a value from the database
 			Parameters
 			----------
@@ -368,8 +346,9 @@ class Table:
 					The column with the return value. If not provided,
 					returns all rows in the dataframe where the 'on' 
 					column contains the 'where' value.
-				to_frame: bool; default False
+				extract_one: bool; default False
 					Whether to force the output to be pandas.DataFrame.
+				default_value: None
 			Returns
 			----------
 				rows: pandas.Series, pandas.DataFrame
@@ -377,31 +356,16 @@ class Table:
 					value. If a single row is found, it will be returned
 					as a pandas.Series object.
 		"""
+		return_single_result = kwargs.get('extract_one', True)
 		indices = self._get_indices(on, where)
-		"""
+		
 		if column is None:
 			return_this = self.df.loc[indices]
-			if len(return_this) == 1:
-				return_this = return_this.iloc[0]
-		else:
-			column_location = self.df.columns.get_loc(column)
-			return_this = self.df.get_value(indices, column_location, takeable = True)
-			
-			if isinstance(return_this, ndarray):
-				if len(return_this) == 1:
-					return_this = return_this[0]
-				else:
-					return_this = pandas.Series(return_this, index = indices)
-			
-		if to_frame and isinstance(return_this, pandas.Series):
-			return_this = return_this.to_frame().transpose()
-		"""
-		if column is None:
-			return_this = self.df.loc[indices]
-			if len(return_this) == 1:
-				return_this = return_this.iloc[0]
 		else:
 			return_this = self.df[column].loc[indices]
+		
+		if return_single_result and len(return_this.index) == 1:
+			return_this = return_this.iloc[0]
 		return return_this
 	def get_column(self, column):
 		""" Retrieves all values in one of the database columns
@@ -429,82 +393,6 @@ class Table:
 		r = random.randrange(0, len(self.df))
 		value = self.df[on].iloc[r]
 		return value
-
-	def refresh(self, sortby = None):
-		""" Updates the sorted order and index of the database after changes
-			are made
-			Parameters
-			----------
-				None
-			Returns
-			----------
-				function : None
-		"""
-		if sortby is not None:
-			self.df.sort_values(by = self.sortby, inplace = True)
-		self.df.reset_index(drop = True, inplace = True)  
-		self.index_map = dict()
-	def remove_columns(self, *columns):
-		""" Removes the given columns
-			Parameters
-			----------
-				*columns: column label
-					The columns to delete
-			Returns
-			----------
-				function : None
-		"""
-		for c in columns:
-			if c in self.df.columns:
-				del self.df[c]  
-	def rename_column(self, column, label):
-		""" Renames a column
-			Parameters
-			----------
-				column: column label
-					The column to rename
-				label: column label
-					The new name for the column
-			Returns
-			----------
-				function : None
-		"""
-	def save(self, filename, **kwargs):
-		""" Saves the database. Keyword arguements will be passed to pandas.
-			Parameters
-			----------
-				filename: string
-					The location on the disk to save the database to
-					Supports .xlsx, .pkl, .csv, .db
-			Returns
-			---------
-				function : None
-		"""
-		file_format = os.path.splitext(filename)[1]
-
-		if '.' not in filename:
-			raise NameError("The file type was not specified!")
-		
-		if file_format == '.xlsx':
-			self.df.to_excel(filename)
-			
-		elif file_format == '.pkl':
-			self.df.to_pickle(filename)
-
-		elif file_format in {'.csv', '.tsv', '.fsv'}:
-			if extension == '.csv': sep = ','
-			elif extension == '.tsv': sep = '\t'
-			elif extension == '.fsv': sep = '\f'
-			self.df.to_csv(filename, encoding = 'utf-8', sep = sep)
-
-		elif file_format == '.db':
-			from sqlalchemy import create_engine
-			engine = create_engine('sqlite:///{0}'.format(filename))
-			self.df.to_sql('Patient Database', engine)
-
-		else:
-			print("Could not save the database to", filename)
-		print("Saved the database to", filename)
 	def search(self, on, value, contains = True):
 		""" Searches a column for a value and returns a DataFrame of every row
 			where in the 'on' column contains the 'value' as a substring 
@@ -571,10 +459,35 @@ class Table:
 		if not to_df:
 			result = Database(result)
 		return result
-	def _boolselect(self, boolarray):
-		return self.df[boolarray]
-	def _set_dtype(self, column, dtype):
-		self.df[column] = self.df[column].astype(dtype)
+
+
+	#Manipulate attributes and data in the Table.
+	def put_column(self, column, iterable):
+		""" Inserts 'iterable' under column name 'column' """
+		self.df[column] = iterable
+	def put_value(self, on, where, column, value, **kwargs):
+		""" Parameters
+			----------
+				on: column label
+					The column to search
+				where: any
+					The value to find in 'on'
+				column: column label
+					The column to modify
+				value: any
+					The new value to place in the selected column
+				refresh_db: bool; default False
+					Whether to refresh the database after the value is changed
+			Returns
+			----------
+			function: None
+		"""
+		selected_indices = self._get_indices(on = on, where = where)
+		column_index = self.df.columns.get_loc(column)
+		self.df.set_value(  selected_indices,
+							column_index,
+							value,
+							takeable = True)
 	def update(self, filename, on, change_column, change_values, dtypes = dict()):
 		""" Loads an external database and updates the current database based on it
 			Parameters
@@ -609,21 +522,6 @@ class Table:
 				elif dtypes[column] == 'str':
 					new_value = str(new_value)
 			self.put_value(on = on, where = where, column = column, value = new_value)
-	def value_counts(self, column, sort = False):
-		""" Wrapper for pandas.DataFrame.value_counts()
-			Parameters
-			----------
-				column: column label
-					The column to count unique values on
-				sort: bool; default False
-					Whether to sort the index of the returned data
-			Returns
-			----------
-				series : pandas.Series
-		"""
-		series = self.df[column].value_counts() 
-		if sorted: series = series.sort_index()
-		return series
 	def add_row(self, *rows):
 		""" Adds rows to the database
 			Parameters
@@ -639,6 +537,111 @@ class Table:
 					for row in rows]
 		self.df = pandas.concat([self.df] + rows, ignore_index = False)
 		self.refresh()
+	def refresh(self, sortby = None):
+		""" Updates the sorted order and index of the database after changes
+			are made
+			Parameters
+			----------
+				None
+			Returns
+			----------
+				function : None
+		"""
+		if sortby is not None:
+			self.df.sort_values(by = self.sortby, inplace = True)
+		self.df.reset_index(drop = True, inplace = True)  
+		self.index_map = dict()
+	def remove_columns(self, *columns):
+		""" Removes the given columns
+			Parameters
+			----------
+				*columns: column label
+					The columns to delete
+			Returns
+			----------
+				function : None
+		"""
+		for c in columns:
+			if c in self.df.columns:
+				del self.df[c]  
+	def rename_column(self, column, label):
+		""" Renames a column
+			Parameters
+			----------
+				column: column label
+					The column to rename
+				label: column label
+					The new name for the column
+			Returns
+			----------
+				function : None
+		"""
+	
+	#Methods based on the values contained in the table.
+	def isin(self, value, column):
+		""" Checks whether a value is in one of the database columns.
+			Parameters
+			----------
+				value:
+					The value to search for.
+				column:
+					The olumn to search in.
+			Returns
+			---------
+				isin : bool
+					Whether the selected value was found
+		"""
+		return value in self.get_column(column)
+
+	#Methods for iterating through the items in the database.
+	def items(self, *columns):
+		""" Returns a generator that iterates over the selected columns
+			Parameters
+			----------
+				*columns: string
+					The columns to return
+			Returns
+			----------
+				row: generator 
+		"""
+		columns_to_iterate = [self.df[column] for column in columns]
+		for i, row in enumerate(zip(*columns_to_iterate)):
+			yield row  
+	def iteritems(self, *columns):
+		""" Returns an indexed generator that iterates over the selected columns
+			Parameters
+			----------
+				*columns: string
+					The columns to return
+			Returns
+			----------
+				row: index, generator 
+		"""
+		for index, row in enumerate(self.items(columns)):
+			yield index, row
+	#Show statistics and other information for the table.
+	def head(self, rows = 5):
+		return self.df.head(rows)   
+	def info(self, verbose = True):
+		print(self.df.info(verbose = verbose))
+	def value_counts(self, column, sort = False):
+		""" Wrapper for pandas.DataFrame.value_counts()
+			Parameters
+			----------
+				column: column label
+					The column to count unique values on
+				sort: bool; default False
+					Whether to sort the index of the returned data
+			Returns
+			----------
+				series : pandas.Series
+		"""
+		series = self.df[column].value_counts() 
+		if sorted: series = series.sort_index()
+		return series	
+	
+	
+
 
 def isNull(value):
 	if isinstance(value, str):
