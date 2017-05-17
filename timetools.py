@@ -3,6 +3,7 @@ import re
 import datetime
 import time
 import math
+import numbertools
 
 def elapsed(loop_number, loop_block, total_loops, timer):
     """ Prints a line indicating the elapsed progress of the loop described
@@ -29,12 +30,8 @@ def elapsed(loop_number, loop_block, total_loops, timer):
                 flush = True)
 
 class Timer:
-    def __init__(self, clock = True):
-        self.clock = clock
-        if self.clock:
-            self.start_time = time.clock()
-        else:
-            self.start_time = time.time()
+    def __init__(self):
+        self.start_time = time.clock()
         self.end_time = 0.0 
     def __str__(self):
         return self.to_iso()
@@ -108,7 +105,7 @@ class Timer:
             'loops': loops
         }
         return result
-    def timeit(self, value = 1):
+    def timeit(self, loops = 1, label = None):
         """ Calculates the time for a loop to execute
             Parameters
             ----------
@@ -118,12 +115,18 @@ class Timer:
             ----------
                 duration : string
         """
-        duration = self.duration()
-        string = "{0:.2f} us per loop, ".format(duration * 1000000 / value)
-        string += "total of {0:.2f} seconds ".format(duration) 
-        string +="and {0:n} loops.".format(value)
-        print(string)
-        return string
+        benchmark = self.benchmark(loops)
+        duration = benchmark['duration']
+        per_loop = numbertools.humanReadable(benchmark['perLoop'])
+        if label is None:
+            message = ""
+        else:
+            message = label + ': '
+        message = message + "{0}s per loop ({1:.2f}s for {2:n} loop(s)) ".format(per_loop, duration, loops)
+        
+        print(message)
+        self.reset()
+        return message
     def to_iso(self):
         """Returns an ISO duration of the elapsed time"""
         seconds = time.clock() - self.start_time
