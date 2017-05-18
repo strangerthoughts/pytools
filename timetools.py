@@ -167,13 +167,13 @@ class Duration(datetime.timedelta):
     """
     duration_regex = re.compile(r"""
         [pP]?
-        ((?P<years>[\d]+)[yY])?
-        ((?P<months>[\d]+)[mM])?
-        ((?P<weeks>[\d]+)[wW])?
+        ((?P<years>[\d]+)[yY])?[-]?
+        ((?P<months>[\d]+)[mM])?[-]?
+        ((?P<weeks>[\d]+)[wW])?[-]?
         ((?P<days>[\d]+)[dD])?
         [tT]?
-        ((?P<hours>[\d]+)[hH])?
-        ((?P<minutes>[\d]+)[mM])?
+        ((?P<hours>[\d]+)[hH])?[-]?
+        ((?P<minutes>[\d]+)[mM])?[-]?
         ((?P<seconds>[\d]+(.[\d]+)?)[sS])?""", re.VERBOSE)
     timestamp_regex = re.compile(r"""
         (?P<date>[\d]{4}-[\d]{2}-[\d]{2})?[\sT]?
@@ -202,7 +202,7 @@ class Duration(datetime.timedelta):
     def __str__(self):
         return self.toiso()
     @classmethod
-    def _parseGenericObject(cls, generic, force = True):
+    def _parseGenericObject(cls, generic, force = False, **kwargs):
         """ Attempts to parse a generic timedelta object. If all attempts
             to extract information from the object fail and 'force' = True (default),
             then a 0-length Duration object is created instead.
@@ -283,6 +283,9 @@ class Duration(datetime.timedelta):
         else: result = cls._parseGenericObject(element, **kwargs)
         return result
     @classmethod
+    def _parseNumericString(cls, string):
+        pass
+    @classmethod
     def _parseNumber(cls, number, **kwargs):
         """ parses a (number, unit) tuple. """
         days = 0
@@ -299,7 +302,7 @@ class Duration(datetime.timedelta):
             elif key == 'days': days += item()
             elif key == 'weeks': days == 7 * weeks
             elif key == 'months': days == 30*item
-            elif key == 'years': days = 365*years
+            elif key == 'years': days = 365*item
             elif key == 'microseconds': microseconds += item
             elif key == 'milliseconds': microseconds += item / 1000
         result = {
@@ -311,6 +314,8 @@ class Duration(datetime.timedelta):
     @classmethod
     def _parseString(cls, string):
         if '/' not in string: result = cls._parseiso(string)
+        elif len([i for i in string if not i.isdigit()]) < 3:
+            result = self._parseNumericString(string)
         else: result = cls._parseInterval(string)
         return result
     @classmethod
@@ -350,7 +355,6 @@ class Duration(datetime.timedelta):
     def fromTuple(cls, value):
         result = cls._parseTuple(value)
         return cls.fromDict(result)
-
     ##################### Public Methods to convert the timedelta to another format ################
     def todict(self):
         """ Returns a dictionary that can be used to instantiate another timedelta or Duration object. """
@@ -376,8 +380,9 @@ class Duration(datetime.timedelta):
         longdict['seconds'] += original['microseconds'] / 1000000
 
         return longdict
-
-
+    def isoformat(self):
+        """ To make calls compatible with Timestamp.isoformat() """
+        return self.toiso()
     def toiso(self, compact = True):
         """ Converts the timedelta to an ISO Duration string. By default, 
             weeks are used instead of months, so the original duration string
@@ -405,8 +410,18 @@ class Duration(datetime.timedelta):
 
         if isostring == 'PT' and not compact: #Duration of 0 seconds
             isostring = 'PT0S'
+        if isostring[1] == 'P': isostring = isostring[1:]
+        if isostring[-1] == 'T': isostring = isostring[:1]
 
         return isostring
+    def totalSeconds(self):
+        return self.total_seconds()
+    def totalDays(self):
+        values = self.todict()
+        days = values['days'] + (24*3600*values['seconds'])
+        return days
+    def totalYears(self):
+        return self.totalDays / 365
 
 
 class Timestamp(datetime.datetime):
@@ -490,12 +505,39 @@ class Timestamp(datetime.datetime):
     @classmethod
     def _parseInput(cls, value):
         if isinstance(value, str):
-            result = cls._parseTimestamp(value)
+            if any(not c.isdigit() for c in value):
+                result = cls._parseTimestamp(value)
+            else:
+                result = cls._parseNumericString(value)
         elif isinstance(value, (int, float)):
             result = cls._parseNumeric(value)
         else:
             result = cls._parseGenericObject(value)
 
+        return result
+    @classmethod
+    def _parseDateTimeString(cls, string):
+        """ parses a string formatted as a generic YY/MM/DD string. """
+        if '-' in string and ':' in string:
+            result = self._parseTimestamp(string)
+        else:
+            pass
+
+
+    @classmethod
+    def _parseNumericString(cls, string):
+        """ Parses a date formatted as YY[YY]MMDD. """
+        string, day = string[:-2], string[-2:]
+        year, month = string[:-2], string[-2:]
+
+        result = {
+            'year': int(year),
+            'month': int(month),
+            'day': int(day),
+            'hour': 0,
+            'minute': 0,
+            'second': 0
+        }
         return result
     @classmethod
     def _parseTimestamp(cls, string):
@@ -508,9 +550,11 @@ class Timestamp(datetime.datetime):
         keys = ('year', 'month', 'day', 'hour', 'minute', 'second')
         result = dict(zip(keys, value))
         return result
+    def getTime(self):
+        return (self.hour, self.minute, self.second, self.microsecond)
     def toiso(self, compact = True):
         result = self.isoformat()
-        if compact and self.hour == 0 and self.minute == 0 and self.seconds == 0:
+        if compact and not any(i!=0 for i in self.getTime()):
             result = result.split('T')[0]
         return result
     def toNumeric(self):
@@ -527,11 +571,13 @@ class Timestamp(datetime.datetime):
         }
         return result
     def toTuple(self):
-        result = (self.year, self.month, self.day, self.hour, self.minute, self.second, self.microsecond)
+        result = (self.year, self.month, self.day, 
+            self.hour, self.minute, self.second, self.microsecond)
         return result
 
 if __name__ == "__main__":
-    d = "2016-04-19T13:4:23"
+    d = "20160519"
     d= Timestamp(d)
     print(d)
     print(d.isoformat())
+    print(d.toiso())
