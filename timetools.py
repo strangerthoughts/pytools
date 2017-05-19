@@ -521,14 +521,17 @@ class Timestamp(datetime.datetime):
         if '-' in string and ':' in string:
             result = self._parseTimestamp(string)
         else:
-            pass
-
-
+            result = self._parseNumericInput(string)
+        return result
     @classmethod
     def _parseNumericString(cls, string):
         """ Parses a date formatted as YY[YY]MMDD. """
         string, day = string[:-2], string[-2:]
         year, month = string[:-2], string[-2:]
+
+        year = int(year)
+        if year < 20: year += 2000
+        else: year += 1900
 
         result = {
             'year': int(year),

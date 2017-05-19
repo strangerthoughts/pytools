@@ -52,7 +52,7 @@ class Table:
 		#self.refresh()  
 	def __len__(self):
 		return len(self.df)
-	def __call__(self, on, where, column = None, value = None, **kwargs):
+	def __call__(self, on, where = None, column = None, value = None, **kwargs):
 		""" Parameters
 			----------
 				on: column label, list<tuple<string:value>>
@@ -77,6 +77,9 @@ class Table:
 					object
 				default_value: default None
 					Value to return if the on/where/column criteria does not exist.
+				overwrite: bool; default False
+					Prevents unintentional table modification. Must be set to 'True' 
+					to modify a value in the table (by supplying 'value' with a value)
 			Notes
 			----------
 				If only 'on' is given, will return self.df[on]
@@ -90,14 +93,13 @@ class Table:
 			kwargs['default_value'] = None
 		if isinstance(on, list):
 			#Assume chainSelect
-			element = self.chainSelect(on)
-		else:
-			if value is None:
-				#Retrieve a specific column
-				element = self.get_value(on, where, column, **kwargs)
-			else:
-				#Replace a value 
-				element = self.put_value(on, where, column, value, **kwargs)
+			element = self.chainSelect(on, **kwargs)
+		elif value is None:
+			#Retrieve a specific column
+			element = self.get_value(on, where, column, **kwargs)
+		elif kwargs.get('overwrite', False):
+			#Replace a value 
+			element = self.put_value(on, where, column, value, **kwargs)
 
 		return element
 
@@ -152,7 +154,12 @@ class Table:
 		return self.index_map[on][where]
 	def _set_dtype(self, column, dtype):
 		self.df[column] = self.df[column].astype(dtype)
-	
+	@staticmethod
+	def _reduceData(data):
+		""" Transforms a dataframe/series/list into a single element if only one row in present. """
+		if len(data.index) == 1:
+			data = data.iloc[0]
+		return data
 	#Load and Save data to the filesystem
 	def load(self, io, **kwargs):
 		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
@@ -312,7 +319,7 @@ class Table:
 	
 	#Select data from the table
 
-	def chainSelect(self, keys):
+	def chainSelect(self, keys, **kwargs):
 		""" Retrieves data from the database based on several 
 			different criteria.
 			Parameters
@@ -323,6 +330,7 @@ class Table:
 					Ex. [(column1, value1), (column2, value2)] selects
 					the rows where column1 contains value1 and column2 contains value2.
 		"""
+		return_single_result = kwargs.get('extract_one', True)
 		boolindex = None
 		for column, value in keys:
 			indicies = self._get_indices(column, value)
@@ -330,9 +338,10 @@ class Table:
 				boolindex = indicies
 			else:
 				boolindex = boolindex & indicies
-		#print(self.df.index)
-		#print(boolindex)
+
 		series = self.df.loc[boolindex]
+		if return_single_result:
+			series = self._reduceData(series)
 		return series
 	def get_value(self, on, where, column = None, **kwargs):
 		""" Retrieves a value from the database
@@ -363,9 +372,8 @@ class Table:
 			return_this = self.df.loc[indices]
 		else:
 			return_this = self.df[column].loc[indices]
-		
-		if return_single_result and len(return_this.index) == 1:
-			return_this = return_this.iloc[0]
+		if return_single_result:
+			return_this = self._reduceData(return_this)
 		return return_this
 	def get_column(self, column):
 		""" Retrieves all values in one of the database columns
