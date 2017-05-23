@@ -614,15 +614,10 @@ class Table:
 			elif self.filename != "":
 				fn = os.path.splitext()
 				fn = fn[0] + '.melt' + fn[1]
-			else:
-				#No usable filename
-				fn = None
-			if fn:
-				new_table.save(fn)
+			else: fn = None #No usable filename
+			if fn: new_table.save(fn)
 
 		return new_table
-
-
 
 	def merge(self, other, **kwargs):
 		""" Merges a pandas.DataFrame object with the current database. The
@@ -739,7 +734,13 @@ class Table:
 		return value in self.get_column(column)
 
 	#Methods for iterating through the items in the database.	
-
+	def iteritems(self):
+		""" Same as self.iterrows, but only returns the row.
+			This is useful where enumerate() would be more valuable than the
+			current index.
+		"""
+		for i in self.iterrows():
+			yield i[1]
 	def iterrows(self):
 		""" Iterates over the rows in the table. The index is corresponds to
 		the labeled index rather than the location (0-based) index.
