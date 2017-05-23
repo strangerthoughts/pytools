@@ -5,6 +5,7 @@ import time
 import math
 import numbertools
 from pprint import pprint
+from numbers import Number
 
 def elapsed(loop_number, loop_block, total_loops, timer):
     """ Prints a line indicating the elapsed progress of the loop described
@@ -31,9 +32,11 @@ def elapsed(loop_number, loop_block, total_loops, timer):
                 flush = True)
 
 class Timer:
-    def __init__(self):
+    def __init__(self, function = None, *args):
         self.start_time = time.clock()
         self.end_time = 0.0 
+        if function is not None:
+            self.timeFunction(function, 100, *args,)
     def __str__(self):
         return self.to_iso()
     def __repr__(self):
@@ -75,7 +78,8 @@ class Timer:
             remaining = Duration(remaining, 'Seconds').to_iso()
         return remaining
     def reset(self):
-        self.__init__()
+        #self.__init__() Would mess up the input if used as a decorator
+        self.start_time = time.clock()
     def split(self, label = 'the previous process'):
         """ Prints the elapsed time, then resets the timer
             Parameters
@@ -106,12 +110,12 @@ class Timer:
             'loops': loops
         }
         return result
-    def timeFunction(self, function, loops = 100, **kwargs):
+    def timeFunction(self, function, loops = 100, *args):
         """ Benchmarks a function. Kwargs are passed on to the function.
         """
         self.reset()
         for i in range(loops):
-            function(**kwargs)
+            function(*args)
         self.timeit(loops)
     def timeit(self, loops = 1, label = None):
         """ Calculates the time for a loop to execute
@@ -229,7 +233,7 @@ class Duration(datetime.timedelta):
         if force:
             return {'seconds': 0}
         else:
-            message = "Unsupported generic type: {}".format(generic)
+            message = "Unsupported generic type: {} ({})".format(generic, type(generic))
             raise ValueError(message)
     @classmethod
     def _parseHumanReadable(cls, string):
@@ -278,7 +282,7 @@ class Duration(datetime.timedelta):
             result = cls._parseString(element)
         elif isinstance(element, tuple):
             result = cls._parseTuple(element)
-        elif isinstance(element, (int, float)):
+        elif isinstance(element, (int, float, Number)):
             result = cls._parseNumber(element, **kwargs)
         else: result = cls._parseGenericObject(element, **kwargs)
         return result
@@ -299,7 +303,7 @@ class Duration(datetime.timedelta):
             if key == 'seconds':seconds += item
             elif key == 'minutes':seconds += 60*item
             elif key == 'hours':seconds += 3600*item
-            elif key == 'days': days += item()
+            elif key == 'days': days += item
             elif key == 'weeks': days == 7 * weeks
             elif key == 'months': days == 30*item
             elif key == 'years': days = 365*item
@@ -421,7 +425,19 @@ class Duration(datetime.timedelta):
         days = values['days'] + (24*3600*values['seconds'])
         return days
     def totalYears(self):
-        return self.totalDays / 365
+        return self.totalDays() / 365
+    def to_numeric(self, units):
+        """Backwords-compatible method"""
+        units = units.lower()
+        if units == 'days':
+            value = self.totalDays()
+        elif units == 'years':
+            value = self.totalYears()
+        elif units == 'months':
+            value = self.totalYears()*12
+
+        return value
+
 
 
 class Timestamp(datetime.datetime):
