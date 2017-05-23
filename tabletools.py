@@ -104,8 +104,8 @@ class Table:
 		return element
 
 	def __iter__(self):
-		for i in self.df.iterrows(): 
-			yield i[1]
+		for i in self.iterrows(): 
+			yield i
 	def __getitem__(self, index):
 		#Try return self.df.__getitem__(index)
 		return self.df.iloc[index]
@@ -197,7 +197,7 @@ class Table:
 		extension = os.path.splitext(filename)[-1]
 		if extension in {'.xlsx', '.xlsx'}:
 			df = pandas.read_excel(filename, **kwargs)
-		elif extension in {'.txt', '.csv', '.tsv', '.fsv'}:
+		elif extension in {'.csv', '.tsv', '.fsv'}:
 			if 'sheetname' in kwargs: kwargs.pop('sheetname')
 			sep = {'.csv':',', '.tsv':'\t', '.fsv':'\f'}[extension]
 			kwargs['delimiter'] = sep
@@ -290,35 +290,42 @@ class Table:
 			   
 		self.df = pandas.concat([self.df, newdf], ignore_index = True)
 		self.refresh() 
-	def merge(self, right_df, left_on, right_on = None, how = 'left'):
-		""" Merges a pandas.DataFrame object with the current database
-			Parameters
-			----------
-				right_df: pandas.DataFrame
-					The DataFrame to merge with the current database
-				left_on: column label
-					The column of the current database to merge on
-				right_on: column label; default None
-					The column of the passed DataFrame to merge on. If None, 
-					will be equivilant to the value passed to right_on
-				how:{'left', 'right', 'outer', 'inner'}; default 'left'
-					* left: use only keys from the current database
-					* right: use only keys from the passed DataFrame
-					* outer: use union of keys from both sources
-					* inner: use intersection of keys from both sources
-			Returns
-			----------
-				function : None
-		"""
-		if isinstance(right_df, pandas.Series):
-			raise ValueError("Cannot merge pandas.DataFrame and pandas.Series, use self.add_row() instead.")
-		if right_on is None:
-			right_on = left_on
-		self.df = pandas.merge(self.df, right_df, how = how, left_on = left_on, 
-			right_on = right_on, left_index = False, right_index = False)
-	
-	#Select data from the table
 
+	#Wrappers around commonly-used pandas methods.
+	@property
+	def columns(self):
+		return self.df.columns
+	def keys(self):
+		return self.df.keys()
+	def items(self):
+		"""Iterator over (column name, Series) pairs."""
+		for item in self.df.items():
+			yield item
+	def lookup(self, rows, columns):
+		""" Label-based "fancy indexing" function for DataFrame.
+    		Given equal-length arrays of row and column labels, return an
+    		array of the values corresponding to each (row, col) pair.
+    		rows must correspond to row indices.
+		"""
+
+		return self.df.lookup(rows, columns)
+	def nlargest(self, n, column):
+		""" Returns n rows in the table sorted by the largest values in 'column' """
+		return self.df.nlargest(n, column)
+	def nsmallest(self, n, column):
+		""" Returns n rows in the table sorted by the smallest values in 'column' """
+		return self.df.nsmallest(n, column)		
+	def nunique(self, column):
+		""" Returns a series object with the number of unique values in 'column'. index values
+			are the unique values present in the column. """
+		return self.df.nunique(column)
+	def sort_values(self, by, **kwargs):
+		self.df.sort_values(by = by, inplace = True)
+		self.index_map = dict()
+	def groupby(self, by):
+		return self.df.groupby(by = by)
+	def to_latex(self, **kwargs): return self.df.to_latex(**kwargs)
+	#Select data from the table
 	def chainSelect(self, keys, **kwargs):
 		""" Retrieves data from the database based on several 
 			different criteria.
@@ -545,6 +552,62 @@ class Table:
 					for row in rows]
 		self.df = pandas.concat([self.df] + rows, ignore_index = False)
 		self.refresh()
+	def merge(self, other, **kwargs):
+		""" Merges a pandas.DataFrame object with the current database. The
+			default behavior is to merge the rows of 'other' that match a 
+			specific key contained in the current table.
+			General reference: https://pandas.pydata.org/pandas-docs/stable/merging.html
+			Parameters
+			----------
+				other: pandas.DataFrame, tabletools.Table
+					Another table to merge with this one.
+			Keyword Arguments
+			----------
+				
+				on, left_on, right_on: column label [REQUIRED]
+					The column of the current database to merge on. If these are different,
+					use 'right_on' and 'left' on to specify which columns to use.
+				how:{'left', 'right', 'outer', 'inner'}; default 'left'
+					* left: use only keys from the current database. Any rows in "other"
+						that do not match any key in the current table will be discarded.
+					* right: similar to 'left', but the other table will be used as the main table.
+					* outer: use union of keys from both sources
+					* inner: use intersection of keys from both sources
+				sort : boolean, default False
+        			Sort the join keys lexicographically in the result DataFrame
+    			suffixes : 2-length sequence (tuple, list, ...); default ('_left', '_right')
+        			Suffix to apply to overlapping column names in the left and right
+        			side, respectively.
+    			copy : boolean, default True
+        			If False, do not copy data unnecessarily
+				indicator : boolean or string, default False
+				    If True, adds a column to output DataFrame called "_merge" with
+				    information on the source of each row.
+				    If string, column with the same name will be added to the resulting table
+				    with information on source of which table the row originated from.
+				    Information column is Categorical-type and takes on a value of "left_only"
+				    for observations whose merge key only appears in 'left' DataFrame,
+				    "right_only" for observations whose merge key only appears in 'right'
+				    DataFrame, and "both" if the observation's merge key is found in both.
+			Returns
+			----------
+				function : None
+		"""
+		kwargs['how'] = kwargs.get('how', 'left')
+		kwargs['suffixes'] = kwargs.get('suffixes', ('_left', '_right'))
+		if 'on' not in kwargs and ('right_on' not in kwargs and 'left_on' not in kwargs):
+			message = "Did not pass a column name to merge on."
+			raise KeyError(message)
+
+		if isinstance(other, Table): other = other.df
+
+		if isinstance(right_df, pandas.Series):
+			raise ValueError("Cannot merge pandas.DataFrame and pandas.Series, use self.add_row() instead.")
+		if right_on is None:
+			right_on = left_on
+		new_df = pandas.merge(self.df, other, **kwargs)
+		self.__init__(new_df)
+	
 	def refresh(self, sortby = None):
 		""" Updates the sorted order and index of the database after changes
 			are made
@@ -601,32 +664,15 @@ class Table:
 		"""
 		return value in self.get_column(column)
 
-	#Methods for iterating through the items in the database.
-	def items(self, *columns):
-		""" Returns a generator that iterates over the selected columns
-			Parameters
-			----------
-				*columns: string
-					The columns to return
-			Returns
-			----------
-				row: generator 
+	#Methods for iterating through the items in the database.	
+
+	def iterrows(self):
+		""" Iterates over the rows in the table. The index is corresponds to
+		the labeled index rather than the location (0-based) index.
 		"""
-		columns_to_iterate = [self.df[column] for column in columns]
-		for i, row in enumerate(zip(*columns_to_iterate)):
-			yield row  
-	def iteritems(self, *columns):
-		""" Returns an indexed generator that iterates over the selected columns
-			Parameters
-			----------
-				*columns: string
-					The columns to return
-			Returns
-			----------
-				row: index, generator 
-		"""
-		for index, row in enumerate(self.items(columns)):
+		for index, row in self.df.iterrows():
 			yield index, row
+
 	#Show statistics and other information for the table.
 	def head(self, rows = 5):
 		return self.df.head(rows)   
