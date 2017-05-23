@@ -586,6 +586,11 @@ class Table:
 		    identifiers, id_vars : sequence of column names.
 		        Column(s) to use as identifier variables. These should be standardized
 		        ways of referring to an observation.
+		    to_file: bool, string; default None
+		    	Whether to save the new table to a file. If a valid filename is passed,
+		    	the table will be saved with that name. If 'to_file' is True and 
+		    	the table was originally loaded from a file (self.filename is defined),
+		    	the table will be saved as basename + '.melt' + original_extension.
 		    variables, value_vars: sequence of column names; default None
 		        Column(s) to merge as 'variable'-'value' pairs. if not specified,
 		        all columns absent from the 'identifiers' sequence will be used.
@@ -598,9 +603,23 @@ class Table:
 		kwargs['value_vars'] = kwargs.get('variables', kwargs.get('value_vars'))
 		kwargs['var_name'] = kwargs.get('subjects', kwargs.get('var_name', 'variable'))
 		kwargs['value_name'] = kwargs.get('values', kwargs.get('value_name', 'value'))
+		kwargs['to_file'] = kwargs.get('to_file')
 
 		new_table = pandas.melt(self.df, **kwargs)
 		new_table = Table(new_table)
+
+		if kwargs['to_file']:
+			if isinstance(kwargs['to_file'], str):
+				fn = kwargs['to_file']
+			elif self.filename != "":
+				fn = os.path.splitext()
+				fn = fn[0] + '.melt' + fn[1]
+			else:
+				#No usable filename
+				fn = None
+			if fn:
+				new_table.save(fn)
+
 		return new_table
 
 
@@ -775,60 +794,6 @@ def getTableType(self, filename, skiprows = 0):
 
 	headers = header_line.split(delimiter)
 	headers = [i for i in headers if i.isdigit()]
-
-
-
-def flattenTable(filename, **kwargs):
-	""" Flattens a dataset. The flattened dataset will
-		automatically be saved as [basename].flattened.tsv.
-		Parameters
-		----------
-			filename: string [PATH]
-				A dataset formatted with variables
-				as column names.
-		Keyword Arguments
-		-----------------
-			'static': list<string, int> (list of column names); default []
-				A list of columns to exclude from the
-				flattening process. These columns will be
-				included in the flattened dataset as additional columns.
-				The following columns are automatically included:
-					'baseYear'
-					'regionCode'
-					'regionName'
-			'saveas': string [PATH]
-				if provided, will save the flattened table with 
-				the filename given to 'saveas'.
-		Returns
-		-------
-			new_filename: string [PATH]
-				The filename the table was saved to.
-	"""
-	basename, ext = os.path.splitext(filename)
-	new_filename = kwargs.get('saveas', basename + '.flattened.tsv')
-	static_columns = kwargs.get('static', [])
-	static_columns += ['regionCode', 'regionName', 
-		'source', 'url', 'baseDate', 'baseYear', 'customCode']
-	
-	data = filetools.openTable(filename, return_type = 'dataframe')
-	table_columns = [i for i in data.columns if i not in static_columns]
-	static_columns = [i for i in static_columns if i in data.columns]
-
-	table = list()
-	for index, row in data.iterrows():
-		current_line = {c:row[c] for c in static_columns}
-		for column in table_columns:
-			current_value = row[column]
-			if isNull(current_value): continue
-
-			new_line = current_line.copy()
-			new_line['subject'] = column
-			new_line['value'] = current_value
-			table.append(new_line)
-
-	filetools.writeCSV(table, new_filename)
-
-	return new_filename
 
 
 def readCSV(filename, headers = False, **kwargs):
