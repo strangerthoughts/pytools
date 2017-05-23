@@ -167,7 +167,6 @@ class Table:
 				raise TypeError(message)
 
 		return table
-
 	def _set_dtype(self, column, dtype):
 		self.df[column] = self.df[column].astype(dtype)
 	@staticmethod
@@ -571,6 +570,41 @@ class Table:
 					for row in rows]
 		self.df = pandas.concat([self.df] + rows, ignore_index = False)
 		self.refresh()
+	def melt(self, **kwargs):
+		""""Unpivots" a DataFrame from wide format to long format, optionally leaving
+		    identifier variables set.
+
+		    Transforms a table from wide format to long format. Non-identifier columns
+		    will be merged together as paired 'subject' and 'value' columns.
+		    This function is useful to massage a DataFrame into a format where one
+		    or more columns are identifier variables (`id_vars`), while all other
+		    columns, considered measured variables (`value_vars`), are "unpivoted" to
+		    the row axis, leaving just two non-identifier columns, 'variable' and
+		    'value'.
+		    Keyword Arguments
+		    -----------------
+		    identifiers, id_vars : sequence of column names.
+		        Column(s) to use as identifier variables. These should be standardized
+		        ways of referring to an observation.
+		    variables, value_vars: sequence of column names; default None
+		        Column(s) to merge as 'variable'-'value' pairs. if not specified,
+		        all columns absent from the 'identifiers' sequence will be used.
+		    var_name : scalar; default 'variable'
+		        Name to use for the 'variable' column.
+		    value_name : scalar; default 'value'
+		        Name to use for the 'value' column.
+		"""
+		kwargs['id_vars'] = kwargs.get('identifiers', kwargs['id_vars'])
+		kwargs['value_vars'] = kwargs.get('variables', kwargs.get('value_vars'))
+		kwargs['var_name'] = kwargs.get('subjects', kwargs.get('var_name', 'variable'))
+		kwargs['value_name'] = kwargs.get('values', kwargs.get('value_name', 'value'))
+
+		new_table = pandas.melt(self.df, **kwargs)
+		new_table = Table(new_table)
+		return new_table
+
+
+
 	def merge(self, other, **kwargs):
 		""" Merges a pandas.DataFrame object with the current database. The
 			default behavior is to merge the rows of 'other' that match a 
@@ -592,6 +626,8 @@ class Table:
 					* right: similar to 'left', but the other table will be used as the main table.
 					* outer: use union of keys from both sources
 					* inner: use intersection of keys from both sources
+				inplace: bool; default False
+					If true, The new table will replace the old one.
 				sort : boolean, default False
         			Sort the join keys lexicographically in the result DataFrame
     			suffixes : 2-length sequence (tuple, list, ...); default ('_left', '_right')
@@ -610,7 +646,8 @@ class Table:
 				    DataFrame, and "both" if the observation's merge key is found in both.
 			Returns
 			----------
-				function : None
+				table: Table, None
+					the merged table. If inplace = True, returns self instead.
 		"""
 		kwargs['how'] = kwargs.get('how', 'left')
 		kwargs['suffixes'] = kwargs.get('suffixes', ('_left', '_right'))
@@ -620,12 +657,11 @@ class Table:
 
 		if isinstance(other, Table): other = other.df
 
-		if isinstance(right_df, pandas.Series):
-			raise ValueError("Cannot merge pandas.DataFrame and pandas.Series, use self.add_row() instead.")
 		if right_on is None:
 			right_on = left_on
 		new_df = pandas.merge(self.df, other, **kwargs)
-		self.__init__(new_df)
+		new_table = Table(new_df)
+		return new_table
 	
 	def refresh(self, sortby = None):
 		""" Updates the sorted order and index of the database after changes
