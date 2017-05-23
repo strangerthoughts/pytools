@@ -29,22 +29,10 @@ class Table:
 					an Excel spreadsheet
 				
 		"""
-		self.use_old_index = kwargs.get('use_old_index', False)
 		kwargs['sheetname'] = kwargs.get('sheetname', 0)
 		kwargs['skiprows'] = kwargs.get('skiprows')
 
-		if isinstance(io, pandas.DataFrame):
-			self.df = io
-			self.filename = 'Pandas.DataFrame'
-		elif isinstance(io, str):
-			self.df = self.load(io, **kwargs)
-			self.filename = io
-		elif isinstance(io, pandas.Series):
-			self.df = io.to_frame().transpose()
-			self.filename = 'Pandas.Series'
-		else:
-			obj_type = type(io)
-			raise TypeError("The supplied data was of type({})".format(obj_type))
+		self.df = self._parseInput(io, **kwargs)
 
 		#Holds the indicies of specific groups within the database.
 		#This is much faster than finding the indices on the fly
@@ -110,29 +98,28 @@ class Table:
 		#Try return self.df.__getitem__(index)
 		return self.df.iloc[index]
 	def __repr__(self):
-		return "Table(source = {source}, shape = ({x}x{y}))".format(
-			source = self.filename,
+		string = 'Table("{}")'.format(self.filename)
+		return string
+	def __str__(self):
+		string = "Table(shape = ({x}x{y}))".format(
 			x = len(self),
 			y = len(self.df.columns))  
-	def __str__(self):
-		return self.__repr__()
+		return string
 
 	#Private Methods
 	def _boolselect(self, boolarray):
 		return self.df[boolarray]
 	def _generate_index(self, column):
-		#Switchable for debugging purposes.
-		if self.use_old_index:
-			#Old method, !7.7s for 50k records.
-			groups = self.df.groupby(column)
-			indexed_series = {key: group.index for key, group in groups}
-		else:
-			#New method, ~3s for 50k records.
-			indexed_series = {}
-			for index, value in self.df[column].items():
-				try: 	indexed_series[value].append(index)
-				except KeyError: indexed_series[value] = [index]
-			indexed_series = {k:pandas.Index(v) for k, v in indexed_series.items()}
+		""" generates an index for all unique values in a column.
+			Each key is a unique value present in the column, and each value is a list
+			of the indices where that value is present.
+		"""
+		#New method, ~3s for 50k records.
+		indexed_series = dict()
+		for index, value in self.df[column].items():
+			try: 	indexed_series[value].append(index)
+			except KeyError: indexed_series[value] = [index]
+		indexed_series = {k:pandas.Index(v) for k, v in indexed_series.items()}
 		return indexed_series
 	def _get_indices(self, on, where):
 		""" Gets the row indices corresponding to rows with a value of 
@@ -152,6 +139,35 @@ class Table:
 			self.index_map[on] = indexed_series
 
 		return self.index_map[on][where]
+	def _parseInput(self, io, **kwargs):
+		""" Parses the input to the Table constructor. 
+			Accepted types:
+				string: path to a file or folder with valid table files.
+				pandas.DataFrame
+				pandas.Series
+				list<<dict>>: list of dict-like rows.
+			other types will be passed to pandas.DataFrame()
+		"""
+		if isinstance(io, str):
+			self.filename = io #Used for self.__repr__()
+		else:
+			self.filename = ""
+
+		if isinstance(io, str):
+			table = self._loadFromFilesystem(io, **kwargs)
+		if isinstance(io, pandas.DataFrame):
+			table = io
+		elif isinstance(io, pandas.Series):
+			table = io.to_frame().transpose()
+		else:
+			try:
+				table = pandas.DataFrame(io, **kwargs)
+			except:
+				message = "Could not load '{}' as a table.".format(str(io))
+				raise TypeError(message)
+
+		return table
+
 	def _set_dtype(self, column, dtype):
 		self.df[column] = self.df[column].astype(dtype)
 	@staticmethod
@@ -161,7 +177,7 @@ class Table:
 			data = data.iloc[0]
 		return data
 	#Load and Save data to the filesystem
-	def load(self, io, **kwargs):
+	def _loadFromFilesystem(self, io, **kwargs):
 		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
 			Parameters
 			----------
@@ -180,7 +196,7 @@ class Table:
 		"""
 		if os.path.isfile(io):
 			df = self._load_file(io, **kwargs)
-		else: #path is a folder
+		elif os.path.isdir(io): #path is a folder
 			directory = io
 			_load_dfs = list()
 			for fn in os.listdir(directory):
@@ -188,6 +204,9 @@ class Table:
 				filename = os.path.join(directory, fn)
 				_load_dfs.append(self._load_file(filename, **kwargs))
 			df = pandas.concat(_load_dfs)
+		else:
+			message = "The string passed to tabletools.Table() is not a valid filename or folder: {}".format(str(io))
+			raise ValueError(message)
 
 		return df
 	@staticmethod
@@ -694,16 +713,6 @@ class Table:
 		if sorted: series = series.sort_index()
 		return series	
 	
-	
-
-
-def isNull(value):
-	if isinstance(value, str):
-		return value == ""
-	elif isinstance(value, float):
-		return math.isnan(value)
-	else:
-		return value is None
 
 def getTableType(self, filename, skiprows = 0):
 	""" Determines what the general layout of the
@@ -835,12 +844,15 @@ def readTable(filename, **kwargs):
 			'return_type': {'dataframe', 'list'}; default 'dataframe'
 			'skiprows': int; default 0
 				The number of rows to skip.
+		Returns
+		-------
+			pandas.DataFrame()
 	"""
-	return_type = kwargs.get('return_type', 'dataframe')
+	#return_type = kwargs.get('return_type', 'dataframe')
 	skiprows = kwargs.get('skiprows', 0)
 
-
-		
+	data = Table(filename, **kwargs)
+	data = data.df		
 
 	return data
 
@@ -862,13 +874,6 @@ def writeTable(table, filename, **kwargs):
 			filename: string
 				The filename that the table was saved to.
 	"""
-
-	ext = os.path.splitext(filename)
-	if ext in {'.xls', 'xlsx'}:
-		#Will probably use pandas.
-		pass
-	elif ext in {'.csv', '.tsv'}:
-		writeCSV(table, filename, **kwargs)
 
 	return filename
 
