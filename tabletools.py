@@ -1,10 +1,11 @@
-import filetools
 import os
 import pandas
 import math
 import numpy
 import csv
 
+#import from local folder
+from . import filetools
 from collections import Iterable, Sequence
 
 class ProtoTable:

@@ -7,7 +7,9 @@ from unidecode import unidecode
 from memory_profiler import profile
 from pprint import pprint
 
-import tabletools
+from . import tabletools
+
+
 ####################################### Local Variables ############################################
 LOCAL_PATH = os.path.dirname(__file__)
 #SUBDIVISION_TABLE = pandas.read_excel(os.path.join(LOCAL_PATH, "data", "Subdivision ISO Codes.xlsx"))

@@ -1,11 +1,14 @@
-import pandas as pandas
-import re
 import datetime
-import time
 import math
-import numbertools
+import pandas
+import re
+import time
+
 from pprint import pprint
 from numbers import Number
+
+#Import local files.
+from . import numbertools
 
 def elapsed(loop_number, loop_block, total_loops, timer):
     """ Prints a line indicating the elapsed progress of the loop described

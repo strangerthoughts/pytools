@@ -1,5 +1,6 @@
 import os
 import shlex
+import subprocess
 
 def memoryUsage(show = True, units = 'MB'):
 	""" Gets the current memory usage 

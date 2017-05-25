@@ -1,7 +1,9 @@
 import os
 import geopandas
 import matplotlib.pyplot as plt
-import tabletools
+
+#import local files
+from . import tabletools
 
 
 
