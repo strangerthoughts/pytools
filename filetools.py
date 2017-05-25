@@ -53,22 +53,28 @@ def generateFileMd5(filename, blocksize=2**20):
 	return m.hexdigest()
 
 
-def listAllFiles(folder):
+def listAllFiles(folder, exclude = []):
 	""" Lists all files in a folder. Includes subfolders.
 		Parameters
 		----------
 			folder: string
 				The folder to search through.
+			exclude: string, list<string>
+				A path or list of paths to exclude from the recursive search.
 		Returns
 		-------
 			list<string>
 				A list of all files that were found.
 	"""
+	if isinstance(exclude, str): exclude = [exclude]
+	
 	file_list = list()
+
 	for fn in os.listdir(folder):
 		abs_path = os.path.join(folder, fn)
+		if abs_path in exclude: continue
 		if os.path.isdir(abs_path):
-			file_list += listAllFiles(abs_path)
+			file_list += listAllFiles(abs_path, exclude = exclude)
 		elif os.path.isfile(abs_path): #Explicit check
 			file_list.append(abs_path)
 	return file_list
