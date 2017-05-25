@@ -69,7 +69,7 @@ class ProtoTable:
 					object
 				default_value: default None
 					Value to return if the on/where/column criteria does not exist.
-				'logic': {'and', 'or'}; default 'and'
+				'logic': {'and', 'or', 'not'}; default 'and'
 					Used to select the logic when using chainselect()
 				overwrite: bool; default False
 					Prevents unintentional table modification. Must be set to 'True' 
@@ -878,6 +878,8 @@ def readCSV(filename, headers = False, **kwargs):
 			'fields': bool; default False
 				Whether to return the headers of the csv file as a list.
 				identical to the 'headers' positional argument
+			'force': bool; default False
+				If 'True', will return an empty list if the file does not exists.
 		Returns
 		-------
 			reader: list<dict> or list<dict>, list<string>
@@ -885,15 +887,19 @@ def readCSV(filename, headers = False, **kwargs):
 	"""
 	fields = kwargs.get('fields', headers)
 	delimiter = kwargs.get('delimiter', kwargs.get('sep', '\t'))
+	force = kwargs.get('force', False)
 
 	if os.path.exists(filename):
 		with open(filename, 'r') as file1:
 			reader = csv.DictReader(file1, delimiter = delimiter)
 			fieldnames = reader.fieldnames
 			reader = list(reader)
-	else:
+	elif force:
 		reader = []
 		fieldnames = []
+	else:
+		message = "tabletools.readCSV - The file does not exist: {}".format(filename)
+		raise FileExistsError(message)
 
 	if fields:
 		return reader, fieldnames
