@@ -25,12 +25,12 @@ class Terminal:
 	"""
 	def __init__(self, command, label = "", filename = None):
 		self.label = label
-		terminal_label = self._getLabel(label)
+		terminal_label = self._getCommandLabel(label)
 		self.output = self._runCommand(command, terminal_label)
 		if filename is not None:
 			self.updateConsoleLog(filename, command, self.output, label)
-
-	def _getLabel(self, command, label, filename):
+	@staticmethod
+	def _getCommandLabel(label):
 		if label == "": return label
 		char = "#"
 		max_len = 180
@@ -55,8 +55,10 @@ class Terminal:
 			console_file.write(now().isoformat() + ': ' + label + '\n')
 			console_file.write(' '.join(command) + '\n')
 			console_file.write(output + '\n\n')
+	def run(self, command, label, filename):
+		pass
 
-def Terminal(command, label = "", filename = None):
+def runCommand(command, label = "", filename = None):
 	""" Calls the system shell.
 		Parameters
 		----------
