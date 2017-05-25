@@ -2,10 +2,12 @@ import filetools
 import os
 import pandas
 import math
+import numpy
 import csv
-from numpy import ndarray
 
-class Table:
+from collections import Iterable, Sequence
+
+class ProtoTable:
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
 		of tabular data.
 
@@ -33,11 +35,12 @@ class Table:
 		kwargs['skiprows'] = kwargs.get('skiprows')
 
 		self.df = self._parseInput(io, **kwargs)
-
+		self.original_indexer = kwargs.get('indexer', True)
 		#Holds the indicies of specific groups within the database.
 		#This is much faster than finding the indices on the fly
-		self.index_map = dict()
-		#self.refresh()  
+		#self.index_map = dict()
+		#Adds the index map and resets the index
+		self.refresh()  
 	def __len__(self):
 		return len(self.df)
 	def __call__(self, on, where = None, column = None, value = None, **kwargs):
@@ -65,6 +68,8 @@ class Table:
 					object
 				default_value: default None
 					Value to return if the on/where/column criteria does not exist.
+				'logic': {'and', 'or'}; default 'and'
+					Used to select the logic when using chainselect()
 				overwrite: bool; default False
 					Prevents unintentional table modification. Must be set to 'True' 
 					to modify a value in the table (by supplying 'value' with a value)
@@ -77,6 +82,7 @@ class Table:
 					calls self.put_value(on, where, column, value)
 		"""
 		kwargs['extract_one'] = kwargs.get('extract_one', True)
+		overwrite_value = kwargs.get('overwrite', False)
 		if 'default_value' not in kwargs:
 			kwargs['default_value'] = None
 		if isinstance(on, list):
@@ -85,7 +91,7 @@ class Table:
 		elif value is None:
 			#Retrieve a specific column
 			element = self.get_value(on, where, column, **kwargs)
-		elif kwargs.get('overwrite', False):
+		elif overwrite_value:
 			#Replace a value 
 			element = self.put_value(on, where, column, value, **kwargs)
 
@@ -98,8 +104,8 @@ class Table:
 		#Try return self.df.__getitem__(index)
 		return self.df.iloc[index]
 	def __repr__(self):
-		string = 'Table("{}")'.format(self.filename)
-		return string
+		#string = 'Table("{}")'.format(self.filename)
+		return self.df.__repr__()
 	def __str__(self):
 		string = "Table(shape = ({x}x{y}))".format(
 			x = len(self),
@@ -116,10 +122,13 @@ class Table:
 		"""
 		#New method, ~3s for 50k records.
 		indexed_series = dict()
-		for index, value in self.df[column].items():
-			try: 	indexed_series[value].append(index)
-			except KeyError: indexed_series[value] = [index]
-		indexed_series = {k:pandas.Index(v) for k, v in indexed_series.items()}
+		if self.original_indexer:
+			for index, value in self.df[column].items():
+				try: 	indexed_series[value].append(index)
+				except KeyError: indexed_series[value] = [index]
+			indexed_series = {k:pandas.Index(v) for k, v in indexed_series.items()}
+		else:
+			indexed_series = pandas.Index(self.df[column])
 		return indexed_series
 	def _get_indices(self, on, where):
 		""" Gets the row indices corresponding to rows with a value of 
@@ -137,8 +146,10 @@ class Table:
 		if on not in self.index_map.keys():
 			indexed_series = self._generate_index(on)
 			self.index_map[on] = indexed_series
-
-		return self.index_map[on][where]
+		if self.original_indexer:
+			return self.index_map[on][where]
+		else:
+			return self.index_map[on].get_loc(where)
 	def _parseInput(self, io, **kwargs):
 		""" Parses the input to the Table constructor. 
 			Accepted types:
@@ -155,7 +166,7 @@ class Table:
 
 		if isinstance(io, str):
 			table = self._loadFromFilesystem(io, **kwargs)
-		if isinstance(io, pandas.DataFrame):
+		elif isinstance(io, pandas.DataFrame):
 			table = io
 		elif isinstance(io, pandas.Series):
 			table = io.to_frame().transpose()
@@ -310,39 +321,7 @@ class Table:
 		self.refresh() 
 
 	#Wrappers around commonly-used pandas methods.
-	@property
-	def columns(self):
-		return self.df.columns
-	def keys(self):
-		return self.df.keys()
-	def items(self):
-		"""Iterator over (column name, Series) pairs."""
-		for item in self.df.items():
-			yield item
-	def lookup(self, rows, columns):
-		""" Label-based "fancy indexing" function for DataFrame.
-    		Given equal-length arrays of row and column labels, return an
-    		array of the values corresponding to each (row, col) pair.
-    		rows must correspond to row indices.
-		"""
 
-		return self.df.lookup(rows, columns)
-	def nlargest(self, n, column):
-		""" Returns n rows in the table sorted by the largest values in 'column' """
-		return self.df.nlargest(n, column)
-	def nsmallest(self, n, column):
-		""" Returns n rows in the table sorted by the smallest values in 'column' """
-		return self.df.nsmallest(n, column)		
-	def nunique(self, column):
-		""" Returns a series object with the number of unique values in 'column'. index values
-			are the unique values present in the column. """
-		return self.df.nunique(column)
-	def sort_values(self, by, **kwargs):
-		self.df.sort_values(by = by, inplace = True)
-		self.index_map = dict()
-	def groupby(self, by):
-		return self.df.groupby(by = by)
-	def to_latex(self, **kwargs): return self.df.to_latex(**kwargs)
 	#Select data from the table
 	def chainSelect(self, keys, **kwargs):
 		""" Retrieves data from the database based on several 
@@ -354,15 +333,22 @@ class Table:
 					and values to use a selection criteria.
 					Ex. [(column1, value1), (column2, value2)] selects
 					the rows where column1 contains value1 and column2 contains value2.
+			Keyword Arguments
+			-----------------
+				'logic': {'and', 'or'}; default 'and'
+
 		"""
+		logic = kwargs.get('logic', 'and')
 		return_single_result = kwargs.get('extract_one', True)
 		boolindex = None
 		for column, value in keys:
 			indicies = self._get_indices(column, value)
 			if boolindex is None:
 				boolindex = indicies
-			else:
+			elif logic == 'and':
 				boolindex = boolindex & indicies
+			elif logic == 'or':
+				boolindex = boolindex | indicies
 
 		series = self.df.loc[boolindex]
 		if return_single_result:
@@ -393,10 +379,17 @@ class Table:
 		return_single_result = kwargs.get('extract_one', True)
 		indices = self._get_indices(on, where)
 		
-		if column is None:
-			return_this = self.df.loc[indices]
+		if self.original_indexer:
+			if column is None:
+				return_this = self.df.loc[indices]
+			else:
+				return_this = self.df[column].loc[indices]
 		else:
-			return_this = self.df[column].loc[indices]
+			if column is None:
+				return_this = self.df.iloc[indices]
+			else:
+				return_this = self.df[column][indices]
+
 		if return_single_result:
 			return_this = self._reduceData(return_this)
 		return return_this
@@ -689,6 +682,7 @@ class Table:
 		"""
 		if sortby is not None:
 			self.df.sort_values(by = self.sortby, inplace = True)
+		print("resetting index...")
 		self.df.reset_index(drop = True, inplace = True)  
 		self.index_map = dict()
 	def remove_columns(self, *columns):
@@ -722,17 +716,20 @@ class Table:
 		""" Checks whether a value is in one of the database columns.
 			Parameters
 			----------
-				value:
+				value: scalar, iterable
 					The value to search for.
-				column:
+				column: column-label
 					The olumn to search in.
 			Returns
 			---------
 				isin : bool
 					Whether the selected value was found
 		"""
-		return value in self.get_column(column)
-
+		if isinstance(value, (Iterable, Sequence)) and not isinstance(value, str):
+			result = self.df[column].isin(value)
+		else:
+			result = value in self.get_column(column)
+		return result
 	#Methods for iterating through the items in the database.	
 	def iteritems(self):
 		""" Same as self.iterrows, but only returns the row.
@@ -768,7 +765,74 @@ class Table:
 		series = self.df[column].value_counts() 
 		if sorted: series = series.sort_index()
 		return series	
-	
+
+	#Methods to convert the table to other formats.
+	def toList(self):
+		""" Converts the table to a list of dicts.
+			Returns
+			-------
+				list<dict>
+		"""
+		return [i.to_dict() for _, i in self]
+
+
+class PandasCompatibleTable(ProtoTable):
+	"""
+		Temporary functions
+		abs()
+	"""
+	@property
+	def columns(self):
+		return self.df.columns
+	def abs(self, column = None, inplace = False):
+		""" Returns a Table with all numeric values converted to
+			the absolute value of themselves.
+			Parameters
+			----------
+				column: column-label
+					If provided, only the selected column will be converted.
+		"""
+		if column:
+			result = self.df
+			result[column] = result[column].abs()
+		else:
+			result = self.df.abs()
+		return result
+	def add(self):
+		pass
+
+	def keys(self):
+		return self.df.keys()
+	def items(self):
+		"""Iterator over (column name, Series) pairs."""
+		for item in self.df.items():
+			yield item
+	def lookup(self, rows, columns):
+		""" Label-based "fancy indexing" function for DataFrame.
+    		Given equal-length arrays of row and column labels, return an
+    		array of the values corresponding to each (row, col) pair.
+    		rows must correspond to row indices.
+		"""
+
+		return self.df.lookup(rows, columns)
+	def nlargest(self, n, column):
+		""" Returns n rows in the table sorted by the largest values in 'column' """
+		return self.df.nlargest(n, column)
+	def nsmallest(self, n, column):
+		""" Returns n rows in the table sorted by the smallest values in 'column' """
+		return self.df.nsmallest(n, column)		
+	def nunique(self, column):
+		""" Returns a series object with the number of unique values in 'column'. index values
+			are the unique values present in the column. """
+		return self.df.nunique(column)
+	def sort_values(self, by, **kwargs):
+		self.df.sort_values(by = by, inplace = True)
+		self.index_map = dict()
+	def groupby(self, by):
+		return self.df.groupby(by = by)
+	def to_latex(self, **kwargs): return self.df.to_latex(**kwargs)
+
+Table = PandasCompatibleTable
 
 def getTableType(self, filename, skiprows = 0):
 	""" Determines what the general layout of the
@@ -835,49 +899,6 @@ def readCSV(filename, headers = False, **kwargs):
 	else:
 		return reader
 
-def readTable(filename, **kwargs):
-	""" Reads a file and returns an appropriate data type.
-		Parameters
-		----------
-			filename: string
-				Path to a file.
-		Keyword Arguments
-		-----------------
-			'return_type': {'dataframe', 'list'}; default 'dataframe'
-			'skiprows': int; default 0
-				The number of rows to skip.
-		Returns
-		-------
-			pandas.DataFrame()
-	"""
-	#return_type = kwargs.get('return_type', 'dataframe')
-	skiprows = kwargs.get('skiprows', 0)
-
-	data = Table(filename, **kwargs)
-	data = data.df		
-
-	return data
-
-def writeTable(table, filename, **kwargs):
-	""" Saves a table to a file. The filetype will 
-		be determined from the extension.
-		Parameters
-		----------
-			table: list<dict<>>
-				The table to save.
-			filename: string
-				Path to the file that will be saved.
-		Keyword Arguments
-		-----------------
-			'append': bool; default True
-				Whether to overwrite a file, if it already exists.
-		Returns
-		-------
-			filename: string
-				The filename that the table was saved to.
-	"""
-
-	return filename
 
 def writeCSV(table, filename, **kwargs):
 	""" Writes a csv file from a list of dictionaries.
