@@ -33,7 +33,7 @@ def humanReadable(value):
 def toNumber(value):
 	if isinstance(value, (list, tuple, set)):
 		converted_number = [toNumber(i) for i in value]
-	if isinstance(value, str):
+	elif isinstance(value, str):
 		if '.' in value:
 			converted_number = float(value)
 		else:
@@ -43,6 +43,7 @@ def toNumber(value):
 	else:
 		try:
 			converted_number = float(value)
-		except:
+		except Exception as exception:
+			print(str(exception))
 			converted_number = math.nan
 	return converted_number
