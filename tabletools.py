@@ -5,7 +5,7 @@ import numpy
 import csv
 
 #import from local folder
-from . import filetools
+import pytools.filetools
 from collections import Iterable, Sequence
 
 class ProtoTable:
@@ -67,13 +67,15 @@ class ProtoTable:
 					if passed to self.get_value(). If True, will return a 
 					pandas.DataFrame object, else will return a pandas.Series
 					object
-				default_value: default None
+				default: default None
 					Value to return if the on/where/column criteria does not exist.
 				'logic': {'and', 'or', 'not'}; default 'and'
 					Used to select the logic when using chainselect()
 				overwrite: bool; default False
 					Prevents unintentional table modification. Must be set to 'True' 
 					to modify a value in the table (by supplying 'value' with a value)
+				to_dataframe: bool; default False
+					If true, will always return a dataframe object. 
 			Notes
 			----------
 				If only 'on' is given, will return self.df[on]
@@ -84,8 +86,9 @@ class ProtoTable:
 		"""
 		kwargs['extract_one'] = kwargs.get('extract_one', True)
 		overwrite_value = kwargs.get('overwrite', False)
-		if 'default_value' not in kwargs:
-			kwargs['default_value'] = None
+		#to_dataframe = kwargs.get('to_dataframe', False)
+		if 'default' not in kwargs:
+			kwargs['default'] = None
 		if isinstance(on, list):
 			#Assume chainSelect
 			element = self.chainSelect(on, **kwargs)
@@ -378,6 +381,7 @@ class ProtoTable:
 					as a pandas.Series object.
 		"""
 		return_single_result = kwargs.get('extract_one', True)
+		to_dataframe = kwargs.get('to_dataframe', False)
 		indices = self._get_indices(on, where)
 		
 		if self.original_indexer:
@@ -393,6 +397,12 @@ class ProtoTable:
 
 		if return_single_result:
 			return_this = self._reduceData(return_this)
+
+		if to_dataframe and not isinstance(return_this, pandas.DataFrame):
+			if isinstance(return_this, pandas.Series):
+				return_this = pandas.DataFrame([return_this])
+			else:
+				return_this = pandas.DataFrame(return_this)
 		return return_this
 	def get_column(self, column):
 		""" Retrieves all values in one of the database columns
