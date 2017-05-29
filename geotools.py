@@ -6,24 +6,51 @@ from fuzzywuzzy import process
 from unidecode import unidecode
 from memory_profiler import profile
 from pprint import pprint
-SUBDIVISION_TABLE = pandas.read_excel("data/Subdivision ISO Codes.xlsx")
-COUNTRY_TABLE = pandas.read_excel("data/country-codes.xlsx")
 
-def decodeList(iterable, col = None):
-	""" Converts a list of strings to a list of ascii strings.
+from . import tabletools
+
+
+####################################### Local Variables ############################################
+LOCAL_PATH = os.path.dirname(__file__)
+#SUBDIVISION_TABLE = pandas.read_excel(os.path.join(LOCAL_PATH, "data", "Subdivision ISO Codes.xlsx"))
+#COUNTRY_TABLE = pandas.read_excel(os.path.join(LOCAL_PATH, "data", "country-codes.xlsx"))
+SUBDIVISION_TABLE 	= tabletools.Table(os.path.join(LOCAL_PATH, "data", "Subdivision ISO Codes.xlsx"))
+COUNTRY_TABLE 		= tabletools.Table(os.path.join(LOCAL_PATH, "data", "country-codes.xlsx"))
+
+
+####################################### Private Methods ############################################
+def _isCode(string):
+	""" Determines if a string represents a form of regional code """
+	is_code = "-" in string
+	is_code = is_code or any(c.isdigit() for c in string)
+	is_code = is_code or not any(c.islower() for c in string)
+	return is_code
+
+def _convertToASCII(iterable, col = None):
+	""" Converts a list of strings to a list of ascii strings. Non-string values
+		are converted to an empty string.
 		Parameters
 		----------
-			iterable: list<string>, pandas.Series
+			iterable: string, list<string>, pandas.Series, pandas.DataFrame
 			col: string
-				required if the iterable is a dataframe
+				The column to use if the passed iterable is a dataframe.
+		Returns
+		-------
+			result: list<string>
+				A list of ASCII representations of the passed strings.
 	"""
-	if isinstance(iterable, pandas.DataFrame):
-		iterable = iterable[col]
-	if isinstance(iterable, pandas.Series):
+	if isinstance(iterable, str):
+		iterable = [iterable]
+	elif isinstance(iterable, pandas.DataFrame):
+		iterable = iterable[col].values
+	elif isinstance(iterable, pandas.Series):
 		iterable = iterable.values
 	iterable = [unidecode(s.strip() if isinstance(s, str) else "") for s in iterable]
 	return iterable
-
+####################################### LOOKUP Methods ############################################
+#Methods to match region names with region codes and vice versa
+#countryName	englishName	officialName	iso2Code	iso3Code	currencyCode	currencyName	
+#isIndependant	capitalName	continent	languages	geonameId
 def findSimilarNames(code):
 	""" Searches for similar ways of spelling the names
 		of countries, states, or other regions.
@@ -37,15 +64,6 @@ def findSimilarNames(code):
 
 	similar_names = similar_names.get(code)
 	return similar_names
-def _isCode(string):
-	""" Determines if a string represents a form of regional code """
-	tests = [
-		"-" in string,
-		not any(c.isdigit() for c in string),
-		string.isupper()
-	]
-	is_code = any(tests)
-	return is_code
 def lookup(label, **kwargs):
 	""" Searches for a region code.
 		Parameters
@@ -89,6 +107,42 @@ def lookup(label, **kwargs):
 		result = match
 	return result
 
+def lookupCountry(label, label_type = None):
+	""" Matches a country's code or name.
+		Parameters
+		----------
+			label: string
+				A country's code or name.
+			label_type: {'countryName', 'englishName', 'officialName', 'iso2Code',
+						 'iso3Code', 'currencyCode', 'currencyName'}; default None
+				The specific type and format of the identifier string that was passed.
+
+		Returns
+		-------
+			result: dict<>
+				* 'regionName': string
+					The country's english name
+				* 'regionCode': string
+					The country's iso3Code
+	"""
+	label_is_code = _isCode(label)
+
+	if label_type is None:
+		label_type = 'iso3Code' if label_is_code else 'englishName'
+	#print(label, label_type, label_is_code)
+
+	match, score = process.extractOne(label, COUNTRY_TABLE.get_column(label_type))
+
+	#Get the row from the table corresponding to the matched value
+	result = COUNTRY_TABLE(label_type, match)
+	result = result.to_dict()
+	return result
+
+
+
+
+
+####################################### Parsing Methods ############################################
 def parseTable(io, column = "countryCode"):
 	""" Loops through a table with either region codes or names
 		and prints any missing names and/or codes.
@@ -108,25 +162,26 @@ def parseTable(io, column = "countryCode"):
 		
 		print(info['iso3Code'], '\t', info['countryName'])
 
-
+####################################### Local Objects ############################################
+#COUNTRY_TABLE.put_column('countryName', _convertToASCII(COUNTRY_TABLE.get_column('countryName')))
 FILE_CACHE = {
 	"subdivisions": {
 		"table": 		SUBDIVISION_TABLE,
-		"contains": 	decodeList(SUBDIVISION_TABLE, "countryCode"),
-		"regionCodes": 	decodeList(SUBDIVISION_TABLE, "regionCode"),
-		"regionNames":  decodeList(SUBDIVISION_TABLE, "regionName")
+		"contains": 	_convertToASCII(SUBDIVISION_TABLE, "countryCode"),
+		"regionCodes": 	_convertToASCII(SUBDIVISION_TABLE, "regionCode"),
+		"regionNames":  _convertToASCII(SUBDIVISION_TABLE, "regionName")
 	},
 	"countries": {
 		"table": 		COUNTRY_TABLE,
-		"regionCodes": 	decodeList(COUNTRY_TABLE, "iso3Code"),
-		"regionNames": 	decodeList(COUNTRY_TABLE, "englishName")
+		"regionCodes": 	_convertToASCII(COUNTRY_TABLE, "iso3Code"),
+		"regionNames": 	_convertToASCII(COUNTRY_TABLE, "englishName")
 	}
 }
 
 if __name__ == "__main__":
-	filename = "D:\\Proginoskes\\Documents\\Data\\Original Data\\World\\International Tourism\\Tourists.xlsx"
+	name = 'Argentina'
 
-	parseTable(filename, column = 'Country Code')
+	pprint(lookupCountry(name))
 
 
 	
