@@ -102,8 +102,8 @@ class ProtoTable:
 		return element
 
 	def __iter__(self):
-		for i in self.iterrows(): 
-			yield i
+		for i, j in enumerate(self.itertuples()): 
+			yield i, j
 	def __getitem__(self, index):
 		#Try return self.df.__getitem__(index)
 		return self.df.iloc[index]
@@ -497,7 +497,6 @@ class ProtoTable:
 			result = Database(result)
 		return result
 
-
 	#Manipulate attributes and data in the Table.
 	def put_column(self, column, iterable):
 		""" Inserts 'iterable' under column name 'column' """
@@ -693,7 +692,7 @@ class ProtoTable:
 		"""
 		if sortby is not None:
 			self.df.sort_values(by = self.sortby, inplace = True)
-		print("resetting index...")
+		#print("resetting index...")
 		self.df.reset_index(drop = True, inplace = True)  
 		self.index_map = dict()
 	def remove_columns(self, *columns):
@@ -742,13 +741,16 @@ class ProtoTable:
 			result = value in self.get_column(column)
 		return result
 	#Methods for iterating through the items in the database.	
+	def itertuples(self):
+		for row in self.df.itertuples():
+			yield row._asdict()
 	def iteritems(self):
 		""" Same as self.iterrows, but only returns the row.
 			This is useful where enumerate() would be more valuable than the
 			current index.
 		"""
 		for i in self.iterrows():
-			yield i[1]
+			yield i
 	def iterrows(self):
 		""" Iterates over the rows in the table. The index is corresponds to
 		the labeled index rather than the location (0-based) index.
@@ -842,7 +844,8 @@ class PandasCompatibleTable(ProtoTable):
 	def groupby(self, by):
 		return self.df.groupby(by = by)
 	def to_latex(self, **kwargs): return self.df.to_latex(**kwargs)
-
+	def unique(self, column):
+		return self.df[column].unique()
 Table = PandasCompatibleTable
 
 def getTableType(self, filename, skiprows = 0):
