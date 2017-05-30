@@ -36,7 +36,6 @@ class ProtoTable:
 		kwargs['skiprows'] = kwargs.get('skiprows')
 
 		self.df = self._parseInput(io, **kwargs)
-		self.original_indexer = kwargs.get('indexer', True)
 		#Holds the indicies of specific groups within the database.
 		#This is much faster than finding the indices on the fly
 		#self.index_map = dict()
@@ -125,14 +124,7 @@ class ProtoTable:
 			of the indices where that value is present.
 		"""
 		#New method, ~3s for 50k records.
-		indexed_series = dict()
-		if self.original_indexer:
-			for index, value in self.df[column].items():
-				try: 	indexed_series[value].append(index)
-				except KeyError: indexed_series[value] = [index]
-			indexed_series = {k:pandas.Index(v) for k, v in indexed_series.items()}
-		else:
-			indexed_series = pandas.Index(self.df[column])
+		indexed_series = pandas.Index(self.df[column])
 		return indexed_series
 	def _get_indices(self, on, where):
 		""" Gets the row indices corresponding to rows with a value of 
@@ -150,10 +142,12 @@ class ProtoTable:
 		if on not in self.index_map.keys():
 			indexed_series = self._generate_index(on)
 			self.index_map[on] = indexed_series
-		if self.original_indexer:
-			return self.index_map[on][where]
-		else:
-			return self.index_map[on].get_loc(where)
+		try:
+			index = self.index_map[on].get_loc(where)
+		except:
+			index = None
+		return index
+
 	def _parseInput(self, io, **kwargs):
 		""" Parses the input to the Table constructor. 
 			Accepted types:
@@ -347,16 +341,19 @@ class ProtoTable:
 		boolindex = None
 		for column, value in keys:
 			indicies = self._get_indices(column, value)
+			if indicies is None: return None
 			if boolindex is None:
 				boolindex = indicies
 			elif logic == 'and':
 				boolindex = boolindex & indicies
 			elif logic == 'or':
 				boolindex = boolindex | indicies
-
-		series = self.df.loc[boolindex]
-		if return_single_result:
-			series = self._reduceData(series)
+		if boolindex is None:
+			series = None
+		else:
+			series = self.df.loc[boolindex]
+			if return_single_result:
+				series = self._reduceData(series)
 		return series
 	def get_value(self, on, where, column = None, **kwargs):
 		""" Retrieves a value from the database
@@ -382,18 +379,16 @@ class ProtoTable:
 		"""
 		return_single_result = kwargs.get('extract_one', True)
 		to_dataframe = kwargs.get('to_dataframe', False)
+		default_value = kwargs.get('default', None)
 		indices = self._get_indices(on, where)
 		
-		if self.original_indexer:
-			if column is None:
-				return_this = self.df.loc[indices]
-			else:
-				return_this = self.df[column].loc[indices]
-		else:
+		try:
 			if column is None:
 				return_this = self.df.iloc[indices]
 			else:
 				return_this = self.df[column][indices]
+		except:
+			return default_value
 
 		if return_single_result:
 			return_this = self._reduceData(return_this)
