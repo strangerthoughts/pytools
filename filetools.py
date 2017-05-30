@@ -52,7 +52,6 @@ def generateFileMd5(filename, blocksize=2**20):
 			m.update( buf )
 	return m.hexdigest()
 
-
 def listAllFiles(folder, exclude = []):
 	""" Lists all files in a folder. Includes subfolders.
 		Parameters
@@ -80,7 +79,7 @@ def listAllFiles(folder, exclude = []):
 	return file_list
 
 
-def searchForDuplicateFiles(folder, by = 'name'):
+def searchForDuplicateFiles(folder, by = 'name', expand = False):
 	""" Searches for duplicate files in a folder.
 		Parameters
 		----------
@@ -88,6 +87,9 @@ def searchForDuplicateFiles(folder, by = 'name'):
 				The folder to search through. subfolders will be included.
 			by: {'md5', 'name', 'size'}; default 'md5'
 				The method to qualify two files as being the same.
+			expand: bool; default False
+				Whether to return the full paths to each file or
+				only the parts that diverge.
 		Return
 		------
 			duplicates: list<list<string>>
@@ -113,13 +115,16 @@ def searchForDuplicateFiles(folder, by = 'name'):
 	_duplicates = list()
 	for key in _duplicate_keys:
 		_duplicates.append(checked_files[key])
-	return _duplicates
+	final_duplicates = list()
+	for duplicate in _duplicates:
+		duplicate = [i.replace(folder, "") for i in duplicate]
+		final_duplicates.append(duplicate)
+	return final_duplicates
 
 
+def test():
+	folder = "D:\\Proginoskes\\Documents\\Data\\Original Data\\"
+	results = searchForDuplicateFiles(folder)
+	pprint(results)
 if __name__ == "__main__":
-	folder = "D:\\Proginoskes\\Documents\\Data\\table.tsv"
-
-	#duplicates = searchForDuplicateFiles(folder)
-	#pprint(duplicates)
-	for key, value in sorted(os.environ.items()):
-		print(key, value)
+	test()
