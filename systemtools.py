@@ -24,10 +24,12 @@ class Terminal:
 	""" Wrapper around python system modules.
 		Makes it easy to run a command and save any output.
 	"""
-	def __init__(self, command, label = "", filename = None):
+	def __init__(self, command, label = "", filename = None, show_output = False):
 		self.label = label
 		terminal_label = self._getCommandLabel(label)
 		self.output = self._runCommand(command, terminal_label)
+		if show_output:
+			print(self.output)
 		if filename is not None:
 			self.updateConsoleLog(filename, command, self.output, label)
 	@staticmethod

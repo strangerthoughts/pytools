@@ -53,28 +53,39 @@ def generateFileMd5(filename, blocksize=2**20):
 	return m.hexdigest()
 
 
-def listAllFiles(folder, exclude = []):
+def listAllFiles(folder, **kwargs):
 	""" Lists all files in a folder. Includes subfolders.
 		Parameters
 		----------
 			folder: string
 				The folder to search through.
-			exclude: string, list<string>
+			exclude: string, list<string>; default []
 				A path or list of paths to exclude from the recursive search.
+			logic: {'or', 'and'}; default 'or'
+				The logic to use when applying the exclusion criteria.
 		Returns
 		-------
 			list<string>
 				A list of all files that were found.
 	"""
+	exclude = kwargs.get('exclude', [])
 	if isinstance(exclude, str): exclude = [exclude]
+	logic = kwargs.get('logic', 'or')
 	
 	file_list = list()
 
 	for fn in os.listdir(folder):
 		abs_path = os.path.join(folder, fn)
-		if abs_path in exclude: continue
+		if logic == 'or':
+			skip_file = any(e in abs_path for e in exclude)
+		elif logic == 'and':
+			skip_file = all(e in abs_path for e in exclude)
+		else:
+			skip_file = False
+		#print(skip_file, '\t', abs_path)
+		if skip_file: continue
 		if os.path.isdir(abs_path):
-			file_list += listAllFiles(abs_path, exclude = exclude)
+			file_list += listAllFiles(abs_path, **kwargs)
 		elif os.path.isfile(abs_path): #Explicit check
 			file_list.append(abs_path)
 	return file_list
@@ -117,9 +128,7 @@ def searchForDuplicateFiles(folder, by = 'name'):
 
 
 if __name__ == "__main__":
-	folder = "D:\\Proginoskes\\Documents\\Data\\table.tsv"
-
-	#duplicates = searchForDuplicateFiles(folder)
-	#pprint(duplicates)
-	for key, value in sorted(os.environ.items()):
-		print(key, value)
+	folder = "/home/upmc/Documents/Genomic_Analysis/1_input_vcfs/original_callsets/TCGA-2H-A9GF"
+	exclude = ['chromosome']
+	result = listAllFiles(folder, exclude = exclude, logic = 'and')
+	pprint(result)
