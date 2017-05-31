@@ -8,7 +8,10 @@ from pprint import pprint
 from numbers import Number
 
 #Import local files.
-from . import numbertools
+try:
+    import pytools.numbertools as numbertools
+except:
+    import numbertools
 
 def elapsed(loop_number, loop_block, total_loops, timer):
     """ Prints a line indicating the elapsed progress of the loop described

@@ -2,12 +2,12 @@ import os
 import pandas
 #import time
 import csv
-from fuzzywuzzy import process
+from fuzzywuzzy import fuzz, process
 from unidecode import unidecode
 from memory_profiler import profile
 from pprint import pprint
 
-from . import tabletools
+import tabletools
 
 
 ####################################### Local Variables ############################################
@@ -46,6 +46,8 @@ def _convertToASCII(iterable, col = None):
 	elif isinstance(iterable, pandas.Series):
 		iterable = iterable.values
 	iterable = [unidecode(s.strip() if isinstance(s, str) else "") for s in iterable]
+	if len(iterable) == 1:
+		iterable = iterable[0]
 	return iterable
 ####################################### LOOKUP Methods ############################################
 #Methods to match region names with region codes and vice versa
@@ -64,79 +66,109 @@ def findSimilarNames(code):
 
 	similar_names = similar_names.get(code)
 	return similar_names
-def lookup(label, **kwargs):
-	""" Searches for a region code.
-		Parameters
-		----------
-			label: string
-				Name or iso3code for a country, state, or other region.
-		Keyword Arguments
-		-----------------
-			'subcode': iso3 country code; default None
-				Speeds up the search, if provided.
-			'region_type': {'subdivisions', 'countries'}; default 'countries'
-			'label_type': {'regionNames', 'regionCodes'}
-				inferred if not provided. Labels containing numerical digits
-				or a '-' character are assumed to be region codes.
-	"""
-	region_type = kwargs.get('region_type', 'countries')
-	label_type = "regionCodes" if _isCode(label) else "regionNames"
-	label_type = kwargs.get('label_type', label_type)
-	subcode = kwargs.get('subcode')
+
+class LookupRegionCode:
+	def __init__(self, file_cache):
+		self.column_cache = dict()
+
+	def __call__(self, label, kind = "country", label_type = None):
+		if label_type is None:
+			label_type = self._checkIfStringIsCode(label)
+		kind = 'countries' if kind == 'country' else 'regions'
+		result = self._searchTable(label, label_type, kind)
+		return result
+
+	def _checkIfStringIsCode(self, string):
+		contains_code_characters = '-' in string
+		is_short = len(string) < 4
+		is_uppercase = string.isupper()
+
+		is_code = contains_code_characters or is_short or is_uppercase
+		
+		if not is_code: 		label_type = 'countryName'
+		elif len(string) == 2: 	label_type = 'iso2Code'
+		elif len(string) == 3:	label_type = 'iso3Code'
+		else: 					label_type = 'regionCode'
+
+		return label_type
 	
-	names = FILE_CACHE[region_type][label_type]
-	if subcode is not None:
-		super_regions = FILE_CACHE[region_type].get("contains", [])
-		names = [s for c, s in zip(super_regions, names) if c == subcode]
-	if label_type == "regionCodes":
-		match = [i for i in names if i == label]
-		if len(match) == 0:
-			match = None
+	def _getTableColumn(self, table_name, column):
+		""" Saves the ASCII version of each column to save time """
+		if table_name not in self.column_cache:
+			self.column_cache[table_name] = dict()
+		if column not in self.column_cache[table_name]:
+			_col = FILE_CACHE[table_name]['table'].get_column(column, True)
+			_col = dict(zip(_col.keys(), _convertToASCII(_col.values)))
+			self.column_cache[table_name][column] = _col
+		return self.column_cache[table_name][column]
+	def _getTableSettings(self, label_type):
+		use_fuzzysearch = False
+		if label_type == 'countryName':
+			columns = ['regionName', 'officialEnglishName']
+			use_fuzzysearch = True
+		elif label_type == 'regionName':
+			columns = []
+			use_fuzzysearch = True
+		elif label_type == 'iso3Code' or label_type == 'isoCode':
+			columns = ['iso3Code']
+		elif label_type == 'iso2Code':
+			columns = ['iso2Code']
+		elif label_type == 'regionCode':
+			columns = []
 		else:
-			match = match[0]
-	else:
-		match = process.extractOne(label, names)
-		match, score = match
-	if match is not None:
-		index = FILE_CACHE[region_type][label_type].index(match)
+			message = "No valid region code found (countryName, regionName, iso[,1,2]Code, regionName): {}".format(label_type)
+			raise ValueError(message)
 
-		label_type = "regionNames" if label_type == "regionCodes" else "regionCodes"
-		result = FILE_CACHE[region_type]["table"].iloc[index]
-		result = result.to_dict()
-	else:
-		result = match
-	return result
+		settings = {
+			'columns': columns,
+			'fuzzy': use_fuzzysearch
+		}
+		return settings
 
-def lookupCountry(label, label_type = None):
-	""" Matches a country's code or name.
-		Parameters
-		----------
-			label: string
-				A country's code or name.
-			label_type: {'countryName', 'englishName', 'officialName', 'iso2Code',
-						 'iso3Code', 'currencyCode', 'currencyName'}; default None
-				The specific type and format of the identifier string that was passed.
+	def _searchColumn(self, search_term, column, fuzzy = False):
+		if fuzzy:
+			for index, value in column.items():
+				score = fuzz.token_sort_ratio(search_term, value)
+				if score >= 90: 
+					found_match = True
+					break
+			else: found_match = False
+		else:
+			try:
+				index = column.index(search_term)
+				found_match = True
+			except:
+				index = None
+				found_match = False
 
-		Returns
-		-------
-			result: dict<>
-				* 'regionName': string
-					The country's english name
-				* 'regionCode': string
-					The country's iso3Code
-	"""
-	label_is_code = _isCode(label)
+		result = {
+			'index': index,
+			'match': found_match
+		}
+		return result
 
-	if label_type is None:
-		label_type = 'iso3Code' if label_is_code else 'englishName'
-	#print(label, label_type, label_is_code)
+	def _searchTable(self, label, label_type, table_name):
+		label = _convertToASCII(label)
+		#print(label)
+		current_table = FILE_CACHE[table_name]['table']
+		settings = self._getTableSettings(label_type)
+		columns = settings['columns']
+		use_fuzzysearch = settings['fuzzy']
+		for column in columns:
+			#column_values = _convertToASCII(current_table.get_column(column))
+			column_values = self._getTableColumn(table_name, column)
 
-	match, score = process.extractOne(label, COUNTRY_TABLE.get_column(label_type))
+			result = self._searchColumn(label, column_values, use_fuzzysearch)
 
-	#Get the row from the table corresponding to the matched value
-	result = COUNTRY_TABLE(label_type, match)
-	result = result.to_dict()
-	return result
+			if result['match']:
+				#index = column_values.index(result)
+				index = result['index']
+				region_information = current_table.ix(index)
+				break
+			else:
+				region_information = None
+
+		return region_information
 
 
 
@@ -165,7 +197,7 @@ def parseTable(io, column = "countryCode"):
 ####################################### Local Objects ############################################
 #COUNTRY_TABLE.put_column('countryName', _convertToASCII(COUNTRY_TABLE.get_column('countryName')))
 FILE_CACHE = {
-	"subdivisions": {
+	"regions": {
 		"table": 		SUBDIVISION_TABLE,
 		"contains": 	_convertToASCII(SUBDIVISION_TABLE, "countryCode"),
 		"regionCodes": 	_convertToASCII(SUBDIVISION_TABLE, "regionCode"),
@@ -178,10 +210,42 @@ FILE_CACHE = {
 	}
 }
 
-if __name__ == "__main__":
-	name = 'Argentina'
+lookup = LookupRegionCode(FILE_CACHE)
 
-	pprint(lookupCountry(name))
+def test1():
+	filename = "C:\\Users\\Deitrickc\\Google Drive\\Harmonized Data\\World\\Historical Country Population and GDP.xlsx"
+	table = tabletools.Table(filename, sheetname = 'Combined')
+	for index, row in table:
+		#print(row)
+		country_name = row['countryName']
+		result = lookup(country_name)
+
+		if result is not None:
+			print("{:<50}\t{:<50}\t{}".format(country_name, result['regionName'], result['iso3Code']))
+		else:
+			print(country_name)
+
+def test2():
+	import timetools as tt
+	countries = FILE_CACHE['countries']['table'].get_column('countryName', True)
+	value = 'United Kingdoms'
+	_iter = 100
+	timer = tt.Timer()
+	for i in range(_iter):
+		result, score = process.extractOne(value, countries.values)
+	print(result, score)
+	timer.timeit(_iter)
+	for i in range(_iter):
+		for index, result in countries.items():
+			score = fuzz.token_sort_ratio(value, result)
+			if score > 90:
+				break
+	print(result, score, index)
+	timer.timeit(_iter)
+if __name__ == "__main__":
+	test1()
+
+	
 
 
 	

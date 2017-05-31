@@ -5,8 +5,9 @@ import numpy
 import csv
 
 #import from local folder
-import pytools.filetools
+import filetools
 from collections import Iterable, Sequence
+from fuzzywuzzy import process
 
 class ProtoTable:
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
@@ -404,18 +405,22 @@ class ProtoTable:
 			else:
 				return_this = pandas.DataFrame(return_this)
 		return return_this
-	def get_column(self, column):
+	def get_column(self, column, to_series = False):
 		""" Retrieves all values in one of the database columns
 			Parameters
 			----------
 				column: column label
 					The column to retrieve
+				to_series: bool; default False
+					If true, returns a pandas.Series object rather than a numpy list.
 			Returns
 			----------
 				column : numpy.ndarray
 					The column values
 		"""
-		return self.df[column].values
+		if not to_series: column = self.df[column].values
+		else: column = self.df[column]
+		return column
 	def getRandomValue(self, on):
 		""" Returns a random value from the selected column
 			Parameters
@@ -693,7 +698,7 @@ class ProtoTable:
 		"""
 		if sortby is not None:
 			self.df.sort_values(by = self.sortby, inplace = True)
-		print("resetting index...")
+		#print("resetting index...")
 		self.df.reset_index(drop = True, inplace = True)  
 		self.index_map = dict()
 	def remove_columns(self, *columns):
@@ -723,7 +728,12 @@ class ProtoTable:
 		"""
 	
 	#Methods based on the values contained in the table.
-	def isin(self, value, column):
+	def _fuzzySearch(self, value, column):
+		""" Uses fuzzywuzzy to search for similar items in the selected column. """
+		result = process.extractOne(value, self.get_column(column))
+		return result
+
+	def isin(self, value, column, fuzzy = False):
 		""" Checks whether a value is in one of the database columns.
 			Parameters
 			----------
@@ -731,12 +741,17 @@ class ProtoTable:
 					The value to search for.
 				column: column-label
 					The olumn to search in.
+				fuzzy: bool; default False
+					Whether to perform fuzzy searching.
+
 			Returns
 			---------
 				isin : bool
 					Whether the selected value was found
 		"""
-		if isinstance(value, (Iterable, Sequence)) and not isinstance(value, str):
+		if fuzzy:
+			result = self._fuzzySearch(value, column)
+		elif isinstance(value, (Iterable, Sequence)) and not isinstance(value, str):
 			result = self.df[column].isin(value)
 		else:
 			result = value in self.get_column(column)
