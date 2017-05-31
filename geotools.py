@@ -79,16 +79,20 @@ class LookupRegionCode:
 		return result
 
 	def _checkIfStringIsCode(self, string):
-		contains_code_characters = '-' in string
+		contains_code_characters = '-' in string and not " " in string
 		is_short = len(string) < 4
 		is_uppercase = string.isupper()
 
-		is_code = contains_code_characters or is_short or is_uppercase
+		is_code = (contains_code_characters and is_uppercase) or is_short
 		
 		if not is_code: 		label_type = 'countryName'
 		elif len(string) == 2: 	label_type = 'iso2Code'
 		elif len(string) == 3:	label_type = 'iso3Code'
-		else: 					label_type = 'regionCode'
+		else: 					
+			print(string)
+			print('-' in string)
+			print(not " " in string)
+			label_type = 'regionCode'
 
 		return label_type
 	
@@ -104,7 +108,7 @@ class LookupRegionCode:
 	def _getTableSettings(self, label_type):
 		use_fuzzysearch = False
 		if label_type == 'countryName':
-			columns = ['regionName', 'officialEnglishName']
+			columns = ['regionName', 'officialEnglishName', 'otherNames']
 			use_fuzzysearch = True
 		elif label_type == 'regionName':
 			columns = []
@@ -127,12 +131,18 @@ class LookupRegionCode:
 
 	def _searchColumn(self, search_term, column, fuzzy = False):
 		if fuzzy:
+			candidates = list()
+			found_match = False
 			for index, value in column.items():
 				score = fuzz.token_sort_ratio(search_term, value)
 				if score >= 90: 
+					candidates.append((index, value, score))
 					found_match = True
-					break
-			else: found_match = False
+
+			if found_match:
+				value = max(candidates, key = lambda s: s[-1])
+				index = value[0]
+
 		else:
 			try:
 				index = column.index(search_term)
@@ -154,6 +164,7 @@ class LookupRegionCode:
 		settings = self._getTableSettings(label_type)
 		columns = settings['columns']
 		use_fuzzysearch = settings['fuzzy']
+		#print(columns)
 		for column in columns:
 			#column_values = _convertToASCII(current_table.get_column(column))
 			column_values = self._getTableColumn(table_name, column)
@@ -221,7 +232,7 @@ def test1():
 		result = lookup(country_name)
 
 		if result is not None:
-			print("{:<50}\t{:<50}\t{}".format(country_name, result['regionName'], result['iso3Code']))
+			print("{}\t{}".format(result['regionName'], result['iso3Code']))
 		else:
 			print(country_name)
 

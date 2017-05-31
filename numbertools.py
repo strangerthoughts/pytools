@@ -1,4 +1,5 @@
 import math
+from numbers import Number
 
 def humanReadable(value):
 
@@ -29,6 +30,10 @@ def humanReadable(value):
 
 	string = '{0:.2f}{1}'.format(value*multiplier, suffix)
 	return string
+
+def isNumber(value):
+	result = isinstance(value, Number)
+	return result
 
 def toNumber(value):
 	if isinstance(value, (list, tuple, set)):

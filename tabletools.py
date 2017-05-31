@@ -5,7 +5,10 @@ import numpy
 import csv
 
 #import from local folder
-import filetools
+try:
+	import filetools
+except:
+	import pytools.filetools
 from collections import Iterable, Sequence
 from fuzzywuzzy import process
 

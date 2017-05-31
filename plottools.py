@@ -17,7 +17,8 @@ class Engine:
 		self._setupPlot(kwargs)
 
 		self.addLabels(**kwargs)
-		self.addSeries(**kwargs)
+		if 'series' in kwargs or 'x' in kwargs:
+			self.addSeries(**kwargs)
 	
 	def _createInitialPlot(self):
 		pass
