@@ -224,8 +224,8 @@ FILE_CACHE = {
 lookup = LookupRegionCode(FILE_CACHE)
 
 def test1():
-	filename = "C:\\Users\\Deitrickc\\Google Drive\\Harmonized Data\\World\\Historical Country Population and GDP.xlsx"
-	table = tabletools.Table(filename, sheetname = 'Combined')
+	filename = "C:\\Users\\Deitrickc\\Google Drive\\Harmonized Data\\World\\Annual_Exchange_Rates.xls"
+	table = tabletools.Table(filename, sheetname = 0)
 	for index, row in table:
 		#print(row)
 		country_name = row['countryName']

@@ -232,7 +232,7 @@ class ProtoTable:
 		""" Returns a dataframe of the suppled file
 		"""
 		extension = os.path.splitext(filename)[-1]
-		if extension in {'.xlsx', '.xlsx'}:
+		if extension in {'.xls', '.xlsx'}:
 			df = pandas.read_excel(filename, **kwargs)
 		elif extension in {'.csv', '.tsv', '.fsv'}:
 			if 'sheetname' in kwargs: kwargs.pop('sheetname')
