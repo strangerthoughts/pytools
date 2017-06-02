@@ -1,21 +1,15 @@
 import os
 import pandas
-#import time
-import csv
-from fuzzywuzzy import fuzz, process
+from fuzzywuzzy import fuzz
 from unidecode import unidecode
-from memory_profiler import profile
-from pprint import pprint
-
 import tabletools
 
 
 ####################################### Local Variables ############################################
 LOCAL_PATH = os.path.dirname(__file__)
-#SUBDIVISION_TABLE = pandas.read_excel(os.path.join(LOCAL_PATH, "data", "Subdivision ISO Codes.xlsx"))
-#COUNTRY_TABLE = pandas.read_excel(os.path.join(LOCAL_PATH, "data", "country-codes.xlsx"))
-SUBDIVISION_TABLE   = tabletools.Table(os.path.join(LOCAL_PATH, "data", "Subdivision ISO Codes.xlsx"))
-COUNTRY_TABLE       = tabletools.Table(os.path.join(LOCAL_PATH, "data", "country-codes.xlsx"))
+
+SUBDIVISION_TABLE = tabletools.Table(os.path.join(LOCAL_PATH, "data", "Subdivision ISO Codes.xlsx"))
+COUNTRY_TABLE     = tabletools.Table(os.path.join(LOCAL_PATH, "data",         "country-codes.xlsx"))
 
 
 ####################################### Private Methods ############################################
@@ -25,6 +19,7 @@ def _isCode(string):
     is_code = is_code or any(c.isdigit() for c in string)
     is_code = is_code or not any(c.islower() for c in string)
     return is_code
+
 
 def _convertToASCII(iterable, col = None):
     """ Converts a list of strings to a list of ascii strings. Non-string values
@@ -50,9 +45,9 @@ def _convertToASCII(iterable, col = None):
         iterable = iterable[0]
     return iterable
 ####################################### LOOKUP Methods ############################################
-#Methods to match region names with region codes and vice versa
-#countryName    englishName officialName    iso2Code    iso3Code    currencyCode    currencyName    
-#isIndependant  capitalName continent   languages   geonameId
+# Methods to match region names with region codes and vice versa
+
+
 def findSimilarNames(code):
     """ Searches for similar ways of spelling the names
         of countries, states, or other regions.
@@ -67,8 +62,9 @@ def findSimilarNames(code):
     similar_names = similar_names.get(code)
     return similar_names
 
+
 class LookupRegionCode:
-    def __init__(self, file_cache):
+    def __init__(self):
         self.column_cache = dict()
 
     def __call__(self, label, kind = "country", label_type = None):
@@ -77,9 +73,9 @@ class LookupRegionCode:
         kind = 'countries' if kind == 'country' else 'regions'
         result = self._searchTable(label, label_type, kind)
         return result
-
-    def _checkIfStringIsCode(self, string):
-        contains_code_characters = '-' in string and not " " in string
+    @staticmethod
+    def _checkIfStringIsCode(string):
+        contains_code_characters = '-' in string and " " not in string
         is_short = len(string) < 4
         is_uppercase = string.isupper()
 
@@ -105,22 +101,24 @@ class LookupRegionCode:
             _col = dict(zip(_col.keys(), _convertToASCII(_col.values)))
             self.column_cache[table_name][column] = _col
         return self.column_cache[table_name][column]
-    def _getTableSettings(self, label_type):
+
+    @staticmethod
+    def _getTableSettings(label_type):
         use_fuzzysearch = False
         if label_type == 'countryName':
             columns = ['regionName', 'officialEnglishName', 'otherNames']
             use_fuzzysearch = True
         elif label_type == 'regionName':
-            columns = []
+            columns = ['regionName']
             use_fuzzysearch = True
         elif label_type == 'iso3Code' or label_type == 'isoCode':
             columns = ['iso3Code']
         elif label_type == 'iso2Code':
             columns = ['iso2Code']
         elif label_type == 'regionCode':
-            columns = []
+            columns = ['regionCode']
         else:
-            message = "No valid region code found (countryName, regionName, iso[,1,2]Code, regionName): {}".format(label_type)
+            message = "Not a valid region identifier: {}".format(label_type)
             raise ValueError(message)
 
         settings = {
@@ -129,7 +127,8 @@ class LookupRegionCode:
         }
         return settings
 
-    def _searchColumn(self, search_term, column, fuzzy = False):
+    @staticmethod
+    def _searchColumn(search_term, column, fuzzy = False):
         if fuzzy:
             candidates = list()
             found_match = False
@@ -142,12 +141,14 @@ class LookupRegionCode:
             if found_match:
                 value = max(candidates, key = lambda s: s[-1])
                 index = value[0]
+            else:
+                index = None
 
         else:
             try:
                 index = column.index(search_term)
                 found_match = True
-            except:
+            except IndexError:
                 index = None
                 found_match = False
 
@@ -159,33 +160,29 @@ class LookupRegionCode:
 
     def _searchTable(self, label, label_type, table_name):
         label = _convertToASCII(label)
-        #print(label)
         current_table = FILE_CACHE[table_name]['table']
         settings = self._getTableSettings(label_type)
         columns = settings['columns']
         use_fuzzysearch = settings['fuzzy']
-        #print(columns)
+
         for column in columns:
-            #column_values = _convertToASCII(current_table.get_column(column))
             column_values = self._getTableColumn(table_name, column)
 
             result = self._searchColumn(label, column_values, use_fuzzysearch)
 
             if result['match']:
-                #index = column_values.index(result)
                 index = result['index']
                 region_information = current_table.ix(index)
                 break
-            else:
-                region_information = None
+        else:
+            region_information = None
 
         return region_information
 
 
-
-
-
 ####################################### Parsing Methods ############################################
+
+
 def parseTable(io, column = "countryCode"):
     """ Loops through a table with either region codes or names
         and prints any missing names and/or codes.
@@ -195,9 +192,7 @@ def parseTable(io, column = "countryCode"):
                 Table to loop through.
             column: string
                 The column to parse.
-            region_type: {"countries"}
     """
-    import tabletools
     table = tabletools.Table(io, skiprows = 1).df
     for index, row in table.iterrows():
         key_label = row[column]
@@ -206,7 +201,8 @@ def parseTable(io, column = "countryCode"):
         print(info['iso3Code'], '\t', info['countryName'])
 
 ####################################### Local Objects ############################################
-#COUNTRY_TABLE.put_column('countryName', _convertToASCII(COUNTRY_TABLE.get_column('countryName')))
+
+
 FILE_CACHE = {
     "regions": {
         "table":        SUBDIVISION_TABLE,
@@ -221,13 +217,12 @@ FILE_CACHE = {
     }
 }
 
-lookup = LookupRegionCode(FILE_CACHE)
+lookup = LookupRegionCode()
 
 def test1():
     filename = "C:\\Users\\Deitrickc\\Google Drive\\Harmonized Data\\World\\Annual_Exchange_Rates.xls"
     table = tabletools.Table(filename, sheetname = 0)
     for index, row in table:
-        #print(row)
         country_name = row['countryName']
         result = lookup(country_name)
 
@@ -236,27 +231,7 @@ def test1():
         else:
             print(country_name)
 
-def test2():
-    import timetools as tt
-    countries = FILE_CACHE['countries']['table'].get_column('countryName', True)
-    value = 'United Kingdoms'
-    _iter = 100
-    timer = tt.Timer()
-    for i in range(_iter):
-        result, score = process.extractOne(value, countries.values)
-    print(result, score)
-    timer.timeit(_iter)
-    for i in range(_iter):
-        for index, result in countries.items():
-            score = fuzz.token_sort_ratio(value, result)
-            if score > 90:
-                break
-    print(result, score, index)
-    timer.timeit(_iter)
+
 if __name__ == "__main__":
     test1()
 
-    
-
-
-    

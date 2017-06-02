@@ -1,9 +1,10 @@
-import os
 import pygal
 
 import matplotlib.pyplot as plt
 
 plt.style.use('fivethirtyeight')
+
+
 class Engine:
     """ Base class to implement a generalized fromawork for using difference plotting libraries.
     """
@@ -19,14 +20,18 @@ class Engine:
         self.addLabels(**kwargs)
         if 'series' in kwargs or 'x' in kwargs:
             self.addSeries(**kwargs)
-    
-    def _createInitialPlot(self):
+
+    def _createInitialPlot(self, kwargs):
         pass
+
     def _getDefaultKeywordArguments(self, kwargs):
         return kwargs
-    def _generateSeriesColor(self):
+
+    @staticmethod
+    def _generateSeriesColor():
         color = "#AA5588"
         return color
+
     def _generateSeriesLabel(self):
         """ Automatically generates a label for a series based on the number
             of previously generated plots.
@@ -38,14 +43,24 @@ class Engine:
     
     def _setupPlot(self, kwargs):
         pass
+
     def _setKeyParameters(self, kwargs):
         pass
+
+    def addLabels(self, **kwargs):
+        message = "Engine.addLabels is not implemented."
+        raise NotImplementedError(message)
 
     def addLegend(self, **kwargs):
         pass
 
+    def addSeries(self, **kwargs):
+        message = "Engine.addSeries is not implemented."
+        raise NotImplementedError(message)
+
 class PyplotXY(Engine):
-    def _setkeyParameters(self, kwargs):
+    @staticmethod
+    def _setkeyParameters(kwargs):
         """
             Keyword Arguements
             ------------------
@@ -53,12 +68,12 @@ class PyplotXY(Engine):
         """
         if 'style' in kwargs:
             plt.style.use(kwargs['style'])
-    def _createInitialPlot(self, kwargs):
 
-        #Holds keyword arguments for every series.
+    def _createInitialPlot(self, kwargs):
+        # Holds keyword arguments for every series.
         self.data = dict()
 
-        #The basic plots
+        # The basic plots
         self.figure, self.chart = plt.subplots(figsize = kwargs['figsize'])
 
     def _getDefaultKeywordArguments(self, kwargs):
@@ -85,6 +100,7 @@ class PyplotXY(Engine):
 
     def addLegend(self, kwargs):
         pass
+
     def addSeries(self, series = None, **kwargs):
         """ Adds a set of x and y value pairs to the plot.
             Parameters
@@ -111,16 +127,20 @@ class PyplotXY(Engine):
 
         self.chart.scatter(x = x, y = y, c = color, label = label)
 
-    def render(self, filename = None):
+    @staticmethod
+    def render(filename = None):
         """ Renders the plot """
         if filename is None:
             plt.show()
 
+
 class PygalXY(Engine):
     def _createInitialPlot(self, kwargs):
         self.chart = pygal.XY()
+
     def addLabels(self, **kwargs):
         pass
+
     def addSeries(self, series = None, **kwargs):
         """ Adds a set of x and y value pairs to the plot.
             Parameters
@@ -137,13 +157,16 @@ class PygalXY(Engine):
                     name of the series. if absent, a name will automatically be generated.
         """
         if series is None:
+            x = kwargs.get('x')
+            y = kwargs.get('y')
             series = list(zip(x, y))
         
         label = self._generateSeriesLabel()
-        color = self._generateSeriesColor()
+        # color = self._generateSeriesColor(**kwargs)
         
         self.chart.add(label, series)
-    def render(self,filename = None):
+
+    def render(self, filename = None):
         """ Renders the plot.
             Parameters
             ----------
@@ -155,14 +178,16 @@ class PygalXY(Engine):
         else:
             self.chart.render_to_file(filename)
 
+
 def debug():
     import math
     label = 'Test Plot'
     xlabel = 'The x axis'
     ylabel = 'The y axis'
-    seriesA = [(x / 10., math.cos(x / 10.)) for x in range(-50, 50, 5)]
+    series_a = [(x / 10., math.cos(x / 10.)) for x in range(-50, 50, 5)]
 
-    test = Pygal(series = seriesA, title = label, xlabel = xlabel, ylabel = ylabel)
+    test = PygalXY(series = series_a, title = label, xlabel = xlabel, ylabel = ylabel)
     test.render('test_plot.svg')
+
 if __name__ == "__main__":
     debug()

@@ -1,9 +1,8 @@
 
-import csv
 import hashlib
 import os
-import pandas
 from pprint import pprint
+
 
 def checkDir(path, full = False):
     """ Creates a folder if it doesn't already exist.
@@ -45,11 +44,11 @@ def generateFileMd5(filename, blocksize=2**20):
                 The md5sum string.
     """
     m = hashlib.md5()
-    with open( filename , "rb" ) as f:
+    with open(filename, "rb") as f:
         while True:
             buf = f.read(blocksize)
             if not buf: break
-            m.update( buf )
+            m.update(buf)
     return m.hexdigest()
 
 
@@ -59,6 +58,8 @@ def listAllFiles(folder, **kwargs):
         ----------
             folder: string
                 The folder to search through.
+        Keyword Arguments
+        -----------------
             exclude: string, list<string>; default []
                 A path or list of paths to exclude from the recursive search.
             logic: {'or', 'and'}; default 'or'
@@ -82,11 +83,11 @@ def listAllFiles(folder, **kwargs):
             skip_file = all(e in abs_path for e in exclude)
         else:
             skip_file = False
-        #print(skip_file, '\t', abs_path)
+
         if skip_file: continue
         if os.path.isdir(abs_path):
             file_list += listAllFiles(abs_path, **kwargs)
-        elif os.path.isfile(abs_path): #Explicit check
+        elif os.path.isfile(abs_path):  # Explicit check
             file_list.append(abs_path)
     return file_list
 
@@ -95,7 +96,7 @@ def searchForDuplicateFiles(folder, by = 'name'):
     """ Searches for duplicate files in a folder.
         Parameters
         ----------
-            folder: path
+            folder: string [Path]
                 The folder to search through. subfolders will be included.
             by: {'md5', 'name', 'size'}; default 'md5'
                 The method to qualify two files as being the same.
@@ -128,7 +129,7 @@ def searchForDuplicateFiles(folder, by = 'name'):
 
 
 if __name__ == "__main__":
-    folder = "/home/upmc/Documents/Genomic_Analysis/1_input_vcfs/original_callsets/TCGA-2H-A9GF"
-    exclude = ['chromosome']
-    result = listAllFiles(folder, exclude = exclude, logic = 'and')
+    test_folder = "/home/upmc/Documents/Genomic_Analysis/1_input_vcfs/original_callsets/TCGA-2H-A9GF"
+    test_exclude = ['chromosome']
+    result = listAllFiles(test_folder, exclude = test_exclude, logic = 'and')
     pprint(result)
