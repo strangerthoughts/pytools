@@ -29,10 +29,11 @@ class Terminal:
     """ Wrapper around python system modules.
         Makes it easy to run a command and save any output.
     """
-    def __init__(self, command, label = "", filename = None, show_output = False):
+    def __init__(self, command, label = "", filename = None, show_output = False, use_system = False):
         self.label = label
+
         terminal_label = self._getCommandLabel(label)
-        self.output = self._runCommand(command, terminal_label)
+        self.output = self._runCommand(command, terminal_label, use_system)
         if show_output:
             print(self.output)
         if filename is not None:
@@ -50,12 +51,15 @@ class Terminal:
         return "\n".join([edge, middle, edge])
 
     @staticmethod
-    def _runCommand(command, label):
+    def _runCommand(command, label, use_system = False):
         if label != "":
             print(label)
-        command = shlex.split(command)
-        process = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
-        output = str(process.stdout.read(), 'utf-8')
+        if use_system:
+            output = os.system(command)
+        else:
+            command = shlex.split(command)
+            process = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            output = str(process.stdout.read(), 'utf-8')
         return output
 
     @staticmethod
