@@ -34,7 +34,11 @@ def humanReadable(value):
 
 
 def isNumber(value):
-    result = isinstance(value, Number)
+    if isinstance(value, str):
+        result = value.isdigit()
+    else: 
+        result = isinstance(value, Number)
+
     return result
 
 

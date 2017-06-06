@@ -797,13 +797,13 @@ class PandasCompatibleTable(ProtoTable):
 Table = PandasCompatibleTable
 
 
-def getTableType(filename, skiprows = 0):
+def getTableType(io, **kwargs):
     """ Determines what the general layout of the
         table is based on the header.
         Parameters
         ----------
-            filename: string
-            skiprows: int
+            io: string, pandas.DataFrame, pandas.Series
+            pandas keyword arguments are supported.
         Returns
         -------
             table_type: {'timeseries', 'verbose'}
@@ -811,20 +811,17 @@ def getTableType(filename, skiprows = 0):
                     as column names
                 * 'long': Each variable in the table has its own row.
     """
-    ext = os.path.splitext(filename)[-1]
-    if ext == '.csv': delimiter = ','
-    else: delimiter = '\t'
+    if isinstance(io, str):
+        table = Table(io, **kwargs)
+        header = table.columns
+    elif isinstance(io, pandas.DataFrame):
+        header = io.columns
+    else:
+        header = io.index
 
-    with open(filename, 'r') as file1:
-        current_line = 0
-        while current_line < skiprows:
-            file1.readline()
-            current_line += 1
-        # removes the newline character at the end
-        header_line = file1.readline().strip()
-
-    header = header_line.split(delimiter)
-    numeric_header = [i for i in header if i.isdigit()]
+    numeric_header = [i for i in header if numbertools.isNumber(i)]
+    static_header  = [i for i in header if i not in numeric_header]
+    
     result = 'compact' if len(numeric_header) > 1 else 'long'
     return result
 
