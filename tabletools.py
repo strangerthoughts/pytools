@@ -1,12 +1,16 @@
 import os
 import pandas
-import math
 import numpy
 import csv
 
-#import from local folder
-import pytools.filetools
+# import from local folder
+try:
+	import filetools
+except ImportError:
+	import pytools.filetools
 from collections import Iterable, Sequence
+from fuzzywuzzy import process
+
 
 class ProtoTable:
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
@@ -26,7 +30,7 @@ class ProtoTable:
 					will load all valid files in that directory
 			Keyword Arguments
 			-----------------
-				Any valid pandas keyword arguments are supported.qa	
+				Any valid pandas keyword arguments are supported.qa 
 				sheetname: string, int; default 0
 					Indicates a specific sheet to load when loading
 					an Excel spreadsheet
@@ -36,13 +40,16 @@ class ProtoTable:
 		kwargs['skiprows'] = kwargs.get('skiprows')
 
 		self.df = self._parseInput(io, **kwargs)
-		#Holds the indicies of specific groups within the database.
-		#This is much faster than finding the indices on the fly
-		#self.index_map = dict()
-		#Adds the index map and resets the index
-		self.refresh()  
+		self.original_indexer = kwargs.get('indexer', True)
+		# Holds the indicies of specific groups within the database.
+		# This is much faster than finding the indices on the fly
+		self.index_map = dict()
+		# Adds the index map and resets the index
+		self._resetIndex()
+
 	def __len__(self):
 		return len(self.df)
+
 	def __call__(self, on, where = None, column = None, value = None, **kwargs):
 		""" Parameters
 			----------
@@ -85,47 +92,62 @@ class ProtoTable:
 		"""
 		kwargs['extract_one'] = kwargs.get('extract_one', True)
 		overwrite_value = kwargs.get('overwrite', False)
-		#to_dataframe = kwargs.get('to_dataframe', False)
-		if 'default' not in kwargs:
-			kwargs['default'] = None
+		kwargs['default'] = kwargs.get('default')
 		if isinstance(on, list):
-			#Assume chainSelect
+			# Assume chainSelect
 			element = self.chainSelect(on, **kwargs)
 		elif value is None:
-			#Retrieve a specific column
+			# Retrieve a specific column
 			element = self.get_value(on, where, column, **kwargs)
 		elif overwrite_value:
-			#Replace a value 
-			element = self.put_value(on, where, column, value, **kwargs)
+			# Replace a value
+			element = self.put_value(on, where, column, value)
+		else:
+			message =  "The provided parameters to Table.__call__ are not valid: \n"
+			message += "\ton = {},\n\twhere = {},\n\tcolumn = {},\n\tvalue = {}".format(
+				on, where, column, value
+			)
+			raise ValueError(message)
 
 		return element
 
 	def __iter__(self):
-		for i, j in enumerate(self.itertuples()): 
-			yield i, j
+		for i in self.iterrows(): 
+			yield i
+
 	def __getitem__(self, index):
-		#Try return self.df.__getitem__(index)
+		# Try return self.df.__getitem__(index)
 		return self.df.iloc[index]
+
 	def __repr__(self):
-		#string = 'Table("{}")'.format(self.filename)
 		return self.df.__repr__()
+
 	def __str__(self):
 		string = "Table(shape = ({x}x{y}))".format(
 			x = len(self),
 			y = len(self.df.columns))  
 		return string
 
-	#Private Methods
+	# Private Methods
 	def _boolselect(self, boolarray):
 		return self.df[boolarray]
+
 	def _generate_index(self, column):
 		""" generates an index for all unique values in a column.
 			Each key is a unique value present in the column, and each value is a list
 			of the indices where that value is present.
 		"""
-		#New method, ~3s for 50k records.
-		indexed_series = pandas.Index(self.df[column])
+		# New method, ~3s for 50k records.
+		indexed_series = dict()
+		if self.original_indexer:
+			for index, value in self.df[column].items():
+				try:    indexed_series[value].append(index)
+				except KeyError: indexed_series[value] = [index]
+			indexed_series = {k: pandas.Index(v) for k, v in indexed_series.items()}
+		else:
+			indexed_series = pandas.Index(self.df[column])
 		return indexed_series
+
 	def _get_indices(self, on, where):
 		""" Gets the row indices corresponding to rows with a value of 
 			'where' in column 'on'.
@@ -142,11 +164,10 @@ class ProtoTable:
 		if on not in self.index_map.keys():
 			indexed_series = self._generate_index(on)
 			self.index_map[on] = indexed_series
-		try:
-			index = self.index_map[on].get_loc(where)
-		except:
-			index = None
-		return index
+		if self.original_indexer:
+			return self.index_map[on][where]
+		else:
+			return self.index_map[on].get_loc(where)
 
 	def _parseInput(self, io, **kwargs):
 		""" Parses the input to the Table constructor. 
@@ -158,7 +179,7 @@ class ProtoTable:
 			other types will be passed to pandas.DataFrame()
 		"""
 		if isinstance(io, str):
-			self.filename = io #Used for self.__repr__()
+			self.filename = io  # Used for self.melt()
 		else:
 			self.filename = ""
 
@@ -176,15 +197,18 @@ class ProtoTable:
 				raise TypeError(message)
 
 		return table
+
 	def _set_dtype(self, column, dtype):
 		self.df[column] = self.df[column].astype(dtype)
+
 	@staticmethod
 	def _reduceData(data):
 		""" Transforms a dataframe/series/list into a single element if only one row in present. """
 		if len(data.index) == 1:
 			data = data.iloc[0]
 		return data
-	#Load and Save data to the filesystem
+
+	# Load and Save data to the filesystem
 	def _loadFromFilesystem(self, io, **kwargs):
 		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
 			Parameters
@@ -204,7 +228,7 @@ class ProtoTable:
 		"""
 		if os.path.isfile(io):
 			df = self._load_file(io, **kwargs)
-		elif os.path.isdir(io): #path is a folder
+		elif os.path.isdir(io):  # path is a folder
 			directory = io
 			_load_dfs = list()
 			for fn in os.listdir(directory):
@@ -217,29 +241,35 @@ class ProtoTable:
 			raise ValueError(message)
 
 		return df
+
 	@staticmethod
 	def _load_file(filename, **kwargs):
 		""" Returns a dataframe of the suppled file
 		"""
 		extension = os.path.splitext(filename)[-1]
-		if extension in {'.xlsx', '.xlsx'}:
+		if extension in {'.xls', '.xlsx'}:
 			df = pandas.read_excel(filename, **kwargs)
 		elif extension in {'.csv', '.tsv', '.fsv'}:
 			if 'sheetname' in kwargs: kwargs.pop('sheetname')
-			sep = {'.csv':',', '.tsv':'\t', '.fsv':'\f'}[extension]
+			if extension == '.csv': sep = ','
+			elif extension == '.tsv': sep = '\t'
+			else: sep = '\f'
 			kwargs['delimiter'] = sep
 			df = pandas.read_csv(filename, **kwargs)
 		elif extension == '.txt':
-			#Text file formatted as a table
+			# Text file formatted as a table
 			if 'sheetname' in kwargs: kwargs.pop('sheetname')
 			df = pandas.read_table(filename, **kwargs)
 		elif extension == '.pkl':
 			df = pandas.read_pickle(filename)
 		elif extension == '.db':
-			df = pandas.read_sql(filename)
+			from sqlalchemy import create_engine
+			engine = create_engine('sqlite:///{0}'.format(filename))
+			df = pandas.read_sql(filename, engine)
 		else:
 			raise NameError("{0} does not have a valid extension!".format(filename))
 		return df
+
 	def save(self, filename, **kwargs):
 		""" Saves the database. Keyword arguements will be passed to pandas.
 			Parameters
@@ -254,50 +284,25 @@ class ProtoTable:
 		file_format = os.path.splitext(filename)[1]
 		
 		if file_format in {'.xls', '.xlsx'}:
-			self.df.to_excel(filename)
+			self.df.to_excel(filename, **kwargs)
 			
 		elif file_format == '.pkl':
-			self.df.to_pickle(filename)
+			self.df.to_pickle(filename, **kwargs)
 
 		elif file_format in {'.csv', '.tsv', '.fsv'}:
-			if extension == '.csv': sep = ','
-			elif extension == '.tsv': sep = '\t'
-			elif extension == '.fsv': sep = '\f'
-			self.df.to_csv(filename, encoding = 'utf-8', sep = sep)
+			if file_format == '.csv': sep = ','
+			elif file_format == '.tsv': sep = '\t'
+			else: sep = '\f'
+			self.df.to_csv(filename, encoding = 'utf-8', sep = sep, **kwargs)
 
 		elif file_format == '.db':
 			from sqlalchemy import create_engine
 			engine = create_engine('sqlite:///{0}'.format(filename))
-			self.df.to_sql('Patient Database', engine)
+			self.df.to_sql('Patient Database', engine, **kwargs)
 
 		else:
 			print("ERROR: Could not save the database to", filename)
-	
-	#Index Rows from the table
-	def lab(self, index):
-		""" label-based indexing. labels may be numbers or strings.
-			Parameters
-			----------
-				index: string, int
-					The label of the rows to find
-			Returns
-			----------
-				pandas.DataFrame.loc: DataFrame
-		"""
-		return self.df.loc[index]
-	def pos(self, index):
-		""" Positional-based indexing. Available values are in the range [0, len(self)).
-			Parameters
-			----------
-				index: int
-					The zero-based positional index of the rows to find
-			Returns
-			----------
-				pandas.DataFrame.iloc: DataFrame
-		"""
-		return self.df.iloc[index]
-	def ix(self, index):
-		return self.df.ix[index]
+
 	def concat(self, io):
 		""" Adds a dataframe from a file to the existing internal dataframe
 			Parameters
@@ -309,18 +314,18 @@ class ProtoTable:
 				function : None
 		"""
 		if isinstance(io, str):
-			newdf = self.load(io)
+			newdf = self._load_file(io)
 		elif isinstance(io, pandas.DataFrame):
 			newdf = io
 		else:
 			raise ValueError("{0} cannot be concatenated with the current DataFrame!".format(type(io)))
 			   
 		self.df = pandas.concat([self.df, newdf], ignore_index = True)
-		self.refresh() 
+		self._resetIndex()
 
-	#Wrappers around commonly-used pandas methods.
+	# Wrappers around commonly-used pandas methods.
 
-	#Select data from the table
+	# Select data from the table
 	def chainSelect(self, keys, **kwargs):
 		""" Retrieves data from the database based on several 
 			different criteria.
@@ -341,20 +346,18 @@ class ProtoTable:
 		boolindex = None
 		for column, value in keys:
 			indicies = self._get_indices(column, value)
-			if indicies is None: return None
 			if boolindex is None:
 				boolindex = indicies
 			elif logic == 'and':
 				boolindex = boolindex & indicies
 			elif logic == 'or':
 				boolindex = boolindex | indicies
-		if boolindex is None:
-			series = None
-		else:
-			series = self.df.loc[boolindex]
-			if return_single_result:
-				series = self._reduceData(series)
+
+		series = self.df.loc[boolindex]
+		if return_single_result:
+			series = self._reduceData(series)
 		return series
+
 	def get_value(self, on, where, column = None, **kwargs):
 		""" Retrieves a value from the database
 			Parameters
@@ -367,6 +370,8 @@ class ProtoTable:
 					The column with the return value. If not provided,
 					returns all rows in the dataframe where the 'on' 
 					column contains the 'where' value.
+			Keyword Arguments
+			-----------------
 				extract_one: bool; default False
 					Whether to force the output to be pandas.DataFrame.
 				default_value: None
@@ -379,16 +384,18 @@ class ProtoTable:
 		"""
 		return_single_result = kwargs.get('extract_one', True)
 		to_dataframe = kwargs.get('to_dataframe', False)
-		default_value = kwargs.get('default', None)
 		indices = self._get_indices(on, where)
 		
-		try:
+		if self.original_indexer:
+			if column is None:
+				return_this = self.df.loc[indices]
+			else:
+				return_this = self.df[column].loc[indices]
+		else:
 			if column is None:
 				return_this = self.df.iloc[indices]
 			else:
 				return_this = self.df[column][indices]
-		except:
-			return default_value
 
 		if return_single_result:
 			return_this = self._reduceData(return_this)
@@ -399,32 +406,24 @@ class ProtoTable:
 			else:
 				return_this = pandas.DataFrame(return_this)
 		return return_this
-	def get_column(self, column):
+
+	def get_column(self, column, to_series = False):
 		""" Retrieves all values in one of the database columns
 			Parameters
 			----------
 				column: column label
 					The column to retrieve
+				to_series: bool; default False
+					If true, returns a pandas.Series object rather than a numpy list.
 			Returns
 			----------
 				column : numpy.ndarray
 					The column values
 		"""
-		return self.df[column].values
-	def getRandomValue(self, on):
-		""" Returns a random value from the selected column
-			Parameters
-			----------
-				on: column label
-					The column to choose a value from.
-			Returns
-			----------
-				value : scalar
-					The value selected
-		"""
-		r = random.randrange(0, len(self.df))
-		value = self.df[on].iloc[r]
-		return value
+		if not to_series: column = self.df[column].values
+		else: column = self.df[column]
+		return column
+
 	def search(self, on, value, contains = True):
 		""" Searches a column for a value and returns a DataFrame of every row
 			where in the 'on' column contains the 'value' as a substring 
@@ -450,6 +449,7 @@ class ProtoTable:
 		else:
 			result = ~self.df[on].str.contains(value)
 		return self._boolselect(result)
+
 	def select(self, on, where, comparison = '==', to_df = True):
 		""" Parameters
 			----------
@@ -486,17 +486,20 @@ class ProtoTable:
 			elements = self.df[on] < where
 		elif comparison == '<=':
 			elements = self.df[on] <= where
-
+		else:
+			message = "Improper comparison provided: '{}'".format(comparison)
+			raise ValueError(message)
 		result = self._boolselect(elements)
 		if not to_df:
-			result = Database(result)
+			result = Table(result)
 		return result
 
-	#Manipulate attributes and data in the Table.
+	# Manipulate attributes and data in the Table.
 	def put_column(self, column, iterable):
 		""" Inserts 'iterable' under column name 'column' """
 		self.df[column] = iterable
-	def put_value(self, on, where, column, value, **kwargs):
+
+	def put_value(self, on, where, column, value):
 		""" Parameters
 			----------
 				on: column label
@@ -507,95 +510,46 @@ class ProtoTable:
 					The column to modify
 				value: any
 					The new value to place in the selected column
-				refresh_db: bool; default False
-					Whether to refresh the database after the value is changed
 			Returns
 			----------
 			function: None
 		"""
 		selected_indices = self._get_indices(on = on, where = where)
 		column_index = self.df.columns.get_loc(column)
-		self.df.set_value(  selected_indices,
-							column_index,
-							value,
-							takeable = True)
-	def update(self, filename, on, change_column, change_values, dtypes = dict()):
-		""" Loads an external database and updates the current database based on it
-			Parameters
-			----------
-				filename: string
-					The file with the updated values. Must be parsable by self.load()
-				on: column label
-					The column of the file that specifies the rows to change
-				change_column: column label
-					The column of the file that specifies the columns to change
-				change_values: column label
-					The column of the file that specifies the new values of 
-					each row, column
-				dtypes: dict; default dict()
-					Specifies the datatypes of each column, to enforce
-					homogeneity
-		"""
-		raise ValueError("Need to update this function so it works")
-		updates = self.load(filename)
+		self.df.set_value(selected_indices,
+						  column_index,
+						  value,
+						  takeable = True)
+		return self
 
-		for index, row in updates.iterrows():
-			where = row[on]
-			column = row[change_column]
-			new_value = row[change_values]
-			if column in dtypes.keys():
-				if dtypes[column] == 'int':
-					new_value = int(new_value)
-				elif dtypes[column] == 'float':
-					new_value = float(new_value)
-				elif dtypes[column] == 'bool':
-					new_value = bool(new_value)
-				elif dtypes[column] == 'str':
-					new_value = str(new_value)
-			self.put_value(on = on, where = where, column = column, value = new_value)
-	def add_row(self, *rows):
-		""" Adds rows to the database
-			Parameters
-			----------
-				*rows: dict, pandas.Series
-					The rows to add.
-			Returns
-			----------
-				function: None
-		"""
-		rows = [(pandas.Series(row) if isinstance(row, dict) else row) for row in rows]
-		rows = [(row.to_frame().transpose() if isinstance(row, pandas.Series) else row)
-					for row in rows]
-		self.df = pandas.concat([self.df] + rows, ignore_index = False)
-		self.refresh()
 	def melt(self, **kwargs):
 		""""Unpivots" a DataFrame from wide format to long format, optionally leaving
-		    identifier variables set.
+			identifier variables set.
 
-		    Transforms a table from wide format to long format. Non-identifier columns
-		    will be merged together as paired 'subject' and 'value' columns.
-		    This function is useful to massage a DataFrame into a format where one
-		    or more columns are identifier variables (`id_vars`), while all other
-		    columns, considered measured variables (`value_vars`), are "unpivoted" to
-		    the row axis, leaving just two non-identifier columns, 'variable' and
-		    'value'.
-		    Keyword Arguments
-		    -----------------
-		    identifiers, id_vars : sequence of column names.
-		        Column(s) to use as identifier variables. These should be standardized
-		        ways of referring to an observation.
-		    to_file: bool, string; default None
-		    	Whether to save the new table to a file. If a valid filename is passed,
-		    	the table will be saved with that name. If 'to_file' is True and 
-		    	the table was originally loaded from a file (self.filename is defined),
-		    	the table will be saved as basename + '.melt' + original_extension.
-		    variables, value_vars: sequence of column names; default None
-		        Column(s) to merge as 'variable'-'value' pairs. if not specified,
-		        all columns absent from the 'identifiers' sequence will be used.
-		    var_name : scalar; default 'variable'
-		        Name to use for the 'variable' column.
-		    value_name : scalar; default 'value'
-		        Name to use for the 'value' column.
+			Transforms a table from wide format to long format. Non-identifier columns
+			will be merged together as paired 'subject' and 'value' columns.
+			This function is useful to massage a DataFrame into a format where one
+			or more columns are identifier variables (`id_vars`), while all other
+			columns, considered measured variables (`value_vars`), are "unpivoted" to
+			the row axis, leaving just two non-identifier columns, 'variable' and
+			'value'.
+			Keyword Arguments
+			-----------------
+			identifiers, id_vars : sequence of column names.
+				Column(s) to use as identifier variables. These should be standardized
+				ways of referring to an observation.
+			to_file: bool, string; default None
+				Whether to save the new table to a file. If a valid filename is passed,
+				the table will be saved with that name. If 'to_file' is True and 
+				the table was originally loaded from a file (self.filename is defined),
+				the table will be saved as basename + '.melt' + original_extension.
+			variables, value_vars: sequence of column names; default None
+				Column(s) to merge as 'variable'-'value' pairs. if not specified,
+				all columns absent from the 'identifiers' sequence will be used.
+			var_name : scalar; default 'variable'
+				Name to use for the 'variable' column.
+			value_name : scalar; default 'value'
+				Name to use for the 'value' column.
 		"""
 		kwargs['id_vars'] = kwargs.get('identifiers', kwargs['id_vars'])
 		kwargs['value_vars'] = kwargs.get('variables', kwargs.get('value_vars'))
@@ -610,9 +564,9 @@ class ProtoTable:
 			if isinstance(kwargs['to_file'], str):
 				fn = kwargs['to_file']
 			elif self.filename != "":
-				fn = os.path.splitext()
+				fn = os.path.splitext(self.filename)
 				fn = fn[0] + '.melt' + fn[1]
-			else: fn = None #No usable filename
+			else: fn = None  # No usable filename
 			if fn: new_table.save(fn)
 
 		return new_table
@@ -641,21 +595,21 @@ class ProtoTable:
 				inplace: bool; default False
 					If true, The new table will replace the old one.
 				sort : boolean, default False
-        			Sort the join keys lexicographically in the result DataFrame
-    			suffixes : 2-length sequence (tuple, list, ...); default ('_left', '_right')
-        			Suffix to apply to overlapping column names in the left and right
-        			side, respectively.
-    			copy : boolean, default True
-        			If False, do not copy data unnecessarily
+					Sort the join keys lexicographically in the result DataFrame
+				suffixes : 2-length sequence (tuple, list, ...); default ('_left', '_right')
+					Suffix to apply to overlapping column names in the left and right
+					side, respectively.
+				copy : boolean, default True
+					If False, do not copy data unnecessarily
 				indicator : boolean or string, default False
-				    If True, adds a column to output DataFrame called "_merge" with
-				    information on the source of each row.
-				    If string, column with the same name will be added to the resulting table
-				    with information on source of which table the row originated from.
-				    Information column is Categorical-type and takes on a value of "left_only"
-				    for observations whose merge key only appears in 'left' DataFrame,
-				    "right_only" for observations whose merge key only appears in 'right'
-				    DataFrame, and "both" if the observation's merge key is found in both.
+					If True, adds a column to output DataFrame called "_merge" with
+					information on the source of each row.
+					If string, column with the same name will be added to the resulting table
+					with information on source of which table the row originated from.
+					Information column is Categorical-type and takes on a value of "left_only"
+					for observations whose merge key only appears in 'left' DataFrame,
+					"right_only" for observations whose merge key only appears in 'right'
+					DataFrame, and "both" if the observation's merge key is found in both.
 			Returns
 			----------
 				table: Table, None
@@ -669,27 +623,17 @@ class ProtoTable:
 
 		if isinstance(other, Table): other = other.df
 
-		if right_on is None:
-			right_on = left_on
 		new_df = pandas.merge(self.df, other, **kwargs)
 		new_table = Table(new_df)
 		return new_table
 	
-	def refresh(self, sortby = None):
+	def _resetIndex(self):
 		""" Updates the sorted order and index of the database after changes
 			are made
-			Parameters
-			----------
-				None
-			Returns
-			----------
-				function : None
 		"""
-		if sortby is not None:
-			self.df.sort_values(by = self.sortby, inplace = True)
-		#print("resetting index...")
-		self.df.reset_index(drop = True, inplace = True)  
+		self.df.reset_index(drop = True, inplace = True)
 		self.index_map = dict()
+
 	def remove_columns(self, *columns):
 		""" Removes the given columns
 			Parameters
@@ -702,22 +646,15 @@ class ProtoTable:
 		"""
 		for c in columns:
 			if c in self.df.columns:
-				del self.df[c]  
-	def rename_column(self, column, label):
-		""" Renames a column
-			Parameters
-			----------
-				column: column label
-					The column to rename
-				label: column label
-					The new name for the column
-			Returns
-			----------
-				function : None
-		"""
+				del self.df[c]
 	
-	#Methods based on the values contained in the table.
-	def isin(self, value, column):
+	# Methods based on the values contained in the table.
+	def _fuzzySearch(self, value, column):
+		""" Uses fuzzywuzzy to search for similar items in the selected column. """
+		result = process.extractOne(value, self.get_column(column))
+		return result
+
+	def isin(self, value, column, fuzzy = False):
 		""" Checks whether a value is in one of the database columns.
 			Parameters
 			----------
@@ -725,27 +662,31 @@ class ProtoTable:
 					The value to search for.
 				column: column-label
 					The olumn to search in.
+				fuzzy: bool; default False
+					Whether to perform fuzzy searching.
+
 			Returns
 			---------
 				isin : bool
 					Whether the selected value was found
 		"""
-		if isinstance(value, (Iterable, Sequence)) and not isinstance(value, str):
+		if fuzzy:
+			result = self._fuzzySearch(value, column)
+		elif isinstance(value, (Iterable, Sequence)) and not isinstance(value, str):
 			result = self.df[column].isin(value)
 		else:
 			result = value in self.get_column(column)
 		return result
-	#Methods for iterating through the items in the database.	
-	def itertuples(self):
-		for row in self.df.itertuples():
-			yield row._asdict()
+	# Methods for iterating through the items in the database.
+
 	def iteritems(self):
 		""" Same as self.iterrows, but only returns the row.
 			This is useful where enumerate() would be more valuable than the
 			current index.
 		"""
 		for i in self.iterrows():
-			yield i
+			yield i[1]
+
 	def iterrows(self):
 		""" Iterates over the rows in the table. The index is corresponds to
 		the labeled index rather than the location (0-based) index.
@@ -753,28 +694,31 @@ class ProtoTable:
 		for index, row in self.df.iterrows():
 			yield index, row
 
-	#Show statistics and other information for the table.
+	# Show statistics and other information for the table.
 	def head(self, rows = 5):
 		return self.df.head(rows)   
+
 	def info(self, verbose = True):
 		print(self.df.info(verbose = verbose))
-	def value_counts(self, column, sort = False):
+
+	def value_counts(self, column, sort_values = True):
 		""" Wrapper for pandas.DataFrame.value_counts()
 			Parameters
 			----------
 				column: column label
 					The column to count unique values on
-				sort: bool; default False
+				sort_values: bool; default False
 					Whether to sort the index of the returned data
 			Returns
 			----------
 				series : pandas.Series
 		"""
 		series = self.df[column].value_counts() 
-		if sorted: series = series.sort_index()
-		return series	
+		if sort_values: series = series.sort_index()
+		return series   
 
-	#Methods to convert the table to other formats.
+	# Methods to convert the table to other formats.
+
 	def toList(self):
 		""" Converts the table to a list of dicts.
 			Returns
@@ -792,7 +736,8 @@ class PandasCompatibleTable(ProtoTable):
 	@property
 	def columns(self):
 		return self.df.columns
-	def abs(self, column = None, inplace = False):
+
+	def abs(self, column = None):
 		""" Returns a Table with all numeric values converted to
 			the absolute value of themselves.
 			Parameters
@@ -806,68 +751,79 @@ class PandasCompatibleTable(ProtoTable):
 		else:
 			result = self.df.abs()
 		return result
+
 	def add(self):
 		pass
 
 	def keys(self):
 		return self.df.keys()
+
 	def items(self):
 		"""Iterator over (column name, Series) pairs."""
 		for item in self.df.items():
 			yield item
+
 	def lookup(self, rows, columns):
 		""" Label-based "fancy indexing" function for DataFrame.
-    		Given equal-length arrays of row and column labels, return an
-    		array of the values corresponding to each (row, col) pair.
-    		rows must correspond to row indices.
+			Given equal-length arrays of row and column labels, return an
+			array of the values corresponding to each (row, col) pair.
+			rows must correspond to row indices.
 		"""
 
 		return self.df.lookup(rows, columns)
+
 	def nlargest(self, n, column):
 		""" Returns n rows in the table sorted by the largest values in 'column' """
 		return self.df.nlargest(n, column)
+
 	def nsmallest(self, n, column):
 		""" Returns n rows in the table sorted by the smallest values in 'column' """
-		return self.df.nsmallest(n, column)		
+		return self.df.nsmallest(n, column)     
+
 	def nunique(self, column):
 		""" Returns a series object with the number of unique values in 'column'. index values
 			are the unique values present in the column. """
 		return self.df.nunique(column)
+
 	def sort_values(self, by, **kwargs):
-		self.df.sort_values(by = by, inplace = True)
+		self.df.sort_values(by = by, inplace = True, **kwargs)
 		self.index_map = dict()
+
 	def groupby(self, by):
 		return self.df.groupby(by = by)
+
 	def to_latex(self, **kwargs): return self.df.to_latex(**kwargs)
-	def unique(self, column):
-		return self.df[column].unique()
+
 Table = PandasCompatibleTable
 
-def getTableType(self, filename, skiprows = 0):
+
+def getTableType(io, **kwargs):
 	""" Determines what the general layout of the
 		table is based on the header.
 		Parameters
 		----------
-			filename: string
-			skiprows: int
+			io: string, pandas.DataFrame, pandas.Series
+			pandas keyword arguments are supported.
 		Returns
 		-------
 			table_type: {'timeseries', 'verbose'}
-				*'timeseries': The table is formatted with years
+				*'compact': The table is formatted with years
 					as column names
-				* 'verbose': Each variable in the table has its own row.
+				* 'long': Each variable in the table has its own row.
 	"""
-	ext = os.path.splitext(filename)[-1]
-	if ext == '.csv': delimiter = ','
-	else: delimiter = '\t'
+	if isinstance(io, str):
+		table = Table(io, **kwargs)
+		header = table.columns
+	elif isinstance(io, pandas.DataFrame):
+		header = io.columns
+	else:
+		header = io.index
 
-	with open(filename, 'r') as file1:
-		while i < skiprows:
-			file1.readline()
-		header_line = file1.readline().strip() #removes the newline character at the end
-
-	headers = header_line.split(delimiter)
-	headers = [i for i in headers if i.isdigit()]
+	numeric_header = [i for i in header if numbertools.isNumber(i)]
+	static_header  = [i for i in header if i not in numeric_header]
+	
+	result = 'compact' if len(numeric_header) > 1 else 'long'
+	return result
 
 
 def readCSV(filename, headers = False, **kwargs):
@@ -939,7 +895,7 @@ def writeCSV(table, filename, **kwargs):
 	"""
 	if len(table) == 0: return None
 	fieldnames = kwargs.get('fieldnames', kwargs.get('fields'))
-	if fieldnames is None:fieldnames = sorted(table[0].keys())
+	if fieldnames is None: fieldnames = sorted(table[0].keys())
 	opentype = 'a' if kwargs.get('append', False) else 'w'
 	delimiter = kwargs.get('delimiter', kwargs.get('sep', '\t'))
 	empty_value = kwargs.get('empty', kwargs.get('restval', ""))
@@ -959,7 +915,4 @@ def writeCSV(table, filename, **kwargs):
 
 
 if __name__ == "__main__":
-	filename = os.path.join(os.getcwd(), 'data', "country-codes.xlsx")
-	df = Table(filename)
-	for row in df:
-		print(row['iso3Code'])
+	pass

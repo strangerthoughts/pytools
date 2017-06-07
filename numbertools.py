@@ -1,6 +1,7 @@
 import math
 from numbers import Number
 
+
 def humanReadable(value):
 
 	if value < 1E-6:
@@ -30,8 +31,17 @@ def humanReadable(value):
 
 	string = '{0:.2f}{1}'.format(value*multiplier, suffix)
 	return string
+
+
 def isNumber(value):
-	return isinstance(value, Number)
+	if isinstance(value, str):
+		result = value.isdigit()
+	else: 
+		result = isinstance(value, Number)
+
+	return result
+
+
 def toNumber(value):
 	if isinstance(value, (list, tuple, set)):
 		converted_number = [toNumber(i) for i in value]
@@ -45,7 +55,6 @@ def toNumber(value):
 	else:
 		try:
 			converted_number = float(value)
-		except Exception as exception:
-			print(str(exception))
+		except TypeError:
 			converted_number = math.nan
 	return converted_number

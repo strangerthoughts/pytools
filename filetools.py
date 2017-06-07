@@ -1,9 +1,8 @@
 
-import csv
 import hashlib
 import os
-import pandas
 from pprint import pprint
+
 
 def checkDir(path, full = False):
 	""" Creates a folder if it doesn't already exist.
@@ -45,51 +44,62 @@ def generateFileMd5(filename, blocksize=2**20):
 				The md5sum string.
 	"""
 	m = hashlib.md5()
-	with open( filename , "rb" ) as f:
+	with open(filename, "rb") as f:
 		while True:
 			buf = f.read(blocksize)
 			if not buf: break
-			m.update( buf )
+			m.update(buf)
 	return m.hexdigest()
 
-def listAllFiles(folder, exclude = []):
+
+def listAllFiles(folder, **kwargs):
 	""" Lists all files in a folder. Includes subfolders.
 		Parameters
 		----------
 			folder: string
 				The folder to search through.
-			exclude: string, list<string>
+		Keyword Arguments
+		-----------------
+			exclude: string, list<string>; default []
 				A path or list of paths to exclude from the recursive search.
+			logic: {'or', 'and'}; default 'or'
+				The logic to use when applying the exclusion criteria.
 		Returns
 		-------
 			list<string>
 				A list of all files that were found.
 	"""
+	exclude = kwargs.get('exclude', [])
 	if isinstance(exclude, str): exclude = [exclude]
+	logic = kwargs.get('logic', 'or')
 	
 	file_list = list()
 
 	for fn in os.listdir(folder):
 		abs_path = os.path.join(folder, fn)
-		if abs_path in exclude: continue
+		if logic == 'or':
+			skip_file = any(e in abs_path for e in exclude)
+		elif logic == 'and':
+			skip_file = all(e in abs_path for e in exclude)
+		else:
+			skip_file = False
+
+		if skip_file: continue
 		if os.path.isdir(abs_path):
-			file_list += listAllFiles(abs_path, exclude = exclude)
-		elif os.path.isfile(abs_path): #Explicit check
+			file_list += listAllFiles(abs_path, **kwargs)
+		elif os.path.isfile(abs_path):  # Explicit check
 			file_list.append(abs_path)
 	return file_list
 
 
-def searchForDuplicateFiles(folder, by = 'name', expand = False):
+def searchForDuplicateFiles(folder, by = 'name'):
 	""" Searches for duplicate files in a folder.
 		Parameters
 		----------
-			folder: path
+			folder: string [Path]
 				The folder to search through. subfolders will be included.
 			by: {'md5', 'name', 'size'}; default 'md5'
 				The method to qualify two files as being the same.
-			expand: bool; default False
-				Whether to return the full paths to each file or
-				only the parts that diverge.
 		Return
 		------
 			duplicates: list<list<string>>
@@ -115,16 +125,11 @@ def searchForDuplicateFiles(folder, by = 'name', expand = False):
 	_duplicates = list()
 	for key in _duplicate_keys:
 		_duplicates.append(checked_files[key])
-	final_duplicates = list()
-	for duplicate in _duplicates:
-		duplicate = [i.replace(folder, "") for i in duplicate]
-		final_duplicates.append(duplicate)
-	return final_duplicates
+	return _duplicates
 
 
-def test():
-	folder = "D:\\Proginoskes\\Documents\\Data\\Original Data\\"
-	results = searchForDuplicateFiles(folder)
-	pprint(results)
 if __name__ == "__main__":
-	test()
+	test_folder = "/home/upmc/Documents/Genomic_Analysis/1_input_vcfs/original_callsets/TCGA-2H-A9GF"
+	test_exclude = ['chromosome']
+	result = listAllFiles(test_folder, exclude = test_exclude, logic = 'and')
+	pprint(result)
