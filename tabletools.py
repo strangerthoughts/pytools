@@ -6,10 +6,12 @@ import csv
 # import from local folder
 try:
 	import filetools
+	import numbertools
 except ImportError:
-	import pytools.filetools
+	import pytools.filetools as filetools
+	import pytools.numbertools as numbertools
 from collections import Iterable, Sequence
-from fuzzywuzzy import process
+#
 
 
 class ProtoTable:
@@ -117,7 +119,7 @@ class ProtoTable:
 
 	def __getitem__(self, index):
 		# Try return self.df.__getitem__(index)
-		return self.df.iloc[index]
+		return self.df.__getitem__(index)
 
 	def __repr__(self):
 		return self.df.__repr__()
@@ -322,6 +324,15 @@ class ProtoTable:
 			   
 		self.df = pandas.concat([self.df, newdf], ignore_index = True)
 		self._resetIndex()
+
+	@classmethod
+	def fromList(cls, io):
+		""" Creates a table from a list of dictionaries.
+		"""
+
+		df = pandas.DataFrame(io)
+		df = cls(df)
+		return df
 
 	# Wrappers around commonly-used pandas methods.
 
@@ -651,6 +662,7 @@ class ProtoTable:
 	# Methods based on the values contained in the table.
 	def _fuzzySearch(self, value, column):
 		""" Uses fuzzywuzzy to search for similar items in the selected column. """
+		from fuzzywuzzy import process
 		result = process.extractOne(value, self.get_column(column))
 		return result
 
@@ -727,6 +739,10 @@ class ProtoTable:
 		"""
 		return [i.to_dict() for _, i in self]
 
+	def searchColumn(self, column, string):
+		values = self.get_column(column)
+		values = [i for i in values if (isinstance(i, str) and string in i)]
+		return values
 
 class PandasCompatibleTable(ProtoTable):
 	"""

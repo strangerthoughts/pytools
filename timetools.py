@@ -160,7 +160,7 @@ class Timer:
 
 	def to_iso(self):
 		"""Returns an ISO duration of the elapsed time"""
-		seconds = time.clock() - self.start_time
+		seconds = self.duration()
 		return Duration(seconds, unit = 'Seconds').toiso()
 
 	def show(self, label = None):
@@ -664,8 +664,6 @@ class Timestamp(datetime.datetime):
 		return result
 
 if __name__ == "__main__":
-	d = "20160519"
-	d = Timestamp(d)
-	print(d)
-	print(d.isoformat())
-	print(d.toiso())
+	timer = Timer()
+	time.sleep(2)
+	print(timer.to_iso())
