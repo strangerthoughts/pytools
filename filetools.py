@@ -74,21 +74,23 @@ def listAllFiles(folder, **kwargs):
 	logic = kwargs.get('logic', 'or')
 	
 	file_list = list()
+	if os.path.isdir(folder):
+		for fn in os.listdir(folder):
+			abs_path = os.path.join(folder, fn)
+			if logic == 'or':
+				skip_file = any(e in abs_path for e in exclude)
+			elif logic == 'and':
+				skip_file = all(e in abs_path for e in exclude)
+			else:
+				skip_file = False
 
-	for fn in os.listdir(folder):
-		abs_path = os.path.join(folder, fn)
-		if logic == 'or':
-			skip_file = any(e in abs_path for e in exclude)
-		elif logic == 'and':
-			skip_file = all(e in abs_path for e in exclude)
-		else:
-			skip_file = False
-
-		if skip_file: continue
-		if os.path.isdir(abs_path):
-			file_list += listAllFiles(abs_path, **kwargs)
-		elif os.path.isfile(abs_path):  # Explicit check
-			file_list.append(abs_path)
+			if skip_file: continue
+			if os.path.isdir(abs_path):
+				file_list += listAllFiles(abs_path, **kwargs)
+			elif os.path.isfile(abs_path):  # Explicit check
+				file_list.append(abs_path)
+	else:
+		file_list = [folder]
 	return file_list
 
 
@@ -133,3 +135,5 @@ if __name__ == "__main__":
 	test_exclude = ['chromosome']
 	result = listAllFiles(test_folder, exclude = test_exclude, logic = 'and')
 	pprint(result)
+	result.to_csv(os.path.join(test_folder, "test.tsv"), sep = "\t")
+	print("Saved!")
