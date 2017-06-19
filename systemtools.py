@@ -5,25 +5,24 @@ import psutil
 
 
 def memoryUsage(show = True, units = 'MB'):
-    """ Gets the current memory usage 
-        Returns
-        ----------
-            if show is False
-            memory: int
-                The total number of bytes being used by the current process
-    """
+	""" Gets the current memory usage 
+		Returns
+		----------
+			if show is False
+			memory: int
+				The total number of bytes being used by the current process
+	"""
 
-    process = psutil.Process(os.getpid())
-    usage = process.memory_info().rss
-    if show:
-        if units == 'MB':
-            value = usage / 1024**2
-        else:
-            value = usage
-        print("Current memory usage: {0:.2f}{1}".format(value, units), flush = True)
-    else:
-        return usage
-
+	process = psutil.Process(os.getpid())
+	usage = process.memory_info().rss
+	if show:
+		if units == 'MB':
+			value = usage / 1024**2
+		else:
+			value = usage
+		print("Current memory usage: {0:.2f}{1}".format(value, units), flush = True)
+	else:
+		return usage
 
 class Terminal:
     """ Wrapper around python system modules.
@@ -89,5 +88,64 @@ class Terminal:
 
     def run(self, command, label, filename):
         pass
+		self.command = command
+		self.label = label
+		self.filename = filename
+
+		if expected_output is None:
+			self.expected_output = []
+		elif isinstance(expected_output, str):
+			self.expected_output = [expected_output]
+		else:
+			self.expected_output = expected_output
+
+
+		self.runCommand()
+
+	def runCommand(self):
+		if any(not os.path.exists(fn) for fn in self.expected_output):
+			#self._printCommand(command_arguments)
+			process = subprocess.Popen(command_arguments, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+			self.output = str(process.stdout.read(), 'utf-8')
+		else:
+			self.output = ""
+
+
+
+		command_string = "\tCommand Arguements:\n"
+		for argument in command_arguments:
+			line = "\t\t{:<30}".format(argument)
+			if argument.startswith('-'):
+				line = "\n" + line
+
+			command_string += line
+
+		if len(self.expected_output) > 0:
+			expected_output_string = "\tExpected Output: \n"
+			for eo in self.expected_output:
+				expected_output_string += line
+		else:
+			expected_output_string = ""
+
+		full_output_string = "\n".join([self.label, expected_output_string, command_string, self.output])
+
+		if self.show_output:
+			print(full_output_string)
+			
+		if self.filename is not None:
+			with open(self.filename, 'a') as console_file:
+				console_file.write(full_output_string)
+
+	@property
+	def status(self):
+		files_missing = any(not os.path.exists(fn) for fn in self.expected_output)
+		return not files_missing
+
+
+
+
+
+
+
 
 
