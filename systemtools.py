@@ -99,7 +99,7 @@ class Terminal:
 		self.label = label
 		self.filename = filename
 		self.show_output = show_output
-
+		self.output = ""
 		if expected_output is None:
 			self.expected_output = []
 		elif isinstance(expected_output, str):
@@ -123,9 +123,9 @@ class Terminal:
 			#self._printCommand(command_arguments)
 			process = subprocess.Popen(command_arguments, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
 			self.output = str(process.stdout.read(), 'utf-8')
-		else:
-			self.output = ""
+
 		self.end_time = timetools.now()
+		self.duration = timetools.Duration(self.end_time - self.start_time)
 		self._showOutput(command_arguments)
 
 	def _showOutput(self, command_arguments):
@@ -152,7 +152,7 @@ class Terminal:
 			_status_string += "\t\t{}\t{}\n".format(k,v)
 		_status_string += "\t\tExpected Output:\n"
 		for fns, fnf in self.getStatus()['outputStatus']:
-			_status_sting += "\t\t\t{}\t{}\n".format(fnf, fnf)
+			_status_string += "\t\t\t{}\t{}\n".format(fnf, fnf)
 
 		full_output_string = "\n".join([self.label, expected_output_string, command_string, self.output, _status_string])
 
