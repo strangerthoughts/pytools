@@ -2,7 +2,8 @@ import os
 import shlex
 import subprocess
 import psutil
-import timetools
+
+from . import timetools
 
 
 def memoryUsage(show = True, units = 'MB'):
@@ -111,8 +112,10 @@ class Terminal:
 
 		self.end_time = timetools.now()
 		self.duration = timetools.Duration(self.end_time - self.start_time)
+	
 	def __str__(self):
 		return self._terminal_string
+	
 	def runCommand(self):
 		command_arguments = shlex.split(self.command)
 		if any(not os.path.exists(fn) for fn in self.expected_output):
@@ -122,7 +125,7 @@ class Terminal:
 			self.output = str(process.stdout.read(), 'utf-8')
 		else:
 			self.output = ""
-
+		self.end_time = timetools.now()
 		self._showOutput(command_arguments)
 
 	def _showOutput(self, command_arguments):

@@ -18,14 +18,21 @@ def checkDir(path, full = False):
 			status: bool
 				Whether the folder was successfully created.
 	"""
-
-	if not os.path.exists(path):
-		if full:
-			os.makedirs(path)
-		else:
-			os.mkdir(path)
+	try:
+		if not os.path.exists(path):
+			if full:
+				os.makedirs(path)
+			else:
+				os.mkdir(path)
+	except FileNotFoundError:
+		_concat_path = os.path.dirname(path)
+		while not os.path.exists(_concat_path):
+			_concat_path = os.path.dirname(_concat_path)
+		message = "The path doesn't exist: {} ({})".format(path, _concat_path)
+		raise FileNotFoundError(message)
 
 	return os.path.exists(path)
+
 
 
 def generateFileMd5(filename, blocksize=2**20):
