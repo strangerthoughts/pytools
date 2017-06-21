@@ -2,6 +2,7 @@ import os
 import shlex
 import subprocess
 import psutil
+import timetools
 
 
 def memoryUsage(show = True, units = 'MB'):
@@ -92,6 +93,7 @@ class Terminal1:
 
 class Terminal:
 	def __init__(self, command, label = "", expected_output = None, filename = None, show_output = False):
+		self.start_time = timetools.now()
 		self.command = command
 		self.label = label
 		self.filename = filename
@@ -107,6 +109,10 @@ class Terminal:
 
 		self.runCommand()
 
+		self.end_time = timetools.now()
+		self.duration = timetools.Duration(self.end_time - self.start_time)
+	def __str__(self):
+		return self._terminal_string
 	def runCommand(self):
 		command_arguments = shlex.split(self.command)
 		if any(not os.path.exists(fn) for fn in self.expected_output):
@@ -137,7 +143,15 @@ class Terminal:
 		else:
 			expected_output_string = ""
 
-		full_output_string = "\n".join([self.label, expected_output_string, command_string, self.output])
+		_status_string =  "\tTerminal Status:\n"
+		for k, v in sorted(self.getStatus().items()):
+			if k == 'outputStatus': continue
+			_status_string += "\t\t{}\t{}\n".format(k,v)
+		_status_string += "\t\tExpected Output:\n"
+		for fns, fnf in self.getStatus()['outputStatus']:
+			_status_sting += "\t\t\t{}\t{}\n".format(fnf, fnf)
+
+		full_output_string = "\n".join([self.label, expected_output_string, command_string, self.output, _status_string])
 
 		if self.show_output:
 			print(full_output_string)
@@ -145,11 +159,28 @@ class Terminal:
 		if self.filename is not None:
 			with open(self.filename, 'a') as console_file:
 				console_file.write(full_output_string)
+		self._terminal_string = full_output_string
 
 	@property
 	def status(self):
-		files_missing = any(not os.path.exists(fn) for fn in self.expected_output)
-		return not files_missing
+		completed_successfully = all(os.path.exists(fn) for fn in self.expected_output)
+		return completed_successfully
+
+	def getStatus(self):
+		""" The status of the terminal.
+		"""
+		output_status = [(os.path.exists(fn), fn) for fn in self.expected_output]
+		eo = self.expected_output[0] if len(self.expected_output) == 1 else self.expected_output
+		status = {
+			'status': 		self.status,
+			'outputStatus': output_status,
+			'startTime': 	self.start_time,
+			'endTime': 		self.end_time,
+			'duration': 	self.duration.isoFormat(),
+			'outputFiles':  eo
+		}
+
+		return status
 
 
 
