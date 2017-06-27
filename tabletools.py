@@ -94,22 +94,34 @@ class ProtoTable:
 		"""
 		kwargs['extract_one'] = kwargs.get('extract_one', True)
 		overwrite_value = kwargs.get('overwrite', False)
+		ignore_errors = kwargs.get('ignore', False)
 		kwargs['default'] = kwargs.get('default')
-		if isinstance(on, list):
-			# Assume chainSelect
-			element = self.chainSelect(on, **kwargs)
-		elif value is None:
-			# Retrieve a specific column
-			element = self.get_value(on, where, column, **kwargs)
-		elif overwrite_value:
-			# Replace a value
-			element = self.put_value(on, where, column, value)
-		else:
-			message =  "The provided parameters to Table.__call__ are not valid: \n"
-			message += "\ton = {},\n\twhere = {},\n\tcolumn = {},\n\tvalue = {}".format(
-				on, where, column, value
-			)
-			raise ValueError(message)
+
+		try:
+			
+			if isinstance(on, list):
+				# Assume chainSelect
+				element = self.chainSelect(on, **kwargs)
+			elif value is None:
+				# Retrieve a specific column
+				element = self.get_value(on, where, column, **kwargs)
+			elif overwrite_value:
+				# Replace a value
+				element = self.put_value(on, where, column, value)
+			else:
+				message =  "The provided parameters to Table.__call__ are not valid: \n"
+				message += "\ton = {},\n\twhere = {},\n\tcolumn = {},\n\tvalue = {}".format(
+					on, where, column, value
+				)
+				raise ValueError(message)
+		except KeyError as exception:
+			print("Available Columns:")
+			for col in self.columns:
+				print('\t', col)
+			if ignore_errors:
+				element = None
+			else:
+				raise exception
 
 		return element
 
@@ -931,4 +943,7 @@ def writeCSV(table, filename, **kwargs):
 
 
 if __name__ == "__main__":
-	pass
+	test_filename = "C:\\Users\\Deitrickc\\Documents\\UPMC Files\\Notebooks\\ablation_dates.tsv"
+	test_table = Table(test_filename)
+	value = test_table('patientId', 'abc')
+	print(value)
