@@ -27,79 +27,49 @@ def memoryUsage(show = True, units = 'MB'):
 		return usage
 
 
-class Terminal1:
-	""" Wrapper around python system modules.
-		Makes it easy to run a command and save any output.
-	"""
-	def __init__(self, command, label = "", filename = None, show_output = False, use_system = False):
-		self.label = label
-
-		terminal_label = self._getCommandLabel(label)
-		self.output = self._runCommand(command, terminal_label, use_system)
-		if show_output:
-			print(self.output)
-		if filename is not None:
-			self.updateConsoleLog(filename, command, self.output, label)
-
-	@staticmethod
-	def _getCommandLabel(label):
-		if label == "": return label
-		char = "#"
-		max_len = 180
-		edge = char * max_len
-		edgelen = int(max_len/2 - int(len(label) / 2))
-		middle = edgelen * char + label + edgelen*char
-
-		return "\n".join([edge, middle, edge])
-
-	@staticmethod
-	def _runCommand(command, label, use_system = False):
-		if label != "":
-			print(label)
-		if use_system:
-			output = os.system(command)
-		else:
-			command = shlex.split(command)
-			process = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
-			output = str(process.stdout.read(), 'utf-8')
-		return output
-
-	@staticmethod
-	def updateConsoleLog(filename, command, output, label = ""):
-		""" Saves any text printed to the console to a file.
+class Terminal:
+	def __init__(self, command, label = "", expected_output = None, command_filename = None, output_filename = None, verbose = 0, show_output = False):
+		"""
 			Parameters
 			----------
-			filename: string
-				The file to save the text to.
-			command: string
-				The command that was executed.
-			output: string
-				The text that was printed to the terminal. Saved
-				from process.stdout.read()
-			label: string
-				A string to write prior to writing the
-				relevant text. Used to distinguish between
-				different command that were executed.
+				command: string
+					The command to excecute.
+				label: string
+					A label to identify the process as it runs. Used mainly for debugging or to show 
+					theprogress of multiple commands excecuted after each other.
+				expected_output = string, list<string> [PATH]
+					Files created by the command, if applicable. If the output files are not created,
+					will raise an error.
+				command_filename: string [PATH]; default None
+					The command and arguments will be saved to this file.
+				output_filename: string [PATH]; default None
+					Any text printed to the console will be saved to the file located at the path provided.
+				verbose: {0, 1, 2, 'label', 'command', 'full'}; default 0
+					Determines how much text to print while the command runs.
+						0: None
+						1: Command Label
+						2: Full output
 		"""
-
-		if os.path.exists(filename): opentype = 'a'
-		else: opentype = 'w'
-		with open(filename, opentype) as console_file:
-			console_file.write(label + '\n')
-			console_file.write(' '.join(command) + '\n')
-			console_file.write(output + '\n\n')
-
-	def run(self, command, label, filename):
-		pass
-
-class Terminal:
-	def __init__(self, command, label = "", expected_output = None, filename = None, show_output = False):
 		self.start_time = timetools.now()
 		self.command = command
 		self.label = label
-		self.filename = filename
+		self.command_filename = command_filename
+		self.output_filename = output_filename
 		self.show_output = show_output
 		self.output = ""
+
+
+		if isinstance(verbose, str):
+			self.verbose = [verbose]
+		elif isinstance(verbose, int):
+			if verbose == 0:
+				self.verbose = []
+			elif verbose == 1:
+				self.verbose = ['label']
+			elif verbose == 2:
+				self.verbose = ['label', 'command']
+			else:
+				self.verbose = ['label', 'command', 'status']
 		if expected_output is None:
 			self.expected_output = []
 		elif isinstance(expected_output, str):
@@ -130,14 +100,56 @@ class Terminal:
 
 	def _showOutput(self, command_arguments):
 
-		command_string = "\tCommand Arguements:\n"
+		label_string = self.label
+		command_string = self._generateCommandArgumentString(command_arguments)
+		status_string = self._generateTerminalStatusString()
+
+		selected_output = list()
+		if 'label' in self.verbose:
+			selected_output.append(label_string)
+		if 'command' in self.verbose:
+			selected_output.append(command_string)
+		if 'status' in self.verbose:
+			selected_output.append(status_string)
+		if 'output' in self.verbose:
+			selected_output.append("\tOutput:\n" + self.output)
+
+		display_string = "\n".join(selected_output)
+
+		if self.command_filename is not None:
+			self.toFile(display_string, self.command_filename)
+
+		if self.output_filename is not None:
+			self.toFile(self.output, self.output_filename)
+		if self.show_output:
+			print(display_string)
+			print(self.output)
+		self._terminal_string = display_string
+
+	def _generateTerminalStatusString(self):
+		_status_string =  "\tTerminal Status:\n"
+		for k, v in sorted(self.getStatus().items()):
+			if k == 'outputFiles': continue
+			if k == 'outputStatus': 
+				_status_string += "\t\toutputStatus\n"
+				for fns, fnf in v:
+					_status_string += "\t\t\t{}\t{}\n".format(fns, fnf)
+			else:
+				_status_string += "\t\t{}\t{}\n".format(k,v)
+
+		return _status_string
+
+	def _generateCommandArgumentString(self, command_arguments):
+		command_string = "\tCommand Arguments:\n"
 		for argument in command_arguments:
-			line = "\t\t{:<30}".format(argument)
+			line = "\t{:<30}".format(argument)
 			if argument.startswith('-'):
-				line = "\n" + line
+				line = "\n\t\t" + line
 
 			command_string += line
+		return command_string
 
+	def getExpectedOutputString(self):
 		if len(self.expected_output) > 0:
 			expected_output_string = "\tExpected Output: \n"
 			for eo in self.expected_output:
@@ -146,23 +158,7 @@ class Terminal:
 		else:
 			expected_output_string = ""
 
-		_status_string =  "\tTerminal Status:\n"
-		for k, v in sorted(self.getStatus().items()):
-			if k == 'outputStatus': continue
-			_status_string += "\t\t{}\t{}\n".format(k,v)
-		_status_string += "\t\tExpected Output:\n"
-		for fns, fnf in self.getStatus()['outputStatus']:
-			_status_string += "\t\t\t{}\t{}\n".format(fnf, fnf)
-
-		full_output_string = "\n".join([self.label, expected_output_string, command_string, self.output, _status_string])
-
-		if self.show_output:
-			print(full_output_string)
-			
-		if self.filename is not None:
-			with open(self.filename, 'a') as console_file:
-				console_file.write(full_output_string)
-		self._terminal_string = full_output_string
+		return expected_output_string
 
 	@property
 	def status(self):
@@ -184,9 +180,14 @@ class Terminal:
 		}
 
 		return status
-
-
-
+	@staticmethod
+	def toFile(string, filename):
+		try:
+			with open(filename, 'a') as console_file:
+				console_file.write(string)
+		except Exception as exception:
+			print("Could not write to the console file: ", str(exception))
+			print(filename)
 
 
 
