@@ -5,9 +5,9 @@ from numbers import Number
 
 # Import local files.
 try:
-	import pytools.numbertools as numbertools
-except ImportError:
 	import numbertools
+except:
+	import pytools.numbertools as numbertools
 
 
 def elapsed(loop_number, loop_block, total_loops, timer):
@@ -37,6 +37,8 @@ def elapsed(loop_number, loop_block, total_loops, timer):
 				flush = True
 			)
 
+def now():
+	return Timestamp.now()
 
 class Timer:
 	def __init__(self, func = None, *args):
@@ -160,7 +162,7 @@ class Timer:
 
 	def to_iso(self):
 		"""Returns an ISO duration of the elapsed time"""
-		seconds = time.clock() - self.start_time
+		seconds = self.duration()
 		return Duration(seconds, unit = 'Seconds').toiso()
 
 	def show(self, label = None):
@@ -435,7 +437,9 @@ class Duration(datetime.timedelta):
 	def isoformat(self):
 		""" To make calls compatible with Timestamp.isoformat() """
 		return self.toiso()
-
+	def isoFormat(self):
+		""" To be consistent with other function names """
+		return self.toiso()
 	def toiso(self, compact = True):
 		""" Converts the timedelta to an ISO Duration string. By default, 
 			weeks are used instead of months, so the original duration string
@@ -507,13 +511,17 @@ class Timestamp(datetime.datetime):
 		elif len(args) == 3:
 			result = {'year': args[0], 'month': args[1], 'day': args[2]}
 			result.update(kwargs)
+		elif len(args) != 0:
+			result = args
 		else:
 			result = kwargs
-
-		return super().__new__(
-			cls,
-			result['year'], result['month'], result['day'],
-			result.get('hour', 0), result.get('minute', 0), result.get('second', 0))
+		if isinstance(result, dict):
+			return super().__new__(
+				cls,
+				result['year'], result['month'], result['day'],
+				result.get('hour', 0), result.get('minute', 0), result.get('second', 0))
+		else:
+			return super().__new__(cls, *result)
 
 	@staticmethod
 	def _cleandict(item):
@@ -664,8 +672,6 @@ class Timestamp(datetime.datetime):
 		return result
 
 if __name__ == "__main__":
-	d = "20160519"
-	d = Timestamp(d)
-	print(d)
-	print(d.isoformat())
-	print(d.toiso())
+	timer = Timer()
+	time.sleep(2)
+	print(timer.to_iso())

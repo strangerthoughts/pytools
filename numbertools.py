@@ -1,5 +1,6 @@
 import math
 from numbers import Number
+import datetime
 
 
 def humanReadable(value):
@@ -52,9 +53,19 @@ def toNumber(value):
 			converted_number = int(value)
 	elif isinstance(value, (int, float)):
 		converted_number = value
+	elif isinstance(value, datetime.datetime):
+		year = value.year
+		month = value.month
+		day = value.day
+		converted_number = year + (month/12) + (day/365)
 	else:
 		try:
 			converted_number = float(value)
 		except TypeError:
 			converted_number = math.nan
 	return converted_number
+
+if __name__ == "__main__":
+	test_value = datetime.datetime(2015, 6, 6)
+	test_value = toNumber(test_value)
+	print(test_value)
