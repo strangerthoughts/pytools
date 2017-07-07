@@ -1,4 +1,5 @@
 
+from .timestamp import Timestamp
 
 def elapsed(loop_number, loop_block, total_loops, timer):
 	""" Prints a line indicating the elapsed progress of the loop described

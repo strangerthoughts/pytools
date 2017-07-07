@@ -1,4 +1,8 @@
 import numbertools
+from tabletools import Table
+import os
+import pandas
+import csv
 
 def getTableType(io, **kwargs):
 	""" Determines what the general layout of the

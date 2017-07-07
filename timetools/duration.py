@@ -1,8 +1,8 @@
 
 import datetime
 import re
-import time
 from numbers import Number
+from .timestamp import Timestamp
 
 class Duration(datetime.timedelta):
 	""" Inherits from datetime.timedelta. Designed to parse

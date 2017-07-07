@@ -1,5 +1,5 @@
-
-
+import pygal
+from ._plotengine import Engine
 
 
 class PygalXY(Engine):

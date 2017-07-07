@@ -1,2 +1,2 @@
-from .terminal import terminal
+from .terminal import Terminal
 from .utilities import *

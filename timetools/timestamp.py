@@ -1,3 +1,7 @@
+
+import datetime
+import re
+
 class Timestamp(datetime.datetime):
 	timestamp_regex = r"""(?:(?P<year>[\d]{4})-(?P<month>[\d]{2})-(?P<day>[\d]{2}))?
 						[\sA-Za-z]?

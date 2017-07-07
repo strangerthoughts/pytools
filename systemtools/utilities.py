@@ -1,5 +1,4 @@
-
-import process
+import os
 import psutil
 
 def memoryUsage(show = True, units = 'MB'):
@@ -21,3 +20,6 @@ def memoryUsage(show = True, units = 'MB'):
 		print("Current memory usage: {0:.2f}{1}".format(value, units), flush = True)
 	else:
 		return usage
+
+if __name__ == "__main__":
+	memoryUsage()
