@@ -2,7 +2,7 @@
 import datetime
 import re
 from numbers import Number
-from .timestamp import Timestamp
+from ._timestamp import Timestamp
 
 class Duration(datetime.timedelta):
 	""" Inherits from datetime.timedelta. Designed to parse

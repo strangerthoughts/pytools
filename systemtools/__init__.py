@@ -1,2 +1,2 @@
 from ._terminal import Terminal
-from .utilities import *
+from ._system_methods import *

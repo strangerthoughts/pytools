@@ -1,2 +1,2 @@
 from ._pandas_table import PandasTable as Table
-from .utilities import *
+from ._table_methods import *

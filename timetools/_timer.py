@@ -4,8 +4,7 @@ import re
 
 from numbers import Number
 
-# Import local files.
-import numbertools
+from ._duration import Duration 
 
 class Timer:
 	def __init__(self, func = None, *args):
