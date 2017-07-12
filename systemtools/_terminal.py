@@ -35,19 +35,7 @@ class Terminal:
 		self.output_filename = output_filename
 		self.show_output = show_output
 		self.output = ""
-
-
-		if isinstance(verbose, str):
-			self.verbose = [verbose]
-		elif isinstance(verbose, int):
-			if verbose == 0:
-				self.verbose = []
-			elif verbose == 1:
-				self.verbose = ['label']
-			elif verbose == 2:
-				self.verbose = ['label', 'command']
-			else:
-				self.verbose = ['label', 'command', 'status']
+		self.verbose = verbose
 		if expected_output is None:
 			self.expected_output = []
 		elif isinstance(expected_output, str):
@@ -66,6 +54,8 @@ class Terminal:
 	
 	def runCommand(self):
 		command_arguments = shlex.split(self.command)
+		if 'command' in self.verbose:
+
 		if any(not os.path.exists(fn) for fn in self.expected_output):
 
 			#self._printCommand(command_arguments)
@@ -76,7 +66,7 @@ class Terminal:
 		self.duration = timetools.Duration(self.end_time - self.start_time)
 		self._showOutput(command_arguments)
 
-	def _showOutput(self, command_arguments):
+	def _showOutput(self, command_arguments, section):
 
 		label_string = self.label
 		command_string = self._generateCommandArgumentString(command_arguments)
@@ -99,9 +89,11 @@ class Terminal:
 
 		if self.output_filename is not None:
 			self.toFile(self.output, self.output_filename)
-		if self.show_output:
+
+		if self.show_output or self.verbose:
 			print(display_string)
 			print(self.output)
+
 		self._terminal_string = display_string
 
 	def _generateTerminalStatusString(self):
