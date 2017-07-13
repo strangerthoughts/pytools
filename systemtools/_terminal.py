@@ -1,30 +1,8 @@
 import os
 import shlex
 import subprocess
-import psutil
+from pytools import timetools
 
-from . import timetools
-
-
-def memoryUsage(show = True, units = 'MB'):
-	""" Gets the current memory usage 
-		Returns
-		----------
-			if show is False
-			memory: int
-				The total number of bytes being used by the current process
-	"""
-
-	process = psutil.Process(os.getpid())
-	usage = process.memory_info().rss
-	if show:
-		if units == 'MB':
-			value = usage / 1024**2
-		else:
-			value = usage
-		print("Current memory usage: {0:.2f}{1}".format(value, units), flush = True)
-	else:
-		return usage
 
 
 class Terminal:
@@ -57,19 +35,9 @@ class Terminal:
 		self.output_filename = output_filename
 		self.show_output = show_output
 		self.output = ""
+		self.verbose = verbose
+		if isinstance(self.verbose, int): self.verbose = []
 
-
-		if isinstance(verbose, str):
-			self.verbose = [verbose]
-		elif isinstance(verbose, int):
-			if verbose == 0:
-				self.verbose = []
-			elif verbose == 1:
-				self.verbose = ['label']
-			elif verbose == 2:
-				self.verbose = ['label', 'command']
-			else:
-				self.verbose = ['label', 'command', 'status']
 		if expected_output is None:
 			self.expected_output = []
 		elif isinstance(expected_output, str):
@@ -77,10 +45,8 @@ class Terminal:
 		else:
 			self.expected_output = expected_output
 
-
 		self.runCommand()
 
-		self.end_time = timetools.now()
 		self.duration = timetools.Duration(self.end_time - self.start_time)
 	
 	def __str__(self):
@@ -93,22 +59,35 @@ class Terminal:
 			#self._printCommand(command_arguments)
 			process = subprocess.Popen(command_arguments, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
 			self.output = str(process.stdout.read(), 'utf-8')
-
 		self.end_time = timetools.now()
 		self.duration = timetools.Duration(self.end_time - self.start_time)
 		self._showOutput(command_arguments)
+
+	def _generateInputFileStatusString(self, arguments):
+		string = "Input Files: \n"
+		for arg in arguments:
+
+			if isinstance(arg, str) and arg.startswith('/'):
+				string += "{}\t{}\n".format(os.path.exists(arg), arg)
+
+		return string
 
 	def _showOutput(self, command_arguments):
 
 		label_string = self.label
 		command_string = self._generateCommandArgumentString(command_arguments)
+		input_string = self._generateInputFileStatusString(command_arguments)
 		status_string = self._generateTerminalStatusString()
 
 		selected_output = list()
+		if len(self.verbose) == 1 and 'all' in self.verbose:
+			self.verbose = ['label', 'command', 'input', 'status', 'output']
 		if 'label' in self.verbose:
 			selected_output.append(label_string)
 		if 'command' in self.verbose:
 			selected_output.append(command_string)
+		if 'input' in self.verbose:
+			selected_output.append(input_string)
 		if 'status' in self.verbose:
 			selected_output.append(status_string)
 		if 'output' in self.verbose:
@@ -121,9 +100,11 @@ class Terminal:
 
 		if self.output_filename is not None:
 			self.toFile(self.output, self.output_filename)
-		if self.show_output:
+
+		if self.show_output or self.verbose:
 			print(display_string)
 			print(self.output)
+
 		self._terminal_string = display_string
 
 	def _generateTerminalStatusString(self):
@@ -168,6 +149,8 @@ class Terminal:
 	def getStatus(self):
 		""" The status of the terminal.
 		"""
+		self.end_time = timetools.now()
+		self.duration = timetools.Duration(self.end_time - self.start_time)
 		output_status = [(os.path.exists(fn), fn) for fn in self.expected_output]
 		eo = self.expected_output[0] if len(self.expected_output) == 1 else self.expected_output
 		status = {
@@ -188,9 +171,3 @@ class Terminal:
 		except Exception as exception:
 			print("Could not write to the console file: ", str(exception))
 			print(filename)
-
-
-
-
-
-
