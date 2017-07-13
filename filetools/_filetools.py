@@ -82,6 +82,7 @@ def listAllFiles(folder, **kwargs):
 	
 	file_list = list()
 	if os.path.isdir(folder):
+
 		for fn in os.listdir(folder):
 			abs_path = os.path.join(folder, fn)
 			if logic == 'or':
@@ -93,9 +94,14 @@ def listAllFiles(folder, **kwargs):
 
 			if skip_file: continue
 			if os.path.isdir(abs_path):
-				file_list += listAllFiles(abs_path, **kwargs)
+				try:
+					file_list += listAllFiles(abs_path, **kwargs)
+				except PermissionError:
+					pass
+					#print(abs_path)
 			elif os.path.isfile(abs_path):  # Explicit check
 				file_list.append(abs_path)
+
 	else:
 		file_list = [folder]
 	return file_list
@@ -136,11 +142,20 @@ def searchForDuplicateFiles(folder, by = 'name'):
 		_duplicates.append(checked_files[key])
 	return _duplicates
 
+def searchFiles(string, folder, include_subfolders = True):
+	found = []
+	all_files = listAllFiles(folder)
+	for fn in all_files:
+		if string in fn:
+			found.append(fn)
+
+	return found
+
 
 if __name__ == "__main__":
-	test_folder = "/home/upmc/Documents/Genomic_Analysis/1_input_vcfs/original_callsets/TCGA-2H-A9GF"
-	test_exclude = ['chromosome']
-	result = listAllFiles(test_folder, exclude = test_exclude, logic = 'and')
-	pprint(result)
-	result.to_csv(os.path.join(test_folder, "test.tsv"), sep = "\t")
-	print("Saved!")
+	test_folder = "C:\\Program Files (x86)"
+	search_result = searchFiles('basetsd.h', test_folder)
+
+	for fn in search_result:
+		print(fn)
+

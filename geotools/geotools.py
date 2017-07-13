@@ -1,9 +1,7 @@
 import os
-import pandas
 from fuzzywuzzy import fuzz
-from unidecode import unidecode
-import tabletools
 
+from .utilities import *
 
 ####################################### Local Variables ############################################
 LOCAL_PATH = os.path.dirname(__file__)
