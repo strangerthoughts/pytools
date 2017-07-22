@@ -90,7 +90,7 @@ class Terminal:
 			selected_output.append(input_string)
 		if 'status' in self.verbose:
 			selected_output.append(status_string)
-		if 'output' in self.verbose:
+		if 'output' in self.verbose and len(self.output) < 1000: #character limit
 			selected_output.append("\tOutput:\n" + self.output)
 
 		display_string = "\n".join(selected_output)
