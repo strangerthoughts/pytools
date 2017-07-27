@@ -115,7 +115,7 @@ class CompositeTable:
 
 	def __iter__(self):
 		for i in self.iterrows(): 
-			yield i
+			yield i[1]
 
 	def __getitem__(self, index):
 		# Try return self.df.__getitem__(index)
