@@ -152,6 +152,13 @@ class Timestamp(datetime.datetime):
 			result = result.split('T')[0]
 		return result
 
+	def toIso(self, compact = True):
+		# for compatability with the other methods names.
+		return self.toiso(self, compact)
+	def isoFormat(self, compact = True):
+		# for compatibility
+		return self.toiso(compact)
+
 	def toNumeric(self):
 		pass
 

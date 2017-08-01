@@ -147,7 +147,9 @@ class Duration(datetime.timedelta):
 	@classmethod
 	def _parseInput(cls, element, **kwargs):
 		""" Chooses which parse to apply to the input, if supported."""
-		if isinstance(element, str):
+		if isinstance(element, datetime.timedelta):
+			result = cls._parseTimedeltaObj(element)
+		elif isinstance(element, str):
 			result = cls._parseString(element)
 		elif isinstance(element, tuple):
 			result = cls._parseTuple(element)
@@ -198,11 +200,18 @@ class Duration(datetime.timedelta):
 		else: result = cls._parseInterval(string)
 		return result
 
-	@staticmethod
-	def _parseTimestamp(cls, string):
+	@classmethod
+	def _parseTimedeltaObj(cls, obj):
 		""" Parses durations formatted as Y:M:D:H:M:S. """
-		pass
+		result = {
+			'days': obj.days,
+			'hours': 0,
+			'minutes': 0,
+			'seconds': obj.seconds,
+			'microseconds': obj.microseconds
+		}
 
+		return result
 	@staticmethod
 	def _parseTuple(value):
 		""" Returns a Duration object generated from a tuple of time values.
@@ -264,15 +273,14 @@ class Duration(datetime.timedelta):
 		longdict['hours'], seconds = divmod(seconds, 3600)
 		longdict['minutes'], longdict['seconds'] = divmod(seconds, 60)
 		longdict['seconds'] += original['microseconds'] / 1000000
-
 		return longdict
 
-	def isoformat(self):
+	def isoformat(self, compact = True):
 		""" To make calls compatible with Timestamp.isoformat() """
-		return self.toiso()
-	def isoFormat(self):
+		return self.toiso(compact)
+	def isoFormat(self, compact = True):
 		""" To be consistent with other function names """
-		return self.toiso()
+		return self.toiso(compact)
 	def toiso(self, compact = True):
 		""" Converts the timedelta to an ISO Duration string. By default, 
 			weeks are used instead of months, so the original duration string
@@ -288,23 +296,29 @@ class Duration(datetime.timedelta):
 		datetime_map = [
 			'P', ('years', 'Y'), ('months', 'M'), ('weeks', 'W'), ('days', 'D'), 
 			'T', ('hours', 'H'), ('minutes', 'M'), ('seconds', 'S')]
+		datetime_values = list()
+
 		isostring = ""
 		for key in datetime_map:
 			if isinstance(key, tuple):
-				value = values.get(key[0], 0)
-				if value == 0 and compact: continue
-				else: isostring += str(value) + key[1]
+				element = (values.get(key[0], 0), key[1])
+				if compact and element[0] == 0: continue
+				datetime_values.append(element)
 			else:
-				isostring += key
-		isostring = ''.join(isostring)
+				datetime_values.append(("", key))
 
-		if isostring == 'PT' and not compact:  # Duration of 0 seconds
-			isostring = 'PT0S'
-		if isostring[1] == 'P': isostring = isostring[1:]
-		if isostring[-1] == 'T': isostring = isostring[:1]
+		isostring = "".join("{}{}".format(i, j) for i, j in datetime_values)
+		
+		if compact:
+			if isostring == 'PT' and not compact:  # Duration of 0 seconds
+				isostring = 'PT0S'
+			#isostring[0] == 'P' and isostring[1] == 'T': isostring = isostring[1:]
+			#elif isostring[-1] == 'T': isostring = isostring[:1]
+		
 
 		return isostring
-
+	def toIso(self, compact = True):
+		return self.toiso(compact)
 	def totalSeconds(self):
 		return self.total_seconds()
 
