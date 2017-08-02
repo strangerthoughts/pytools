@@ -31,14 +31,14 @@ class Duration(datetime.timedelta):
 	duration_regex = re.compile(
 		r"""
 		[pP]?
-		((?P<years>[\d]+)[yY])?[-]?
-		((?P<months>[\d]+)[mM])?[-]?
-		((?P<weeks>[\d]+)[wW])?[-]?
-		((?P<days>[\d]+)[dD])?
+		((?P<years>[-\d]+)[yY])?[-]?
+		((?P<months>[-\d]+)[mM])?[-]?
+		((?P<weeks>[-\d]+)[wW])?[-]?
+		((?P<days>[-\d]+)[dD])?
 		[tT]?
-		((?P<hours>[\d]+)[hH])?[-]?
-		((?P<minutes>[\d]+)[mM])?[-]?
-		((?P<seconds>[\d]+(.[\d]+)?)[sS])?""",
+		((?P<hours>[-\d]+)[hH])?[-]?
+		((?P<minutes>[-\d]+)[mM])?[-]?
+		((?P<seconds>[-\d]+(.[\d]+)?)[sS])?""",
 		re.VERBOSE
 	)
 	timestamp_regex = re.compile(
@@ -135,9 +135,11 @@ class Duration(datetime.timedelta):
 	def _parseiso(cls, string):
 		""" Parses a string with formatted as an ISO duration: PnnYnnMnnWnnDTnnHnnMnnST """
 		matches = cls.duration_regex.search(string).groupdict()
+		is_negative = string[0] == '-'
 		for k, v in matches.items():
 			if v is None: v = 0
 			else: v = float(v)
+			if is_negative: v = -v
 			matches[k] = v
 		if 'years' in matches:  matches['days'] += 365 * matches.pop('years')
 		if 'months' in matches: matches['days'] += 30  * matches.pop('months')
@@ -261,7 +263,17 @@ class Duration(datetime.timedelta):
 
 	def tolongdict(self):
 		""" Returns a dictionary with more human readable date and time keys. """
-		original = self.todict()
+
+		is_negative = self.totalSeconds() < 0
+		if is_negative: 
+			original = abs(self)
+			original = {
+				'days': original.days,
+				'seconds': original.seconds,
+				'microseconds': original.microseconds
+			}
+		else:
+			original = self.todict()
 		longdict = dict()
 		# Get date values
 		days = original['days']
@@ -273,6 +285,10 @@ class Duration(datetime.timedelta):
 		longdict['hours'], seconds = divmod(seconds, 3600)
 		longdict['minutes'], longdict['seconds'] = divmod(seconds, 60)
 		longdict['seconds'] += original['microseconds'] / 1000000
+
+		
+		# Since timedelta objects subtract positive numbers from the largest unit for negative timestamps, need to convert back,
+
 		return longdict
 
 	def isoformat(self, compact = True):
@@ -291,7 +307,7 @@ class Duration(datetime.timedelta):
 				compact: bool; default False
 					Whether to omit emty fields.
 		"""
-
+		is_negative = self.totalSeconds() < 0
 		values = self.tolongdict()
 		datetime_map = [
 			'P', ('years', 'Y'), ('months', 'M'), ('weeks', 'W'), ('days', 'D'), 
@@ -314,8 +330,9 @@ class Duration(datetime.timedelta):
 				isostring = 'PT0S'
 			#isostring[0] == 'P' and isostring[1] == 'T': isostring = isostring[1:]
 			#elif isostring[-1] == 'T': isostring = isostring[:1]
-		
 
+		if is_negative:
+			isostring = '-' + isostring
 		return isostring
 	def toIso(self, compact = True):
 		return self.toiso(compact)
