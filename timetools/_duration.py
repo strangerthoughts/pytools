@@ -361,3 +361,6 @@ class Duration(datetime.timedelta):
 			raise ValueError(message)
 
 		return value
+
+	def toNumeric(self, units):
+		return self.to_numeric(units)

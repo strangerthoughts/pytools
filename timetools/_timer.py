@@ -5,6 +5,7 @@ import re
 from numbers import Number
 
 from ._duration import Duration 
+from .. import numbertools
 
 class Timer:
 	def __init__(self, func = None, *args):
@@ -93,13 +94,27 @@ class Timer:
 		}
 		return result
 
-	def timeFunction(self, func, loops = 100, *args):
+	def timeFunction(self, func, loops = 10, *args):
 		""" Benchmarks a function. Kwargs are passed on to the function.
 		"""
-		self.reset()
+		_results = list()
+		
 		for i in range(loops):
+			self.reset()
 			func(*args)
-		self.timeit(loops)
+			_results.append(self.duration())
+
+		minimum = min(_results)
+		maximum = max(_results)
+		avg = sum(_results) / len(_results)
+		std = numbertools.standardDeviation(_results)
+
+		minimum = numbertools.humanReadable(minimum)
+		maximum = numbertools.humanReadable(maximum)
+		avg = numbertools.humanReadable(avg)
+		std = numbertools.humanReadable(std)
+		print("{}s ± {}s per loop [{} loops][{}s, {}s]".format(avg, std, loops, minimum, maximum))
+		return avg, std
 
 	def timeit(self, loops = 1, label = None):
 		""" Calculates the time for a loop to execute

@@ -1,6 +1,7 @@
 import math
 from numbers import Number
 import datetime
+import numpy
 
 
 def humanReadable(value):
@@ -64,6 +65,9 @@ def toNumber(value):
 		except TypeError:
 			converted_number = math.nan
 	return converted_number
+
+def standardDeviation(values):
+	return numpy.std(values)
 
 if __name__ == "__main__":
 	test_value = datetime.datetime(2015, 6, 6)

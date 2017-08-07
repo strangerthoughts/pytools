@@ -194,9 +194,15 @@ class CompositeTable:
 		else:
 			try:
 				table = pandas.DataFrame(io, **kwargs)
-			except:
-				message = "Could not load '{}' as a table.".format(str(io))
-				raise TypeError(message)
+			except TypeError:
+				try:
+					print("Could not load the table, trying without keywork arguments.")
+					table = pandas.DataFrame(io)
+				except Exception as exception:
+					message = "Could not load '{}' as a table.".format(str(io))
+					raise exception(message)
+				
+
 
 		return table
 
