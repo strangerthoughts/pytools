@@ -94,14 +94,14 @@ class Timer:
 		}
 		return result
 
-	def timeFunction(self, func, loops = 10, *args):
+	def timeFunction(self, func, loops = 10, *args, **kwargs):
 		""" Benchmarks a function. Kwargs are passed on to the function.
 		"""
 		_results = list()
 		
 		for i in range(loops):
 			self.reset()
-			func(*args)
+			func(*args, **kwargs)
 			_results.append(self.duration())
 
 		minimum = min(_results)
