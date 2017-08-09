@@ -90,8 +90,11 @@ class Terminal:
 			selected_output.append(input_string)
 		if 'status' in self.verbose:
 			selected_output.append(status_string)
-		if 'output' in self.verbose and len(self.output) < 300: #character limit
-			selected_output.append("\tOutput:\n" + self.output)
+		if 'output' in self.verbose:
+			if  len(self.output) <= 300: #character limit
+				selected_output.append("\tOutput:\n" + self.output)
+			else:
+				selected_output.append("\tOutput:\n" + self.output[:300])
 
 		display_string = "\n".join(selected_output)
 
@@ -101,7 +104,7 @@ class Terminal:
 		if self.output_filename is not None:
 			self.toFile(self.output, self.output_filename)
 
-		if self.show_output or self.verbose:
+		if self.show_output:
 			print(display_string)
 			print(self.output)
 
