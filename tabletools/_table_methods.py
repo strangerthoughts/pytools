@@ -1,4 +1,3 @@
-print("name: ", __name__)
 
 from pytools import numbertools
 
