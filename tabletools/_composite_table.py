@@ -1,6 +1,9 @@
 import os
 import pandas
-
+class AbstractTable:
+	@property
+	def columns(self):
+		raise NotImplementedError
 
 class CompositeTable:
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
@@ -196,11 +199,12 @@ class CompositeTable:
 				table = pandas.DataFrame(io, **kwargs)
 			except TypeError:
 				try:
-					print("Could not load the table, trying without keywork arguments.")
+					print("Could not load the table, trying without keyword arguments.")
 					table = pandas.DataFrame(io)
 				except Exception as exception:
 					message = "Could not load '{}' as a table.".format(str(io))
-					raise exception(message)
+					print(message)
+					raise exception
 				
 
 
@@ -507,8 +511,7 @@ class CompositeTable:
 			message = "Improper comparison provided: '{}'".format(comparison)
 			raise ValueError(message)
 		result = self._boolselect(elements)
-		if not to_df:
-			result = Table(result)
+
 		return result
 
 	# Manipulate attributes and data in the Table.
@@ -528,16 +531,20 @@ class CompositeTable:
 				value: any
 					The new value to place in the selected column
 			Returns
-			----------
-			function: None
+			-------
+				value
 		"""
 		selected_indices = self._get_indices(on = on, where = where)
 		column_index = self.df.columns.get_loc(column)
-		self.df.set_value(selected_indices,
-						  column_index,
-						  value,
-						  takeable = True)
-		return self
+		self.df.set_value(
+			selected_indices,
+			column_index,
+			value,
+			takeable = True
+		)
+
+		return value
+
 
 	def melt(self, **kwargs):
 		""""Unpivots" a DataFrame from wide format to long format, optionally leaving
@@ -701,6 +708,7 @@ class CompositeTable:
 	def select(self, criteria):
 		""" Returns a new table that satisfies the input criteria.
 		"""
+		raise NotImplementedError
 
 	def iteritems(self):
 		""" Same as self.iterrows, but only returns the row.
