@@ -137,7 +137,6 @@ class Timer:
 		
 		message = message + "{0}s per loop ({1:.2f}s for {2:n} loop(s)) ".format(per_loop, duration, loops)
 		
-		print(message)
 		self.reset()
 		return message
 

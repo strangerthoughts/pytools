@@ -255,7 +255,7 @@ class CompositeTable:
 		""" Returns a dataframe of the suppled file
 		"""
 		extension = os.path.splitext(filename)[-1]
-		if extension in {'.xls', '.xlsx'}:
+		if extension in {'.xls', '.xlsx', '.xlsm'}:
 			df = pandas.read_excel(filename, **kwargs)
 		elif extension in {'.csv', '.tsv', '.fsv'}:
 			if 'sheetname' in kwargs: kwargs.pop('sheetname')
@@ -690,12 +690,17 @@ class CompositeTable:
 		"""
 		if fuzzy:
 			result = self._fuzzySearch(value, column)
-		elif isinstance(value, (Iterable, Sequence)) and not isinstance(value, str):
+		#elif isinstance(value, (Iterable, Sequence)) and not isinstance(value, str):
+		elif isinstance(value, (list, set)):
 			result = self.df[column].isin(value)
 		else:
 			result = value in self.get_column(column)
 		return result
 	# Methods for iterating through the items in the database.
+
+	def select(self, criteria):
+		""" Returns a new table that satisfies the input criteria.
+		"""
 
 	def iteritems(self):
 		""" Same as self.iterrows, but only returns the row.

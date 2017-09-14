@@ -62,6 +62,7 @@ class Terminal:
 		self.end_time = timetools.now()
 		self.duration = timetools.Duration(self.end_time - self.start_time)
 		self._showOutput(command_arguments)
+		return self.output
 
 	def _generateInputFileStatusString(self, arguments):
 		string = "Input Files: \n"
