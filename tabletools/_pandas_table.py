@@ -1,31 +1,22 @@
 
-from ._composite_table import CompositeTable
+import pandas
 
+from ._abstract_table import AbstractTable
 
-class PandasTable(CompositeTable):
+DataFrameType = pandas.core.frame.DataFrame
+
+class PandasTable(AbstractTable):
 	"""
-		Temporary functions
-		abs()
+		Acts as a Pandas.DataFrame Emulator
 	"""
+
 	@property
-	def columns(self):
-		return self.df.columns
+	def df(self)->DataFrameType:
+		return self._df
 
-	def abs(self, column = None):
-		""" Returns a Table with all numeric values converted to
-			the absolute value of themselves.
-			Parameters
-			----------
-				column: column-label
-					If provided, only the selected column will be converted.
-		"""
-		if column:
-			result = self.df
-			result[column] = result[column].abs()
-		else:
-			result = self.df.abs()
-		return result
-
+	@df.setter
+	def df(self, value):
+		pass
 	def items(self):
 		"""Iterator over (column name, Series) pairs."""
 		for item in self.df.items():
@@ -59,5 +50,3 @@ class PandasTable(CompositeTable):
 
 	def groupby(self, by):
 		return self.df.groupby(by = by)
-
-	def to_latex(self, **kwargs): return self.df.to_latex(**kwargs)
