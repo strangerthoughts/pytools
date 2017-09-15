@@ -26,12 +26,6 @@ class PandasTable(CompositeTable):
 			result = self.df.abs()
 		return result
 
-	def add(self):
-		pass
-
-	def keys(self):
-		return self.df.keys()
-
 	def items(self):
 		"""Iterator over (column name, Series) pairs."""
 		for item in self.df.items():

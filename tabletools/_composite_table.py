@@ -1,19 +1,47 @@
 import os
 import pandas
-class AbstractTable:
-	@property
-	def columns(self):
-		raise NotImplementedError
 
-class CompositeTable:
+class AbstractTable:
+	@classmethod
+	def fromDataframe(cls, io, **kwargs):
+		""" Returns a new Table object from a pandas.DataFrame object.
+			Keyword arguments are passed on to the Table constructor.
+			Parameters
+			----------
+				io: pandas.DataFrame
+					The input dataframe
+			
+		"""
+		return cls(io, **kwargs)
+	
+	@classmethod
+	def fromList(cls, io):
+		""" Creates a table from a list of dictionaries.
+			Parameters
+			----------
+				io: list<dict<>>
+					A list of dictionaries to convert to a table.
+		"""
+
+		df = pandas.DataFrame(io)
+		df = cls(df)
+		return df
+
+	def toDataframe(self):
+		return self.df
+
+
+class CompositeTable(AbstractTable):
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
-		of tabular data.
+		of tabular data. It is designed such that selection of row values based
+		on other values is both fast and easy.
 
 		Examples
 		--------
-			iteration:
+			Example of iteration:
 				for row in Table():
 					pass
+				
 	"""
 	def __init__(self, io, **kwargs):
 		""" Parameters
@@ -41,6 +69,7 @@ class CompositeTable:
 		self._resetIndex()
 
 	def __len__(self):
+		""" Returns the number of rows present in the table. """
 		return len(self.df)
 
 	def __call__(self, on, where = None, column = None, value = None, **kwargs):
@@ -117,20 +146,18 @@ class CompositeTable:
 		return element
 
 	def __iter__(self):
-		for i in self.iterrows(): 
+		for i in self.df.iterrows(): 
 			yield i[1]
 
 	def __getitem__(self, index):
 		# Try return self.df.__getitem__(index)
 		return self.df.__getitem__(index)
 
-	def __repr__(self):
-		return self.df.__repr__()
-
 	def __str__(self):
 		string = "Table(shape = ({x}x{y}))".format(
 			x = len(self),
-			y = len(self.df.columns))  
+			y = len(self.df.columns)
+		)  
 		return string
 
 	# Private Methods
@@ -335,16 +362,6 @@ class CompositeTable:
 		self.df = pandas.concat([self.df, newdf], ignore_index = True)
 		self._resetIndex()
 
-	@classmethod
-	def fromList(cls, io):
-		""" Creates a table from a list of dictionaries.
-		"""
-
-		df = pandas.DataFrame(io)
-		df = cls(df)
-		return df
-
-	# Wrappers around commonly-used pandas methods.
 
 	# Select data from the table
 	def chainSelect(self, keys, **kwargs):
@@ -575,14 +592,14 @@ class CompositeTable:
 			value_name : scalar; default 'value'
 				Name to use for the 'value' column.
 		"""
-		kwargs['id_vars'] = kwargs.get('identifiers', kwargs['id_vars'])
-		kwargs['value_vars'] = kwargs.get('variables', kwargs.get('value_vars'))
-		kwargs['var_name'] = kwargs.get('subjects', kwargs.get('var_name', 'variable'))
-		kwargs['value_name'] = kwargs.get('values', kwargs.get('value_name', 'value'))
-		kwargs['to_file'] = kwargs.get('to_file')
+		kwargs['id_vars'] 	= kwargs.get('identifiers', kwargs['id_vars'])
+		kwargs['value_vars']= kwargs.get('variables', 	kwargs.get('value_vars'))
+		kwargs['var_name'] 	= kwargs.get('subjects', 	kwargs.get('var_name', 'variable'))
+		kwargs['value_name']= kwargs.get('values', 		kwargs.get('value_name', 'value'))
+		kwargs['to_file'] 	= kwargs.get('to_file')
 
 		new_table = pandas.melt(self.df, **kwargs)
-		new_table = Table(new_table)
+		new_table = self.fromDataframe(new_table)
 
 		if kwargs['to_file']:
 			if isinstance(kwargs['to_file'], str):
@@ -591,7 +608,8 @@ class CompositeTable:
 				fn = os.path.splitext(self.filename)
 				fn = fn[0] + '.melt' + fn[1]
 			else: fn = None  # No usable filename
-			if fn: new_table.save(fn)
+			if fn: 
+				new_table.save(fn)
 
 		return new_table
 
@@ -645,10 +663,11 @@ class CompositeTable:
 			message = "Did not pass a column name to merge on."
 			raise KeyError(message)
 
-		if isinstance(other, Table): other = other.df
+		if not isinstance(other, pandas.DataFrame): 
+			other = other.toDataframe()
 
-		new_df = pandas.merge(self.df, other, **kwargs)
-		new_table = Table(new_df)
+		new_df = pandas.merge(self.toDataframe, other, **kwargs)
+		new_table = self.fromDataframe(new_df)
 		return new_table
 	
 	def _resetIndex(self):
@@ -669,7 +688,7 @@ class CompositeTable:
 				function : None
 		"""
 		for c in columns:
-			if c in self.df.columns:
+			if c in self.columns:
 				del self.df[c]
 	
 	# Methods based on the values contained in the table.
@@ -679,7 +698,7 @@ class CompositeTable:
 		result = process.extractOne(value, self.get_column(column))
 		return result
 
-	def isin(self, value, column, fuzzy = False):
+	def isin(self, value, column):
 		""" Checks whether a value is in one of the database columns.
 			Parameters
 			----------
@@ -687,76 +706,24 @@ class CompositeTable:
 					The value to search for.
 				column: column-label
 					The olumn to search in.
-				fuzzy: bool; default False
-					Whether to perform fuzzy searching.
-
 			Returns
 			---------
 				isin : bool
 					Whether the selected value was found
 		"""
-		if fuzzy:
-			result = self._fuzzySearch(value, column)
-		#elif isinstance(value, (Iterable, Sequence)) and not isinstance(value, str):
-		elif isinstance(value, (list, set)):
+
+		if isinstance(value, (list, set)):
 			result = self.df[column].isin(value)
 		else:
 			result = value in self.get_column(column)
 		return result
-	# Methods for iterating through the items in the database.
-
-	def select(self, criteria):
-		""" Returns a new table that satisfies the input criteria.
-		"""
-		raise NotImplementedError
-
-	def iteritems(self):
-		""" Same as self.iterrows, but only returns the row.
-			This is useful where enumerate() would be more valuable than the
-			current index.
-		"""
-		for i in self.iterrows():
-			yield i[1]
 
 	def iterrows(self):
 		""" Iterates over the rows in the table. The index is corresponds to
 		the labeled index rather than the location (0-based) index.
 		"""
 		for index, row in self.df.iterrows():
-			yield index, row
-
-	# Show statistics and other information for the table.
-	def head(self, rows = 5):
-		return self.df.head(rows)   
-
-	def info(self, verbose = True):
-		print(self.df.info(verbose = verbose))
-
-	def value_counts(self, column, sort_values = True):
-		""" Wrapper for pandas.DataFrame.value_counts()
-			Parameters
-			----------
-				column: column label
-					The column to count unique values on
-				sort_values: bool; default False
-					Whether to sort the index of the returned data
-			Returns
-			----------
-				series : pandas.Series
-		"""
-		series = self.df[column].value_counts() 
-		if sort_values: series = series.sort_index()
-		return series   
-
-	# Methods to convert the table to other formats.
-
-	def toList(self):
-		""" Converts the table to a list of dicts.
-			Returns
-			-------
-				list<dict>
-		"""
-		return [i.to_dict() for _, i in self]
+			yield index, row 
 
 	def searchColumn(self, column, string):
 		values = self.get_column(column)

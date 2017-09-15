@@ -1,10 +1,22 @@
+import datetime
 import math
 from numbers import Number
-import datetime
+
 import numpy
 
 
 def humanReadable(value):
+	""" Converts a number into a more easily-read string.
+		Ex. 101000 -> '101T' or (101, 'T')
+		Parameters
+		----------
+			values: int, float
+				Any number.
+		Returns
+		-------
+			string: str
+				The reformatted number.
+	"""
 
 	if value < 1E-6:
 		suffix = 'n'
@@ -45,6 +57,16 @@ def isNumber(value):
 
 
 def toNumber(value):
+	""" Attempts to convert the passed object to a number.
+		Returns
+		-------
+			value: Scalar
+				* list,tuple,set -> list of Number
+				* int,float -> int, float
+				* str -> int, float
+				* datetime.datetime -> float (with units of 'years')
+				* generic -> float if float() works, else math.nan
+	"""
 	if isinstance(value, (list, tuple, set)):
 		converted_number = [toNumber(i) for i in value]
 	elif isinstance(value, str):
@@ -67,6 +89,7 @@ def toNumber(value):
 	return converted_number
 
 def standardDeviation(values):
+	""" Returns the standard deviation of a list of values. """
 	return numpy.std(values)
 
 if __name__ == "__main__":

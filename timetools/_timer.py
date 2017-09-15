@@ -1,18 +1,21 @@
 import time
-import datetime
-import re
-
-from numbers import Number
 
 from ._duration import Duration 
 from .. import numbertools
 
 class Timer:
-	def __init__(self, func = None, *args):
+	""" A class with convienient timing methods.
+		.timeit -> Times a number of loops
+		.timeFunction -> benchmarks a function
+		.benchmark -> benchmarks an external process and returns
+			both the average execution time and standard deviation.
+	
+	"""
+	def __init__(self, func = None, *args, **kwargs):
 		self.start_time = time.clock()
 		self.end_time = 0.0 
 		if func is not None:
-			self.timeFunction(func, 100, *args,)
+			self.timeFunction(func, 100, *args, **kwargs)
 
 	def __str__(self):
 		return self.to_iso()
@@ -83,7 +86,18 @@ class Timer:
 		self.reset()
 
 	def benchmark(self, loops = 1):
-		""" Returns a dictionary with information on the loop timing"""
+		""" Returns a dictionary with information on the loop timing
+		
+			Returns
+			-------
+				result: dict<>
+					* 'duration': int
+						The total time that has passed.
+					* 'perLoop': float
+						The average number of seconds passed for every loop.
+					* 'loops': int
+						Number of loops passed to the function.
+		"""
 		duration = self.duration()
 		per_loop = duration / loops
 
@@ -96,6 +110,15 @@ class Timer:
 
 	def timeFunction(self, func, loops = 10, *args, **kwargs):
 		""" Benchmarks a function. Kwargs are passed on to the function.
+			Prints a message of the form 'a ± b per loop [c, d] where:
+				* 'a': average time for each loop to execute. 
+				* 'b': standard deviation for each loop. 
+				* 'c': The fastest time any given loop completed. 
+				* 'd': The slowest time any given loop took to complete.
+			Returns
+			-------
+				result: tuple -> float, float
+					The average and standard deviation of the loop execution times.
 		"""
 		_results = list()
 		
@@ -117,7 +140,7 @@ class Timer:
 		return avg, std
 
 	def timeit(self, loops = 1, label = None):
-		""" Calculates the time for a loop to execute
+		""" Calculates the time for a loop(s) to execute. Resets the timer.
 			Parameters
 			----------
 				loops: int
@@ -127,6 +150,10 @@ class Timer:
 			Return
 			----------
 				duration : string
+					a string of the form 'a per loop (b for c loops)'
+					* 'a': The average execution time for each loop 
+					* 'b': The total execution time
+					* 'c': The number of loops executed.
 		"""
 		benchmark = self.benchmark(loops)
 		duration = benchmark['duration']
@@ -141,7 +168,7 @@ class Timer:
 		return message
 
 	def to_iso(self):
-		"""Returns an ISO duration of the elapsed time"""
+		"""Returns an ISO duration representation of the elapsed time."""
 		seconds = self.duration()
 		return Duration(seconds, unit = 'Seconds').toiso()
 
