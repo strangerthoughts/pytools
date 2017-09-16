@@ -1,13 +1,10 @@
 
-import csv
+from pytools import numbertools
+
 import os
-
 import pandas
-
-from .. import numbertools
-
-from ._composite_table import CompositeTable as Table
-
+import csv
+from ._pandas_table import PandasTable as Table
 
 def getTableType(io, **kwargs):
 	""" Determines what the general layout of the
@@ -32,7 +29,7 @@ def getTableType(io, **kwargs):
 		header = io.index
 
 	numeric_header = [i for i in header if numbertools.isNumber(i)]
-
+	static_header  = [i for i in header if i not in numeric_header]
 	
 	result = 'compact' if len(numeric_header) > 1 else 'long'
 	return result
@@ -105,13 +102,9 @@ def writeCSV(table, filename, **kwargs):
 				If true, will append the table to an existing
 				file rather than overwriting any existing one.
 	"""
-	if len(table) == 0: 
-		return None
+	if len(table) == 0: return None
 	fieldnames = kwargs.get('fieldnames', kwargs.get('fields'))
-	
-	if fieldnames is None: 
-		fieldnames = sorted(table[0].keys())
-	
+	if fieldnames is None: fieldnames = sorted(table[0].keys())
 	opentype = 'a' if kwargs.get('append', False) else 'w'
 	delimiter = kwargs.get('delimiter', kwargs.get('sep', '\t'))
 	empty_value = kwargs.get('empty', kwargs.get('restval', ""))

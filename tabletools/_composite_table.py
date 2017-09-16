@@ -1,12 +1,37 @@
 import os
 import pandas
-from typing import Generic
-from ._pandas_table import PandasTable
 
-DataFrameType = pandas.core.frame.DataFrame
+class AbstractTable:
+	@classmethod
+	def fromDataframe(cls, io, **kwargs):
+		""" Returns a new Table object from a pandas.DataFrame object.
+			Keyword arguments are passed on to the Table constructor.
+			Parameters
+			----------
+				io: pandas.DataFrame
+					The input dataframe
+			
+		"""
+		return cls(io, **kwargs)
+	
+	@classmethod
+	def fromList(cls, io):
+		""" Creates a table from a list of dictionaries.
+			Parameters
+			----------
+				io: list<dict<>>
+					A list of dictionaries to convert to a table.
+		"""
+
+		df = pandas.DataFrame(io)
+		df = cls(df)
+		return df
+
+	def toDataframe(self):
+		return self.df
 
 
-class CompositeTable(PandasTable):
+class CompositeTable(AbstractTable):
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
 		of tabular data. It is designed such that selection of row values based
 		on other values is both fast and easy.
@@ -121,24 +146,23 @@ class CompositeTable(PandasTable):
 		return element
 
 	def __iter__(self):
-		for i in self.iterrows(): 
+		for i in self.df.iterrows(): 
 			yield i[1]
 
 	def __getitem__(self, index):
-		
+		# Try return self.df.__getitem__(index)
 		return self.df.__getitem__(index)
-	def __setitem__(self, key, value):
-		self.df.__setitem__(key, value)
+
 	def __str__(self):
 		string = "Table(shape = ({x}x{y}))".format(
 			x = len(self),
-			y = len(self.columns)
+			y = len(self.df.columns)
 		)  
 		return string
 
 	# Private Methods
 	def _boolselect(self, boolarray):
-		return self[boolarray]
+		return self.df[boolarray]
 
 	def _generate_index(self, column):
 		""" generates an index for all unique values in a column.
@@ -148,14 +172,12 @@ class CompositeTable(PandasTable):
 		# New method, ~3s for 50k records.
 		indexed_series = dict()
 		if self.original_indexer:
-			for index, value in self[column].items():
-				try:    
-					indexed_series[value].append(index)
-				except KeyError: 
-					indexed_series[value] = [index]
+			for index, value in self.df[column].items():
+				try:    indexed_series[value].append(index)
+				except KeyError: indexed_series[value] = [index]
 			indexed_series = {k: pandas.Index(v) for k, v in indexed_series.items()}
 		else:
-			indexed_series = pandas.Index(self[column])
+			indexed_series = pandas.Index(self.df[column])
 		return indexed_series
 
 	def _get_indices(self, on, where):
@@ -179,38 +201,44 @@ class CompositeTable(PandasTable):
 		else:
 			return self.index_map[on].get_loc(where)
 
-	def _parseInput(self, io: Generic, **kwargs) -> DataFrameType:
+	def _parseInput(self, io, **kwargs):
 		""" Parses the input to the Table constructor. 
-			Parameters
-			----------
-				io: str, Table, pandas.DataFrame, list of dict
-			
+			Accepted types:
+				string: path to a file or folder with valid table files.
+				pandas.DataFrame
+				pandas.Series
+				list<<dict>>: list of dict-like rows.
+			other types will be passed to pandas.DataFrame()
 		"""
+		if isinstance(io, str):
+			self.filename = io  # Used for self.melt()
+		else:
+			self.filename = ""
 
 		if isinstance(io, str):
-			table = self._load_file(io, **kwargs)
-
-		elif isinstance(io, DataFrameType):
+			table = self._loadFromFilesystem(io, **kwargs)
+		elif isinstance(io, pandas.DataFrame):
 			table = io
-		elif hasattr(io, 'toDataframe'):
-			table = io.toDataframe()
-		elif isinstance(io, list):
-			table = pandas.DataFrame(io)
+		elif isinstance(io, pandas.Series):
+			table = io.to_frame().transpose()
 		else:
-			raise Exception
-		#else:
-		#	try:
-		#		table = pandas.DataFrame(io, **kwargs)
-		#	except TypeError:
-		#		try:
-		#			print("Could not load the table, trying without keyword arguments.")
-		#			table = pandas.DataFrame(io)
-		#		except Exception as exception:
-		#			message = "Could not load '{}' as a table.".format(str(io))
-		##			raise exception
+			try:
+				table = pandas.DataFrame(io, **kwargs)
+			except TypeError:
+				try:
+					print("Could not load the table, trying without keyword arguments.")
+					table = pandas.DataFrame(io)
+				except Exception as exception:
+					message = "Could not load '{}' as a table.".format(str(io))
+					print(message)
+					raise exception
+				
+
 
 		return table
 
+	def _set_dtype(self, column, dtype):
+		self.df[column] = self.df[column].astype(dtype)
 
 	@staticmethod
 	def _reduceData(data):
@@ -220,36 +248,123 @@ class CompositeTable(PandasTable):
 		return data
 
 	# Load and Save data to the filesystem
+	def _loadFromFilesystem(self, io, **kwargs):
+		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
+			Parameters
+			----------
+				io: string [PATH]
+					The database file. If a directory is given, will attempt to
+					load all valid database files in the directory
+					Available filetypes: .xlsx, .pkl, .csv, .db
+				ID: sheet name, sheet index; default 0
+					The sheet to load (currently only works in Excel spreadsheets)
+					To get a dict of dataframes for all sheets, pass 'all'
+				na_values: list-like
+					The values in io that indicate nan values
+			Returns
+			----------
+				self._load_file : pandas.DataFrame or dict(sheetname: pandas.DataFrame)
+		"""
+		if os.path.isfile(io):
+			df = self._load_file(io, **kwargs)
+		elif os.path.isdir(io):  # path is a folder
+			directory = io
+			_load_dfs = list()
+			for fn in os.listdir(directory):
+				if '~' in fn: continue
+				filename = os.path.join(directory, fn)
+				_load_dfs.append(self._load_file(filename, **kwargs))
+			df = pandas.concat(_load_dfs)
+		else:
+			message = "The string passed to tabletools.Table() is not a valid filename or folder: {}".format(str(io))
+			raise ValueError(message)
+
+		return df
 
 	@staticmethod
-	def _load_file(filename:str, **kwargs) -> DataFrameType:
-		""" Returns a dataframe of the suppled file. Any keyword arguments
-			are passed on to pandas.
-			Returns
-			-------
-				df: pandas.DataFrame
+	def _load_file(filename, **kwargs):
+		""" Returns a dataframe of the suppled file
 		"""
 		extension = os.path.splitext(filename)[-1]
-
 		if extension in {'.xls', '.xlsx', '.xlsm'}:
-			_new_table = pandas.read_excel(filename, **kwargs)
-		
-		elif extension in {'.csv', '.tsv', '.fsv', 'txt'}:
-			if 'sheetname' in kwargs: 
-				kwargs.pop('sheetname')
-
-			_new_table = pandas.read_table(filename, **kwargs)
-
-		
+			df = pandas.read_excel(filename, **kwargs)
+		elif extension in {'.csv', '.tsv', '.fsv'}:
+			if 'sheetname' in kwargs: kwargs.pop('sheetname')
+			if extension == '.csv': sep = ','
+			elif extension == '.tsv': sep = '\t'
+			else: sep = '\f'
+			kwargs['delimiter'] = sep
+			df = pandas.read_csv(filename, **kwargs)
+		elif extension == '.txt':
+			# Text file formatted as a table
+			if 'sheetname' in kwargs: kwargs.pop('sheetname')
+			df = pandas.read_table(filename, **kwargs)
 		elif extension == '.pkl':
-			_new_table = pandas.read_pickle(filename)
+			df = pandas.read_pickle(filename)
+		elif extension == '.db':
+			from sqlalchemy import create_engine
+			engine = create_engine('sqlite:///{0}'.format(filename))
+			df = pandas.read_sql(filename, engine)
 		else:
 			raise NameError("{0} does not have a valid extension!".format(filename))
-		assert isinstance(_new_table, pandas.DataFrame)
-		return _new_table
+		return df
+
+	def save(self, filename, **kwargs):
+		""" Saves the database. Keyword arguements will be passed to pandas.
+			Parameters
+			----------
+				filename: string
+					The location on the disk to save the database to
+					Supports .xlsx, .pkl, .csv, .db
+			Returns
+			---------
+				function : None
+		"""
+		file_format = os.path.splitext(filename)[1]
+		
+		if file_format in {'.xls', '.xlsx'}:
+			self.df.to_excel(filename, **kwargs)
+			
+		elif file_format == '.pkl':
+			self.df.to_pickle(filename, **kwargs)
+
+		elif file_format in {'.csv', '.tsv', '.fsv'}:
+			if file_format == '.csv': sep = ','
+			elif file_format == '.tsv': sep = '\t'
+			else: sep = '\f'
+			self.df.to_csv(filename, encoding = 'utf-8', sep = sep, **kwargs)
+
+		elif file_format == '.db':
+			from sqlalchemy import create_engine
+			engine = create_engine('sqlite:///{0}'.format(filename))
+			self.df.to_sql('Patient Database', engine, **kwargs)
+
+		else:
+			print("ERROR: Could not save the database to", filename)
+
+	def concat(self, io):
+		""" Adds a dataframe from a file to the existing internal dataframe
+			Parameters
+			----------
+				io: string, pandas.DataFrame
+					The database to add
+			Returns
+			----------
+				function : None
+		"""
+		if isinstance(io, str):
+			newdf = self._load_file(io)
+		elif isinstance(io, pandas.DataFrame):
+			newdf = io
+		else:
+			raise ValueError("{0} cannot be concatenated with the current DataFrame!".format(type(io)))
+			   
+		self.df = pandas.concat([self.df, newdf], ignore_index = True)
+		self._resetIndex()
+
 
 	# Select data from the table
-	def chainSelect(self, keys, extract_one = True, **kwargs):
+	def chainSelect(self, keys, **kwargs):
 		""" Retrieves data from the database based on several 
 			different criteria.
 			Parameters
@@ -259,15 +374,13 @@ class CompositeTable(PandasTable):
 					and values to use a selection criteria.
 					Ex. [(column1, value1), (column2, value2)] selects
 					the rows where column1 contains value1 and column2 contains value2.
-				extract_one: bool; default True
-					If True, only the first result will be returned.
 			Keyword Arguments
 			-----------------
 				'logic': {'and', 'or'}; default 'and'
 
 		"""
 		logic = kwargs.get('logic', 'and')
-		return_single_result = extract_one
+		return_single_result = kwargs.get('extract_one', True)
 		boolindex = None
 		for column, value in keys:
 			indicies = self._get_indices(column, value)
@@ -278,7 +391,7 @@ class CompositeTable(PandasTable):
 			elif logic == 'or':
 				boolindex = boolindex | indicies
 
-		series = self.loc(boolindex)
+		series = self.df.loc[boolindex]
 		if return_single_result:
 			series = self._reduceData(series)
 		return series
@@ -313,14 +426,14 @@ class CompositeTable(PandasTable):
 		
 		if self.original_indexer:
 			if column is None:
-				return_this = self.loc(indices)
+				return_this = self.df.loc[indices]
 			else:
-				return_this = self[column].loc[indices]
+				return_this = self.df[column].loc[indices]
 		else:
 			if column is None:
-				return_this = self.iloc(indices)
+				return_this = self.df.iloc[indices]
 			else:
-				return_this = self[column][indices]
+				return_this = self.df[column][indices]
 
 		if return_single_result:
 			return_this = self._reduceData(return_this)
@@ -332,18 +445,22 @@ class CompositeTable(PandasTable):
 				return_this = pandas.DataFrame(return_this)
 		return return_this
 
-	def get_column(self, column):
+	def get_column(self, column, to_series = False):
 		""" Retrieves all values in one of the database columns
 			Parameters
 			----------
 				column: column label
 					The column to retrieve
+				to_series: bool; default False
+					If true, returns a pandas.Series object rather than a numpy list.
 			Returns
 			----------
 				column : numpy.ndarray
 					The column values
 		"""
-		return self[column]
+		if not to_series: column = self.df[column].values
+		else: column = self.df[column]
+		return column
 
 	def search(self, on, value, contains = True):
 		""" Searches a column for a value and returns a DataFrame of every row
@@ -366,12 +483,12 @@ class CompositeTable(PandasTable):
 		if not isinstance(value, str):
 			raise ValueError("{0} is not a string!".format(value))
 		if contains:
-			result = self[on].str.contains(value)
+			result = self.df[on].str.contains(value)
 		else:
-			result = ~self[on].str.contains(value)
+			result = ~self.df[on].str.contains(value)
 		return self._boolselect(result)
 
-	def select(self, on, where, comparison = '=='):
+	def select(self, on, where, comparison = '==', to_df = True):
 		""" Parameters
 			----------
 				on: column label
@@ -383,28 +500,30 @@ class CompositeTable(PandasTable):
 					Which comparison to use. If the 'where' variable is a list,
 					the comparison will check if the values in the 'on' column
 					are in the 'where' value (using comparison == '~' is the inverse).
+				to_df: bool; True
+					Determines whether to return a DataFrame
 			Returns
 			----------
 				result: pandas.Series or pandas.DataFrame
 		"""
 		if isinstance(where, (list, set)):
-			elements = self[on].isin(where)
+			elements = self.df[on].isin(where)
 		elif comparison == '~':
-			elements = ~self[on].isin(where)
+			elements = ~self.df[on].isin(where)
 		elif isinstance(where, pandas.Series):
 			elements = where
 		elif comparison == '==':
-			elements = self[on] == where
+			elements = self.df[on] == where
 		elif comparison == '!=':
-			elements = self[on] != where
+			elements = self.df[on] != where
 		elif comparison == '>':
-			elements = self[on] > where
+			elements = self.df[on] > where
 		elif comparison == '>=':
-			elements = self[on] >= where
+			elements = self.df[on] >= where
 		elif comparison == '<':
-			elements = self[on] < where
+			elements = self.df[on] < where
 		elif comparison == '<=':
-			elements = self[on] <= where
+			elements = self.df[on] <= where
 		else:
 			message = "Improper comparison provided: '{}'".format(comparison)
 			raise ValueError(message)
@@ -415,7 +534,7 @@ class CompositeTable(PandasTable):
 	# Manipulate attributes and data in the Table.
 	def put_column(self, column, iterable):
 		""" Inserts 'iterable' under column name 'column' """
-		self[column] = iterable
+		self.df[column] = iterable
 
 	def put_value(self, on, where, column, value):
 		""" Parameters
@@ -433,8 +552,8 @@ class CompositeTable(PandasTable):
 				value
 		"""
 		selected_indices = self._get_indices(on = on, where = where)
-		column_index = self.columns.get_loc(column)
-		self.set_value(
+		column_index = self.df.columns.get_loc(column)
+		self.df.set_value(
 			selected_indices,
 			column_index,
 			value,
@@ -442,6 +561,7 @@ class CompositeTable(PandasTable):
 		)
 
 		return value
+
 
 	def melt(self, **kwargs):
 		""""Unpivots" a DataFrame from wide format to long format, optionally leaving
@@ -479,11 +599,14 @@ class CompositeTable(PandasTable):
 		kwargs['to_file'] 	= kwargs.get('to_file')
 
 		new_table = pandas.melt(self.df, **kwargs)
-
+		new_table = self.fromDataframe(new_table)
 
 		if kwargs['to_file']:
 			if isinstance(kwargs['to_file'], str):
 				fn = kwargs['to_file']
+			elif self.filename != "":
+				fn = os.path.splitext(self.filename)
+				fn = fn[0] + '.melt' + fn[1]
 			else: fn = None  # No usable filename
 			if fn: 
 				new_table.save(fn)
@@ -547,6 +670,26 @@ class CompositeTable(PandasTable):
 		new_table = self.fromDataframe(new_df)
 		return new_table
 	
+	def _resetIndex(self):
+		""" Updates the sorted order and index of the database after changes
+			are made
+		"""
+		self.df.reset_index(drop = True, inplace = True)
+		self.index_map = dict()
+
+	def remove_columns(self, *columns):
+		""" Removes the given columns
+			Parameters
+			----------
+				*columns: column label
+					The columns to delete
+			Returns
+			----------
+				function : None
+		"""
+		for c in columns:
+			if c in self.columns:
+				del self.df[c]
 	
 	# Methods based on the values contained in the table.
 	def _fuzzySearch(self, value, column):
@@ -570,14 +713,19 @@ class CompositeTable(PandasTable):
 		"""
 
 		if isinstance(value, (list, set)):
-			result = self[column].isin(value)
+			result = self.df[column].isin(value)
 		else:
 			result = value in self.get_column(column)
 		return result
 
-
+	def iterrows(self):
+		""" Iterates over the rows in the table. The index is corresponds to
+		the labeled index rather than the location (0-based) index.
+		"""
+		for index, row in self.df.iterrows():
+			yield index, row 
 
 	def searchColumn(self, column, string):
 		values = self.get_column(column)
-		values = [i for i in values if isinstance(i, str) and string in i]
+		values = [i for i in values if (isinstance(i, str) and string in i)]
 		return values

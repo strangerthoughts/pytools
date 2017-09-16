@@ -11,52 +11,7 @@
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FileEditorManager">
-    <leaf>
-      <file leaf-file-name="_table_methods.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tabletools/_table_methods.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="194">
-              <caret line="26" column="26" lean-forward="false" selection-start-line="26" selection-start-column="26" selection-end-line="26" selection-end-column="26" />
-              <folding>
-                <element signature="e#1#11#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="_composite_table.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tabletools/_composite_table.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="323">
-              <caret line="129" column="29" lean-forward="false" selection-start-line="129" selection-start-column="29" selection-end-line="129" selection-end-column="29" />
-              <folding>
-                <element signature="e#0#9#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="_abstract_table.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/tabletools/_abstract_table.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="34">
-              <caret line="4" column="0" lean-forward="false" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="43" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="_pandas_table.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/tabletools/_pandas_table.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="51">
-              <caret line="5" column="16" lean-forward="false" selection-start-line="5" selection-start-column="16" selection-end-line="5" selection-end-column="16" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -88,10 +43,7 @@
         <option value="$PROJECT_DIR$/geotools/geotools.py" />
         <option value="$PROJECT_DIR$/systemtools/terminal.py" />
         <option value="$PROJECT_DIR$/timetools/_timestamp.py" />
-        <option value="$PROJECT_DIR$/tabletools/_table_methods.py" />
-        <option value="$PROJECT_DIR$/tabletools/_abstract_table.py" />
         <option value="$PROJECT_DIR$/tabletools/_composite_table.py" />
-        <option value="$PROJECT_DIR$/tabletools/_pandas_table.py" />
       </list>
     </option>
   </component>
@@ -114,7 +66,7 @@
         </expanded-state>
         <selected-state>
           <State>
-            <id>Spelling</id>
+            <id>PyPep8NamingInspection</id>
           </State>
         </selected-state>
       </profile-state>
@@ -170,7 +122,6 @@
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../process-variants" />
     <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
-    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -302,6 +253,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
@@ -388,6 +340,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="272">
           <caret line="17" column="25" lean-forward="true" selection-start-line="17" selection-start-column="25" selection-end-line="17" selection-end-column="25" />
+          <folding />
         </state>
       </provider>
     </entry>
@@ -395,42 +348,55 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tabletools/_table_methods.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="194">
-          <caret line="26" column="26" lean-forward="false" selection-start-line="26" selection-start-column="26" selection-end-line="26" selection-end-column="26" />
           <folding>
-            <element signature="e#1#11#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tabletools/_abstract_table.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="34">
-          <caret line="4" column="0" lean-forward="false" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="43" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tabletools/_composite_table.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="323">
-          <caret line="129" column="29" lean-forward="false" selection-start-line="129" selection-start-column="29" selection-end-line="129" selection-end-column="29" />
-          <folding>
-            <element signature="e#0#9#0" expanded="true" />
+            <element signature="e#0#47#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tabletools/_pandas_table.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="51">
-          <caret line="5" column="16" lean-forward="false" selection-start-line="5" selection-start-column="16" selection-end-line="5" selection-end-column="16" />
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tabletools/_composite_table.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2771">
+          <caret line="582" column="0" lean-forward="true" selection-start-line="582" selection-start-column="0" selection-end-line="582" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+            <element signature="e#338#1151#0" expanded="false" />
+            <element signature="e#1276#3867#0" expanded="false" />
+            <element signature="e#4347#4933#0" expanded="false" />
+            <element signature="e#4973#5500#0" expanded="false" />
+            <element signature="e#5542#6477#0" expanded="false" />
+            <element signature="e#6519#6566#0" expanded="false" />
+            <element signature="e#6609#6765#0" expanded="false" />
+            <element signature="e#6855#7998#0" expanded="false" />
+            <element signature="e#8054#9002#0" expanded="false" />
+            <element signature="e#9043#9978#0" expanded="false" />
+            <element signature="e#10005#10517#0" expanded="false" />
+            <element signature="e#10559#10669#0" expanded="false" />
+            <element signature="e#10793#11732#0" expanded="false" />
+            <element signature="e#11794#13297#0" expanded="false" />
+            <element signature="e#13351#13775#0" expanded="false" />
+            <element signature="e#13826#14642#0" expanded="false" />
+            <element signature="e#16174#16256#0" expanded="false" />
+            <element signature="e#16308#16804#0" expanded="false" />
+            <element signature="e#19067#21679#0" expanded="false" />
+            <element signature="e#21708#21871#0" expanded="false" />
+            <element signature="e#21912#22145#0" expanded="false" />
+            <element signature="e#22241#22427#0" expanded="false" />
+            <element signature="e#22478#23125#0" expanded="false" />
+            <element signature="e#23336#23522#0" expanded="false" />
+            <element signature="e#23547#23746#0" expanded="false" />
+            <element signature="e#23990#24385#0" expanded="false" />
+            <element signature="e#24462#24587#0" expanded="false" />
+            <element signature="e#24632#24751#0" expanded="false" />
+          </folding>
         </state>
       </provider>
     </entry>
