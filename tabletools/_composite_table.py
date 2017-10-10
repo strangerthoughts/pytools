@@ -30,33 +30,38 @@ class AbstractTable:
 	def toDataframe(self):
 		return self.df
 
+	@property
+	def df(self):
+		raise NotImplementedError
+	@df.setter
+	def df(self):
+		raise NotImplementedError
+	@property
+	def columns(self):
+		raise NotImplementedError
+
 
 class CompositeTable(AbstractTable):
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
 		of tabular data. It is designed such that selection of row values based
 		on other values is both fast and easy.
 
-		Examples
-		--------
-			Example of iteration:
-				for row in Table():
-					pass
+		Parameters
+		----------
+		io: string, pandas.DataFrame, pandas.Series
+			The database to load. If a directory is given,
+			will load all valid files in that directory
+		Keyword Arguments
+		-----------------
+			Any valid pandas keyword arguments are supported
+		sheetname: string, int; default 0
+			Indicates a specific sheet to load when loading
+			an Excel spreadsheet
 				
+		
 	"""
 	def __init__(self, io, **kwargs):
-		""" Parameters
-			----------
-				io: string, pandas.DataFrame, pandas.Series
-					The database to load. If a directory is given,
-					will load all valid files in that directory
-			Keyword Arguments
-			-----------------
-				Any valid pandas keyword arguments are supported.qa 
-				sheetname: string, int; default 0
-					Indicates a specific sheet to load when loading
-					an Excel spreadsheet
-				
-		"""
+
 		kwargs['sheetname'] = kwargs.get('sheetname', 0)
 		kwargs['skiprows'] = kwargs.get('skiprows')
 
@@ -73,39 +78,43 @@ class CompositeTable(AbstractTable):
 		return len(self.df)
 
 	def __call__(self, on, where = None, column = None, value = None, **kwargs):
-		""" Parameters
+		""" Selects an element from the table.
+
+			Parameters
 			----------
-				on: column label, list<tuple<string:value>>
-					The column to look in or a list of criteria to use
-					when selecting rows.
-				where: scalar
-					The value to look for in the column indicated by on.
-					If given, will find all rows with the value of 'where'
-					in the column 'on'.
-					If not given, will return the column indicated by on.
-				column: column label; default None
-					If given, will return the values in this column corresponding
-					to the rows found with 'on' and 'where'
-				value: any; default None
-					If given, replaces the values in the columns of the rows
-					found with 'on' and 'where'.
+			on: str, list<tuple<string,value>>
+				The column to look in or a list of criteria to use
+				when selecting rows.
+			where: scalar
+				The value to look for in the column indicated by on.
+				If given, will find all rows with the value of 'where'
+				in the column 'on'.
+				If not given, will return the column indicated by on.
+			column: column label; default None
+				If given, will return the values in this column corresponding
+				to the rows found with 'on' and 'where'
+			value: any; default None
+				If given, replaces the values in the columns of the rows
+				found with 'on' and 'where'.
+
 			Keyword Arguments
 			-----------------
-				single_value: bool; default True
-					if passed to self.get_value(). If True, will return a 
-					pandas.DataFrame object, else will return a pandas.Series
-					object
-				default: default None
-					Value to return if the on/where/column criteria does not exist.
-				'logic': {'and', 'or', 'not'}; default 'and'
-					Used to select the logic when using chainselect()
-				overwrite: bool; default False
-					Prevents unintentional table modification. Must be set to 'True' 
-					to modify a value in the table (by supplying 'value' with a value)
-				to_dataframe: bool; default False
+			single_value: bool; default True
+				if passed to self.get_value(). If True, will return a 
+				pandas.DataFrame object, else will return a pandas.Series
+				object
+			default: default None
+				Value to return if the on/where/column criteria does not exist.
+			'logic': {'and', 'or', 'not'}; default 'and'
+				Used to select the logic when using chainselect()
+			overwrite: bool; default False
+				Prevents unintentional table modification. Must be set to 'True' 
+				to modify a value in the table (by supplying 'value' with a value)
+			to_dataframe: bool; default False
 					If true, will always return a dataframe object. 
+
 			Notes
-			----------
+			-----
 				If only 'on' is given, will return self.df[on]
 				If 'on' and 'where' [and column] are given, will 
 					return self.get_value(on, where, column, to_frame = flag)
@@ -203,12 +212,13 @@ class CompositeTable(AbstractTable):
 
 	def _parseInput(self, io, **kwargs):
 		""" Parses the input to the Table constructor. 
-			Accepted types:
-				string: path to a file or folder with valid table files.
-				pandas.DataFrame
-				pandas.Series
-				list<<dict>>: list of dict-like rows.
-			other types will be passed to pandas.DataFrame()
+			
+			Parameters
+			----------
+			io: str, pandas.DataFrame, pandas.Series, list<dict<>>
+				path to a file or folder with valid table files.
+
+				other types will be passed to pandas.DataFrame()
 		"""
 		if isinstance(io, str):
 			self.filename = io  # Used for self.melt()
@@ -488,7 +498,7 @@ class CompositeTable(AbstractTable):
 			result = ~self.df[on].str.contains(value)
 		return self._boolselect(result)
 
-	def select(self, on, where, comparison = '==', to_df = True):
+	def select(self, on, where, comparison = '=='):
 		""" Parameters
 			----------
 				on: column label
@@ -500,8 +510,6 @@ class CompositeTable(AbstractTable):
 					Which comparison to use. If the 'where' variable is a list,
 					the comparison will check if the values in the 'on' column
 					are in the 'where' value (using comparison == '~' is the inverse).
-				to_df: bool; True
-					Determines whether to return a DataFrame
 			Returns
 			----------
 				result: pandas.Series or pandas.DataFrame

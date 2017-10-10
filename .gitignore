@@ -17,7 +17,8 @@ $RECYCLE.BIN/
 #Python binaries
 *.pyc
 *__pycache__*
-
+.idea
+.vscode
 # Windows shortcuts
 *.lnk
 

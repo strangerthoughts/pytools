@@ -72,7 +72,7 @@ class Duration(datetime.timedelta):
 		return self.toiso()
 
 	@classmethod
-	def _parseGenericObject(cls, generic, force = False, **kwargs):
+	def _parseGenericObject(cls, generic, force = False):
 		""" Attempts to parse a generic timedelta object. If all attempts
 			to extract information from the object fail and 'force' = True (default),
 			then a 0-length Duration object is created instead.
@@ -102,11 +102,6 @@ class Duration(datetime.timedelta):
 			message = "Unsupported generic type: {} ({})".format(generic, type(generic))
 			raise ValueError(message)
 
-	@classmethod
-	def _parseHumanReadable(cls, string):
-		""" Parses durations written in common non-numerical formats."""
-		message = "_parseHumanReadable is not implemented."
-		raise NotImplementedError(message)
 
 	@classmethod
 	def _parseInterval(cls, value):
@@ -314,7 +309,6 @@ class Duration(datetime.timedelta):
 			'T', ('hours', 'H'), ('minutes', 'M'), ('seconds', 'S')]
 		datetime_values = list()
 
-		isostring = ""
 		for key in datetime_map:
 			if isinstance(key, tuple):
 				element = (values.get(key[0], 0), key[1])

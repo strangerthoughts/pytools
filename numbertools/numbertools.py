@@ -4,47 +4,99 @@ from numbers import Number
 
 import numpy
 
+def getBase(value):
 
-def humanReadable(value):
+	if value < 1E-6:
+		suffix = 'n'
+		
+	elif value < 1E-3:
+		suffix = 'u'
+		
+	elif value < 1:
+		suffix = 'm'
+		
+	elif value < 1000:
+		suffix = ''
+
+	elif value < 1E6:
+		suffix = 'K'
+	
+	elif value < 1E9:
+		suffix = 'M'
+	
+	elif value < 1E12:
+		suffix = 'B'
+	
+	elif value <1E15:
+		suffix = 'T'
+	else:
+		message = "'{}' does not have a defined base.".format(value)
+		raise ValueError(message)
+		
+	return suffix
+
+def getMultiplier(base):
+
+	if base == 'n':
+		multiplier = 1E-9
+	elif base == 'u':
+		multiplier = 1E-6
+	elif base == 'm':
+		multiplier = 1E-3
+	elif base == '':
+		multiplier = 1.0
+	elif base in {'T', 'K'}:
+		multiplier = 1E3
+	elif base == 'M':
+		multiplier = 1E6
+	elif base == 'B':
+		multiplier = 1E9
+	elif base == 'T':
+		multiplier = 1E12
+	else:
+		message = "'{}' is not a valid base.".format(base)
+		raise ValueError(message)
+
+	return multiplier
+
+
+def humanReadable(value, base = None, to_string = True):
 	""" Converts a number into a more easily-read string.
 		Ex. 101000 -> '101T' or (101, 'T')
 		Parameters
 		----------
-			values: int, float
-				Any number.
+		value: number, list<number>
+			Any number or list of numbers. If a list is given, all numbers
+			will be asigned the same suffix as the lowest number. 
+		base: str; default None
+			The base to use. Will be generated automatically if not provided 
+		to_string: bool; default True
+			If True, the number(s) will be automatically converted to a formatted
+			string. Otherwise, a tuple will be returned with the reduced number
+			as well as the suffix.
 		Returns
 		-------
-			string: str
-				The reformatted number.
+		str, list<str>
+			The reformatted number.
 	"""
+	if not isinstance(value, list):
+		value = [value]
 
-	if value < 1E-6:
-		suffix = 'n'
-		multiplier = 1E9
-	elif value < 1E-3:
-		suffix = 'u'
-		multiplier = 1E6
-	elif value < 1:
-		suffix = 'm'
-		multiplier = 1E3
-	elif value < 1000:
-		suffix = ''
-		multiplier = 1
-	elif value < 1E6:
-		suffix = 'K'
-		multiplier = 1E-3
-	elif value < 1E9:
-		suffix = 'M'
-		multiplier = 1E-6
-	elif value < 1E12:
-		suffix = 'B'
-		multiplier = 1E-9
-	else:
-		suffix = 'T'
-		multiplier = 1E-12
+	if base is None:
+		base = getBase(min([i for i in value if not math.isnan(i)]))
 
-	string = '{0:.2f}{1}'.format(value*multiplier, suffix)
-	return string
+	multiplier = getMultiplier(base)
+
+	result = [(i/multiplier, base) for i in value]
+
+	if to_string:
+		_toString = lambda v,b: '{0:.2f}{1}'.format(v, b)
+		result = [_toString(i[0], i[1]) for i in result]
+
+	if len(result) == 1:
+		result = result[0]
+
+	return result
 
 
 def isNumber(value):

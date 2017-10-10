@@ -1,7 +1,7 @@
 import os
 import shlex
 import subprocess
-from pytools import timetools
+from .. import timetools
 
 
 
@@ -29,6 +29,7 @@ class Terminal:
 						2: Full output
 		"""
 		self.start_time = timetools.now()
+		self.end_time = None
 		self.command = command
 		self.label = label
 		self.command_filename = command_filename
@@ -63,8 +64,8 @@ class Terminal:
 		self.duration = timetools.Duration(self.end_time - self.start_time)
 		self._showOutput(command_arguments)
 		return self.output
-
-	def _generateInputFileStatusString(self, arguments):
+	@staticmethod
+	def _generateInputFileStatusString(arguments):
 		string = "Input Files: \n"
 		for arg in arguments:
 
@@ -123,8 +124,8 @@ class Terminal:
 				_status_string += "\t\t{}\t{}\n".format(k,v)
 
 		return _status_string
-
-	def _generateCommandArgumentString(self, command_arguments):
+	@staticmethod
+	def _generateCommandArgumentString(command_arguments):
 		command_string = "\tCommand Arguments:\n"
 		for argument in command_arguments:
 			line = "\t{:<30}".format(argument)

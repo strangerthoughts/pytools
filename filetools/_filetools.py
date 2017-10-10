@@ -1,7 +1,7 @@
 
 import hashlib
 import os
-from pprint import pprint
+
 
 
 def checkDir(path, full = False):
@@ -83,8 +83,8 @@ def listAllFiles(folder, **kwargs):
 	file_list = list()
 	if os.path.isdir(folder):
 
-		for fn in os.listdir(folder):
-			abs_path = os.path.join(folder, fn)
+		for subfn in os.listdir(folder):
+			abs_path = os.path.join(folder, subfn)
 			if logic == 'or':
 				skip_file = any(e in abs_path for e in exclude)
 			elif logic == 'and':
@@ -142,12 +142,12 @@ def searchForDuplicateFiles(folder, by = 'name'):
 		_duplicates.append(checked_files[key])
 	return _duplicates
 
-def searchFiles(string, folder, include_subfolders = True):
+def searchFiles(string, folder):
 	found = []
 	all_files = listAllFiles(folder)
-	for fn in all_files:
-		if string in fn:
-			found.append(fn)
+	for subfn in all_files:
+		if string in subfn:
+			found.append(subfn)
 
 	return found
 

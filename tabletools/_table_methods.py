@@ -1,5 +1,5 @@
 
-from pytools import numbertools
+from .. import numbertools
 
 import os
 import pandas
@@ -29,7 +29,7 @@ def getTableType(io, **kwargs):
 		header = io.index
 
 	numeric_header = [i for i in header if numbertools.isNumber(i)]
-	static_header  = [i for i in header if i not in numeric_header]
+	#static_header  = [i for i in header if i not in numeric_header]
 	
 	result = 'compact' if len(numeric_header) > 1 else 'long'
 	return result
