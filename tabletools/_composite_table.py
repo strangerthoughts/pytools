@@ -30,15 +30,6 @@ class AbstractTable:
 	def toDataframe(self):
 		return self.df
 
-	@property
-	def df(self):
-		raise NotImplementedError
-	@df.setter
-	def df(self):
-		raise NotImplementedError
-	@property
-	def columns(self):
-		raise NotImplementedError
 
 
 class CompositeTable(AbstractTable):

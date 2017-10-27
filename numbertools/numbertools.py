@@ -83,14 +83,18 @@ def humanReadable(value, base = None, to_string = True):
 		value = [value]
 
 	if base is None:
-		base = getBase(min([i for i in value if not math.isnan(i)]))
+		values = [i for i in value if not math.isnan(i)]
+		if len(values) > 0:
+			base = getBase(min(values))
+		else:
+			return 'nan'
 
 	multiplier = getMultiplier(base)
 
 	result = [(i/multiplier, base) for i in value]
 
 	if to_string:
-		_toString = lambda v,b: '{0:.2f}{1}'.format(v, b)
+		_toString = lambda v,b: '{0:.2f}{1}'.format(v, b) if v != 0.0 else "0.00"
 		result = [_toString(i[0], i[1]) for i in result]
 
 	if len(result) == 1:
