@@ -103,6 +103,8 @@ class CompositeTable(AbstractTable):
 				to modify a value in the table (by supplying 'value' with a value)
 			to_dataframe: bool; default False
 					If true, will always return a dataframe object. 
+			ignore: bool; default false
+				whether to ignore errors when selecting data.
 
 			Notes
 			-----
@@ -135,12 +137,12 @@ class CompositeTable(AbstractTable):
 				)
 				raise ValueError(message)
 		except KeyError as exception:
-			print("Available Columns:")
-			for col in self.columns:
-				print('\t', col)
 			if ignore_errors:
 				element = None
 			else:
+				print("Available Columns:")
+				for col in self.columns:
+					print('\t', col)
 				raise exception
 
 		return element

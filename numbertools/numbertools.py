@@ -5,7 +5,8 @@ from numbers import Number
 import numpy
 
 def getBase(value):
-
+	""" Returns the SI base for a given value """
+	value = abs(value)
 	if value < 1E-6:
 		suffix = 'n'
 		
@@ -45,7 +46,7 @@ def getMultiplier(base):
 		multiplier = 1E-3
 	elif base == '':
 		multiplier = 1.0
-	elif base in {'T', 'K'}:
+	elif base == 'K':
 		multiplier = 1E3
 	elif base == 'M':
 		multiplier = 1E6
