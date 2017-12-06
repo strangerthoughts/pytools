@@ -25,7 +25,9 @@ class Timer:
 
 	def duration(self):
 		self.end_time = time.clock()
-		return self.end_time - self.start_time
+		_duration = self.end_time - self.start_time
+		_duration = Duration(seconds = _duration)
+		return(_duration)
 
 	def isover(self, limit = 10.0):
 		""" Checks if more time has elapsed than the supplied limit

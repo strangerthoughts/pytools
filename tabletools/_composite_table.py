@@ -53,7 +53,11 @@ class CompositeTable(AbstractTable):
 	"""
 	def __init__(self, io, **kwargs):
 
-		kwargs['sheetname'] = kwargs.get('sheetname', 0)
+		
+		if kwargs.get('sheetname') == 'all': 
+			kwargs['sheetname'] = None
+		else:
+			kwargs['sheetname'] = kwargs.get('sheetname', 0)
 		kwargs['skiprows'] = kwargs.get('skiprows')
 
 		self.df = self._parseInput(io, **kwargs)

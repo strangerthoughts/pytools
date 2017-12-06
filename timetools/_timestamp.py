@@ -156,7 +156,7 @@ class Timestamp(datetime.datetime):
 
 	def toIso(self, compact = True):
 		# for compatability with the other methods names.
-		return self.toiso(self, compact)
+		return self.toiso(compact)
 	def isoFormat(self, compact = True):
 		# for compatibility
 		return self.toiso(compact)
