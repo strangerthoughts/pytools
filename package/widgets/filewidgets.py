@@ -13,11 +13,18 @@ def searchForDuplicateFiles(folder, by = 'name'):
 			duplicates: list<list<string>>
 				A list of paired filenames representing identical files.
 	"""
+	_ignored_files = [
+		'desktop.ini', 'README.md'
+	]
 	all_files = filetools.listAllFiles(folder)
 
 	checked_files = dict()
 	_duplicate_keys = list()
 	for filename in all_files:
+		basename = os.path.basename(filename)
+		if basename in _ignored_files:
+			continue
+		if basename.startswith('~'): continue
 		if by == 'md5':
 			file_key = filetools.generateFileMd5(filename)
 		elif by == 'name':
@@ -33,4 +40,6 @@ def searchForDuplicateFiles(folder, by = 'name'):
 	_duplicates = list()
 	for key in _duplicate_keys:
 		_duplicates.append(checked_files[key])
+	_duplicates = {k:v for k,v in checked_files.items() if len(v) > 1}
+
 	return _duplicates
