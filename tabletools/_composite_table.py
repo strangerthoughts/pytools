@@ -51,6 +51,11 @@ class CompositeTable(AbstractTable):
 				
 		
 	"""
+
+	def __getattr__(self, key):
+		""" Calls the corresponding method on self.df it it is not already defined. """
+		return getattr(self.df, key)
+
 	def __init__(self, io, **kwargs):
 
 		

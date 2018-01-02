@@ -2,7 +2,7 @@
 import datetime
 import re
 
-
+from pprint import pprint
 # noinspection PyArgumentList
 class Timestamp(datetime.datetime):
 	timestamp_regex = r"""(?:(?P<year>[\d]{4})-(?P<month>[\d]{2})-(?P<day>[\d]{2}))?
@@ -182,3 +182,11 @@ class Timestamp(datetime.datetime):
 			self.hour, self.minute, self.second, self.microsecond
 		)
 		return result
+
+if __name__ == "__main__":
+	string = '2008-04-18T15:52:09.000Z'
+
+	result = Timestamp(string)
+
+	print('Input: ', string)
+	print("Output: ", result)
