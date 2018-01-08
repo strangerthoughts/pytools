@@ -162,9 +162,9 @@ class Timestamp(datetime.datetime):
 		_month = _months.index(_month) + 1
 
 		result = {
-			'year': _year,
-			'month': _month,
-			'day': _day
+			'year': int(_year),
+			'month': int(_month),
+			'day': int(_day)
 		}
 		return result
 
