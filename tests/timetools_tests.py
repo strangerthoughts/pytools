@@ -1,5 +1,21 @@
-import unittest 
 
-class TestTimetoolsTimer(unittest.TestCase):
-	def testToIso(self):
-		pass
+from package import timetools
+
+# list of timestamps formatted as (test_value, answer)
+example_timestamps = [
+	('2017-09-13', '2017-09-13'),
+	('20170913', '2017-09-13'),
+	('Sep 13, 2017', '2017-09-13'),
+	('1997-07-16T19:20:30+01:00', '1997-07-16T19:20:30')
+]
+
+for test_value, answer_value in example_timestamps:
+	timestamp = timetools.Timestamp(test_value)
+	iso_string = timestamp.toIso()
+
+	result = iso_string == answer_value
+
+	print(result, iso_string, '\t', answer_value)
+
+
+print("Finished!")

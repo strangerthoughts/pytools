@@ -3,7 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="d37fb5f9-0e86-4a7d-ad10-2c63361ce20b" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change beforePath="$PROJECT_DIR$/package/timetools/_duration.py" afterPath="$PROJECT_DIR$/package/timetools/_duration.py" />
       <change beforePath="$PROJECT_DIR$/package/timetools/_timestamp.py" afterPath="$PROJECT_DIR$/package/timetools/_timestamp.py" />
+      <change beforePath="$PROJECT_DIR$/tests/timetools_tests.py" afterPath="$PROJECT_DIR$/tests/timetools_tests.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -13,35 +15,11 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="CoverageDataManager">
+    <SUITE FILE_PATH="coverage/pytools$timetools_tests.coverage" NAME="timetools_tests Coverage Results" MODIFIED="1515389024651" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/pytools$pytools.coverage" NAME="pytools Coverage Results" MODIFIED="1514924205445" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
   </component>
   <component name="FileEditorManager">
-    <leaf>
-      <file leaf-file-name="_timestamp.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/package/timetools/_timestamp.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="478">
-              <caret line="166" column="23" lean-forward="false" selection-start-line="166" selection-start-column="23" selection-end-line="166" selection-end-column="23" />
-              <folding>
-                <element signature="e#388#866#0" expanded="false" />
-                <element signature="e#1028#1529#0" expanded="false" />
-                <element signature="e#1585#1846#0" expanded="false" />
-                <element signature="e#1908#2081#0" expanded="false" />
-                <element signature="e#2143#2326#0" expanded="false" />
-                <element signature="e#2374#2680#0" expanded="false" />
-                <element signature="e#3067#3410#0" expanded="false" />
-                <element signature="e#3463#3631#0" expanded="false" />
-                <element signature="e#3679#3788#0" expanded="false" />
-                <element signature="e#4442#4502#0" expanded="false" />
-                <element signature="e#4540#4672#0" expanded="false" />
-                <element signature="e#4930#5143#0" expanded="false" />
-                <element signature="e#5167#5290#0" expanded="false" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -94,6 +72,8 @@
         <option value="$PROJECT_DIR$/pytools_notebook.ipynb" />
         <option value="$PROJECT_DIR$/tests/tabletools_tests.py" />
         <option value="$PROJECT_DIR$/package/timetools/_timestamp.py" />
+        <option value="$PROJECT_DIR$/package/timetools/_duration.py" />
+        <option value="$PROJECT_DIR$/tests/timetools_tests.py" />
       </list>
     </option>
   </component>
@@ -146,7 +126,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -165,11 +144,17 @@
               <item name="package" type="462c0819:PsiDirectoryNode" />
               <item name="timetools" type="462c0819:PsiDirectoryNode" />
             </path>
+            <path>
+              <item name="pytools" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pytools" type="462c0819:PsiDirectoryNode" />
+              <item name="tests" type="462c0819:PsiDirectoryNode" />
+            </path>
           </expand>
           <select />
         </subPane>
       </pane>
       <pane id="Scratches" />
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -194,7 +179,26 @@
       </list>
     </option>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.timetools_tests">
+    <configuration name="timetools_tests" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="pytools" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tests/timetools_tests.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
     <configuration name="pytools" type="Python.Ipnb" factoryName="Jupyter Notebook">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -277,6 +281,15 @@
       <option name="_new_target" value="&quot;.&quot;" />
       <option name="_new_targetType" value="&quot;PATH&quot;" />
     </configuration>
+    <list size="2">
+      <item index="0" class="java.lang.String" itemvalue="Jupyter Notebook.pytools" />
+      <item index="1" class="java.lang.String" itemvalue="Python.timetools_tests" />
+    </list>
+    <recent_temporary>
+      <list size="1">
+        <item index="0" class="java.lang.String" itemvalue="Python.timetools_tests" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="ShelveChangesManager" show_recycled="false">
     <option name="remove_strategy" value="false" />
@@ -299,25 +312,31 @@
       <option name="project" value="LOCAL" />
       <updated>1515384525141</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Added support for verbally-formatted dates. Ex. 7 Oct 2015">
+      <created>1515384560117</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1515384560117</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info id="PlantUML" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3296875" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32979852" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32934782" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32934782" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32934782" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.102878466" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Docker" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="SciView" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.20309168" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -343,7 +362,7 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="6" />
+      <option name="time" value="7" />
     </breakpoint-manager>
     <watches-manager />
   </component>
@@ -359,7 +378,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="15">
           <caret line="1" column="0" lean-forward="false" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -427,7 +445,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="15">
           <caret line="1" column="0" lean-forward="false" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -438,50 +455,62 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/package/timetools/_duration.py">
+    <entry file="file://$PROJECT_DIR$/package/timetools/_timestamp.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="404">
-          <caret line="198" column="0" lean-forward="true" selection-start-line="198" selection-start-column="0" selection-end-line="198" selection-end-column="0" />
+        <state relative-caret-position="-81">
+          <caret line="3" column="0" lean-forward="true" selection-start-line="3" selection-start-column="0" selection-end-line="3" selection-end-column="0" />
           <folding>
-            <element signature="e#1641#2263#0" expanded="false" />
-            <element signature="e#2379#3394#0" expanded="false" />
-            <element signature="e#3446#4171#0" expanded="false" />
-            <element signature="e#4218#4675#0" expanded="false" />
-            <element signature="e#4735#5205#0" expanded="false" />
-            <element signature="e#5262#5366#0" expanded="false" />
-            <element signature="e#5426#6201#0" expanded="false" />
-            <element signature="e#6516#6716#0" expanded="false" />
-            <element signature="e#6759#7270#0" expanded="false" />
-            <element signature="e#7412#7470#0" expanded="false" />
-            <element signature="e#7627#7688#0" expanded="false" />
-            <element signature="e#7809#8027#0" expanded="false" />
-            <element signature="e#8054#8915#0" expanded="false" />
-            <element signature="e#8957#9045#0" expanded="false" />
-            <element signature="e#9086#9165#0" expanded="false" />
-            <element signature="e#9202#10403#0" expanded="false" />
+            <element signature="e#388#866#0" expanded="false" />
+            <element signature="e#1092#1593#0" expanded="false" />
+            <element signature="e#1649#1910#0" expanded="false" />
+            <element signature="e#1972#2145#0" expanded="false" />
+            <element signature="e#2207#2390#0" expanded="false" />
+            <element signature="e#2438#2744#0" expanded="false" />
+            <element signature="e#2802#3074#0" expanded="false" />
+            <element signature="e#3131#3474#0" expanded="false" />
+            <element signature="e#3527#3695#0" expanded="false" />
+            <element signature="e#3743#3852#0" expanded="false" />
+            <element signature="e#3905#4482#0" expanded="false" />
+            <element signature="e#4506#4566#0" expanded="false" />
+            <element signature="e#4604#4736#0" expanded="false" />
+            <element signature="e#4994#5207#0" expanded="false" />
+            <element signature="e#5231#5354#0" expanded="false" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/package/timetools/_timestamp.py">
+    <entry file="file://$PROJECT_DIR$/package/timetools/_duration.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="478">
-          <caret line="166" column="23" lean-forward="false" selection-start-line="166" selection-start-column="23" selection-end-line="166" selection-end-column="23" />
+        <state relative-caret-position="737">
+          <caret line="341" column="0" lean-forward="false" selection-start-line="341" selection-start-column="0" selection-end-line="341" selection-end-column="0" />
           <folding>
-            <element signature="e#388#866#0" expanded="false" />
-            <element signature="e#1028#1529#0" expanded="false" />
-            <element signature="e#1585#1846#0" expanded="false" />
-            <element signature="e#1908#2081#0" expanded="false" />
-            <element signature="e#2143#2326#0" expanded="false" />
-            <element signature="e#2374#2680#0" expanded="false" />
-            <element signature="e#3067#3410#0" expanded="false" />
-            <element signature="e#3463#3631#0" expanded="false" />
-            <element signature="e#3679#3788#0" expanded="false" />
-            <element signature="e#4442#4502#0" expanded="false" />
-            <element signature="e#4540#4672#0" expanded="false" />
-            <element signature="e#4930#5143#0" expanded="false" />
-            <element signature="e#5167#5290#0" expanded="false" />
+            <element signature="e#1641#2263#0" expanded="false" />
+            <element signature="e#2379#3357#0" expanded="false" />
+            <element signature="e#3409#4134#0" expanded="false" />
+            <element signature="e#4181#4638#0" expanded="false" />
+            <element signature="e#4698#5168#0" expanded="false" />
+            <element signature="e#5225#5329#0" expanded="false" />
+            <element signature="e#5389#6164#0" expanded="false" />
+            <element signature="e#6214#6426#0" expanded="false" />
+            <element signature="e#6479#6679#0" expanded="false" />
+            <element signature="e#6722#7233#0" expanded="false" />
+            <element signature="e#7375#7433#0" expanded="false" />
+            <element signature="e#7590#7651#0" expanded="false" />
+            <element signature="e#7772#7990#0" expanded="false" />
+            <element signature="e#8017#8878#0" expanded="false" />
+            <element signature="e#8920#9008#0" expanded="false" />
+            <element signature="e#9049#9128#0" expanded="false" />
+            <element signature="e#9165#10366#0" expanded="false" />
+            <element signature="e#10690#11034#0" expanded="false" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/timetools_tests.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="225">
+          <caret line="15" column="39" lean-forward="true" selection-start-line="15" selection-start-column="39" selection-end-line="15" selection-end-column="39" />
+          <folding />
         </state>
       </provider>
     </entry>

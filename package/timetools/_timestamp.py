@@ -28,6 +28,9 @@ class Timestamp(datetime.datetime):
 		else:
 			return super().__new__(cls, *result)
 
+	def __str__(self):
+		string = self.toIso(True)
+		return string
 	@staticmethod
 	def _cleandict(item):
 		item = {k: (int(v) if v else 0) for k, v in item.items()}

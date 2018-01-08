@@ -69,7 +69,7 @@ class Duration(datetime.timedelta):
 		return super().__new__(cls, **datetime_keys)
 
 	def __str__(self):
-		return self.toiso()
+		return self.toIso()
 
 	@classmethod
 	def _parseGenericObject(cls, generic, force = False):
@@ -95,12 +95,10 @@ class Duration(datetime.timedelta):
 		try:
 			generic_values = generic.to_timedelta()
 			return cls._parseGenericObject(generic_values)
-		except Exception: pass
-		if force:
-			return {'seconds': 0}
-		else:
+		except Exception as exception:
+
 			message = "Unsupported generic type: {} ({})".format(generic, type(generic))
-			raise ValueError(message)
+			raise exception(message)
 
 
 	@classmethod
