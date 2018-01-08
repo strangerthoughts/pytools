@@ -108,6 +108,8 @@ class Timestamp(datetime.datetime):
 		""" parses a string formatted as a generic YY/MM/DD string. """
 		if '-' in string and ':' in string:
 			result = cls._parseTimestamp(string)
+		elif ' ' in string:
+			result = cls._parseVerbalDate(string)
 		else:
 			result = cls._parseNumericString(string)
 		return result
@@ -143,6 +145,27 @@ class Timestamp(datetime.datetime):
 	def _parseTuple(cls, value):
 		keys = ('year', 'month', 'day', 'hour', 'minute', 'second')
 		result = dict(zip(keys, value))
+		return result
+
+	@classmethod
+	def _parseVerbalDate(cls, value):
+		# Parsed dates formatted verbally. Ex. 7 Oct 2015
+		_short_months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'sep', 'oct', 'nov', 'dec']
+		_long_months = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
+			'august', 'september', 'november', 'december']
+		_day, _month, _year = value.split(' ')
+		_month = _month.to_lower()
+		if _month in _short_months:
+			_months = _short_months
+		else:
+			_months = _long_months
+		_month = _months.index(_month) + 1
+
+		result = {
+			'year': _year,
+			'month': _month,
+			'day': _day
+		}
 		return result
 
 	def getTime(self):
