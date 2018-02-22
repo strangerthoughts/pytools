@@ -48,7 +48,7 @@ class Duration(datetime.timedelta):
 		re.VERBOSE
 	)
 
-	def __new__(cls, value = None, unit = None, **kwargs):
+	def __new__(cls, *args, **kwargs):
 		"""
 			Keyword Arguments
 			-----------------
@@ -62,17 +62,19 @@ class Duration(datetime.timedelta):
 				hours:        number; default 0
 				weeks:        number; default 0
 		"""
-		if value is None: datetime_keys = kwargs
-		else: 
-			if unit is not None: kwargs['unit'] = unit
-			datetime_keys = cls._parseInput(value, **kwargs)
+		if len(args) == 0:
+			datetime_keys = kwargs
+		else:
+			datetime_keys = cls._parseInput(*args, **kwargs)
 		return super().__new__(cls, **datetime_keys)
 
-	def __str__(self):
-		return self.toIso()
+	
+	def __repr__(self):
+		string = "Duration('{}')".format(self.toiso())
+		return string
 
 	@classmethod
-	def _parseGenericObject(cls, generic, force = False):
+	def _parseGenericObject(cls, generic):
 		""" Attempts to parse a generic timedelta object. If all attempts
 			to extract information from the object fail and 'force' = True (default),
 			then a 0-length Duration object is created instead.
@@ -140,8 +142,9 @@ class Duration(datetime.timedelta):
 		return matches
 
 	@classmethod
-	def _parseInput(cls, element, **kwargs):
+	def _parseInput(cls, *args, **kwargs):
 		""" Chooses which parse to apply to the input, if supported."""
+		element = args[0]
 		if isinstance(element, datetime.timedelta):
 			result = cls._parseTimedeltaObj(element)
 		elif isinstance(element, str):
@@ -287,9 +290,7 @@ class Duration(datetime.timedelta):
 	def isoformat(self, compact = True):
 		""" To make calls compatible with Timestamp.isoformat() """
 		return self.toiso(compact)
-	def isoFormat(self, compact = True):
-		""" To be consistent with other function names """
-		return self.toiso(compact)
+
 	def toiso(self, compact = True):
 		""" Converts the timedelta to an ISO Duration string. By default, 
 			weeks are used instead of months, so the original duration string
@@ -326,8 +327,7 @@ class Duration(datetime.timedelta):
 		if is_negative:
 			isostring = '-' + isostring
 		return isostring
-	def toIso(self, compact = True):
-		return self.toiso(compact)
+
 	def totalSeconds(self):
 		return self.total_seconds()
 

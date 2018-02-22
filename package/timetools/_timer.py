@@ -1,5 +1,5 @@
 import time
-
+import numpy
 from ._duration import Duration 
 from .. import numbertools
 
@@ -26,8 +26,8 @@ class Timer:
 	def duration(self):
 		self.end_time = time.clock()
 		_duration = self.end_time - self.start_time
-		_duration = Duration(seconds = _duration)
-		return(_duration)
+		#_duration = Duration(seconds = _duration)
+		return _duration
 
 	def isover(self, limit = 10.0):
 		""" Checks if more time has elapsed than the supplied limit
@@ -104,40 +104,48 @@ class Timer:
 		per_loop = duration / loops
 
 		result = {
-			'duration': duration,
+			'duration': Duration(duration),
 			'perLoop': per_loop,
 			'loops': loops
 		}
 		return result
 
-	def timeFunction(self, func, loops = 10, *args, **kwargs):
-		""" Benchmarks a function. Kwargs are passed on to the function.
+	def timeFunction(self, func, *args, **kwargs):
+		""" Benchmarks a function. args and kwargs are passed on to the function.
 			Prints a message of the form 'a ± b per loop [c, d] where:
 				* 'a': average time for each loop to execute. 
 				* 'b': standard deviation for each loop. 
 				* 'c': The fastest time any given loop completed. 
 				* 'd': The slowest time any given loop took to complete.
+			Parameters
+			----------
+			func: callable
+				The function to benchmark.
+			* 'loops': int; default 10
+				The number of times to run the function during the benchmark.
 			Returns
 			-------
 				result: tuple -> float, float
 					The average and standard deviation of the loop execution times.
 		"""
+		if 'loops' in kwargs:
+			loops = kwargs.pop('loops')
+		else:
+			loops = 100
 		_results = list()
 		
 		for i in range(loops):
 			self.reset()
 			func(*args, **kwargs)
 			_results.append(self.duration())
-
+		_results = numpy.array(_results)
 		minimum = min(_results)
 		maximum = max(_results)
-		avg = sum(_results) / len(_results)
-		std = numbertools.standardDeviation(_results)
 
 		minimum = numbertools.humanReadable(minimum)
 		maximum = numbertools.humanReadable(maximum)
-		avg = numbertools.humanReadable(avg)
-		std = numbertools.humanReadable(std)
+		avg = numbertools.humanReadable(_results.mean())
+		std = numbertools.humanReadable(_results.std())
 		print("{}s ± {}s per loop [{} loops][{}s, {}s]".format(avg, std, loops, minimum, maximum))
 		return avg, std
 
@@ -178,3 +186,5 @@ class Timer:
 		if label is not None:   label += ': '
 		else:                   label = ''
 		print(label, "{0:.3f} seconds...".format(self.duration()), flush = True)
+
+

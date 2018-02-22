@@ -9,13 +9,20 @@ example_timestamps = [
 	('1997-07-16T19:20:30+01:00', '1997-07-16T19:20:30')
 ]
 
+example_durations = [
+	('P1Y2DT7H4S'),
+	()
+]
+
 for test_value, answer_value in example_timestamps:
 	timestamp = timetools.Timestamp(test_value)
 	iso_string = timestamp.toIso()
 
 	result = iso_string == answer_value
 
-	print(result, iso_string, '\t', answer_value)
+	print(result, test_value, '\t', iso_string, '\t', answer_value)
 
 
 print("Finished!")
+
+

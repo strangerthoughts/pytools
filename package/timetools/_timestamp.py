@@ -10,6 +10,9 @@ class Timestamp(datetime.datetime):
 						(?:(?P<hour>[\d]+)[:](?P<minute>[\d]+)[:](?P<second>[\d]+))?"""
 	timestamp_regex = re.compile(timestamp_regex, re.VERBOSE)
 
+	verbal_regex = r"""(?P<first>[\dA-Za-z]+)[,\s]*(?P<second>[\dA-Za-z]+)[,\s]*(?P<year>[\d]+)"""
+	verbal_regex = re.compile(verbal_regex, re.VERBOSE)
+
 	def __new__(cls, *args, **kwargs):
 		if len(args) == 1:
 			result = cls._parseInput(args[0])
@@ -30,6 +33,9 @@ class Timestamp(datetime.datetime):
 
 	def __str__(self):
 		string = self.toIso(True)
+		return string
+	def __repr__(self):
+		string = "Timestamp('{}')".format(self.toiso())
 		return string
 	@staticmethod
 	def _cleandict(item):
@@ -58,6 +64,7 @@ class Timestamp(datetime.datetime):
 		}
 		return result
 
+	# Methods for converting generic datetime objects
 	@classmethod
 	def _parseGenericObject(cls, value):
 		generic_date = cls._parseGenericDateObject(value)
@@ -95,10 +102,7 @@ class Timestamp(datetime.datetime):
 	@classmethod
 	def _parseInput(cls, value):
 		if isinstance(value, str):
-			if any(not c.isdigit() for c in value):
-				result = cls._parseTimestamp(value)
-			else:
-				result = cls._parseNumericString(value)
+			result = cls._parseDateTimeString(value)
 		elif isinstance(value, (tuple, list)):
 			result = cls._parseTuple(value)
 		else:
@@ -109,7 +113,7 @@ class Timestamp(datetime.datetime):
 	@classmethod
 	def _parseDateTimeString(cls, string):
 		""" parses a string formatted as a generic YY/MM/DD string. """
-		if '-' in string and ':' in string:
+		if '-' in string or ':' in string:
 			result = cls._parseTimestamp(string)
 		elif ' ' in string:
 			result = cls._parseVerbalDate(string)
@@ -120,12 +124,21 @@ class Timestamp(datetime.datetime):
 	@classmethod
 	def _parseNumericString(cls, string):
 		""" Parses a date formatted as YY[YY]MMDD. """
-		string, day = string[:-2], string[-2:]
-		year, month = string[:-2], string[-2:]
-
+		extra, day = string[:-2], string[-2:]
+		year, month = extra[:-2], extra[-2:]
+		debug_info = {
+			'string': string,
+			'year': year,
+			'month': month,
+			'day': day
+		}
+		pprint(debug_info)
 		year = int(year)
-		if year < 20: year += 2000
-		else: year += 1900
+		if year < 100:
+			if year < 20:
+				year += 2000
+			else:
+				year += 1900
 
 		result = {
 			'year': int(year),
@@ -146,18 +159,35 @@ class Timestamp(datetime.datetime):
 
 	@classmethod
 	def _parseTuple(cls, value):
-		keys = ('year', 'month', 'day', 'hour', 'minute', 'second')
-		result = dict(zip(keys, value))
-		return result
+		if len(value) == 3:
+			keys = ('year', 'month', 'day')
+		else:
+			keys = ('year', 'month', 'day', 'hour', 'minute', 'second')
+		datetime_dict = dict(zip(keys, value))
+		return datetime_dict
 
 	@classmethod
 	def _parseVerbalDate(cls, value):
 		# Parsed dates formatted verbally. Ex. 7 Oct 2015
-		_short_months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'sep', 'oct', 'nov', 'dec']
+		#print("Value: ", value)
+		#print(cls.verbal_regex.search(value).groups())
+		_short_months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 		_long_months = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
 			'august', 'september', 'november', 'december']
-		_day, _month, _year = value.split(' ')
-		_month = _month.to_lower()
+		match = cls.verbal_regex.search(value)
+		if not match:
+			return None
+		else:
+			match = match.groups()
+		_first, _second, _year = match
+		if _first.isdigit():
+			_day = _first
+			_month = _second
+		else:
+			_day = _second
+			_month = _first
+		_month = _month.lower()
+
 		if _month in _short_months:
 			_months = _short_months
 		else:
@@ -171,6 +201,11 @@ class Timestamp(datetime.datetime):
 		}
 		return result
 
+
+	# Public access methods
+	def getDate(self):
+		return self.year, self.month, self.day
+
 	def getTime(self):
 		return self.hour, self.minute, self.second, self.microsecond
 
@@ -183,22 +218,27 @@ class Timestamp(datetime.datetime):
 	def toIso(self, compact = True):
 		# for compatability with the other methods names.
 		return self.toiso(compact)
-	def isoFormat(self, compact = True):
-		# for compatibility
-		return self.toiso(compact)
 
-	def toNumeric(self):
-		pass
 
 	def toDict(self):
+
+		struct = self.timetuple()
+
 		result = {
-			'year':   self.year,
-			'month':  self.month,
-			'day':    self.day,
-			'hour':   self.hour,
-			'minute': self.minute,
-			'second': self.second,
-			'microsecond': self.microsecond
+			# Regular
+			'year':   struct.tm_year,
+			'month':  struct.tm_mon,
+			'day':    struct.tm_mday,
+			'hour':   struct.tm_hour,
+			'minute': struct.tm_min,
+			'second': struct.tm_sec,
+			'microsecond': 0,
+			
+			'daylightSavings': struct.tm_isdst,
+			'ordinalDay': struct.tm_yday,
+			'weekDay': struct.tm_wday,
+			'timezone': struct.tm_zone
+
 		}
 		return result
 
@@ -209,10 +249,29 @@ class Timestamp(datetime.datetime):
 		)
 		return result
 
+	def toYear(self):
+		""" Converts the timestamp to a float """
+
+		data = self.toDict()
+
+		year = data['year']
+
+		ordinal_day = data['ordinalDay']
+		if ordinal_day >= 364: ordinal_day = 364
+
+		result = year + ((ordinal_day-1) / 365)
+
+		return result
+	
+	def toDatetime(self):
+		return datetime.datetime(self.year, self.month, self.day, self.hour, self.minute, self.second)
+		
+
+
 if __name__ == "__main__":
-	string = '2008-04-18T15:52:09.000Z'
-
-	result = Timestamp(string)
-
-	print('Input: ', string)
-	print("Output: ", result)
+	def test(string):
+		print(string)
+		result = Timestamp(string)
+		print("\t", result.toYear())
+	for i in ['2009-01-01', '2009-06-30', '2009-07-01', '2009-12-31']:
+		test(i)

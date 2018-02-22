@@ -1,59 +1,151 @@
 import datetime
 import math
 from numbers import Number
-
 import numpy
+
+
+SCALE = [
+	{
+		'prefix':     'atto',
+		'suffix':     'a',
+		'string':     None,
+		'multiplier': 1E-18
+	},
+	{
+		'prefix':     'femto',
+		'suffix':     'f',
+		'string':     None,
+		'multiplier': 1E-15
+	},
+	{
+		'prefix':     'pico',
+		'suffix':     'p',
+		'string':     None,
+		'multiplier': 1E-12
+	},
+	{
+		'prefix':     'nano',
+		'suffix':     'n',
+		'string':     None,
+		'multiplier': 1E-9
+	},
+	{
+		'prefix':     'micro',
+		'suffix':     'u',  # 'μ'
+		'string':     'millionth',
+		'multiplier': 1E-6
+	},
+	{
+		'prefix':     'milli',
+		'suffix':     'm',
+		'string':     'thousandth',
+		'multiplier': 1E-3
+	},
+	{
+		'prefix':     'centi',
+		'suffix':     'c',
+		'string':     'hundredth',
+		'multiplier': 1E-2
+	},
+	{
+		'prefix':     'deci',
+		'suffix':     'd',
+		'string':     'tenth',
+		'multiplier': .1
+	},
+	{
+		'prefix':     '',
+		'suffix':     '',
+		'string':     'unit',
+		'multiplier': 1
+	},
+	{
+		'prefix':     'deca',
+		'suffix':     'da',
+		'string':     'ten',
+		'multiplier': 10
+	},
+	{
+		'prefix':     'hecto',
+		'suffix':     'h',
+		'string':     'hundred',
+		'multiplier': 100
+	},
+	{
+		'prefix':     'kilo',
+		'suffix':     'K',
+		'string':     'thousand',
+		'multiplier': 1000
+	},
+	{
+		'prefix':     'mega',
+		'suffix':     'M',
+		'string':     'million',
+		'multiplier': 1E6
+	},
+	{
+		'prefix':     'giga',
+		'suffix':     'B',
+		'string':     'billion',
+		'multiplier': 1E9
+	},
+	{
+		'prefix':     'tera',
+		'suffix':     'T',
+		'string':     'trillion',
+		'multiplier': 1E12
+	},
+	{
+		'prefix':     'peta',
+		'suffix':     'P',
+		'string':     '',
+		'multiplier': 1E15
+	},
+	{
+		'prefix':     'exa',
+		'suffix':     'E',
+		'string':     '',
+		'multiplier': 1E18
+	}
+]
+
+SCALE = sorted(SCALE, key = lambda s: s['multiplier'])
+REVERSED_SCALE = sorted(SCALE, key = lambda s: s['multiplier'], reverse = True)
 
 def getBase(value):
 	""" Returns the SI base for a given value """
-	value = abs(value)
-	if value < 1E-6:
-		suffix = 'n'
-		
-	elif value < 1E-3:
-		suffix = 'u'
-		
-	elif value < 1:
-		suffix = 'm'
-		
-	elif value < 1000:
-		suffix = ''
 
-	elif value < 1E6:
-		suffix = 'K'
-	
-	elif value < 1E9:
-		suffix = 'M'
-	
-	elif value < 1E12:
-		suffix = 'B'
-	
-	elif value <1E15:
-		suffix = 'T'
+	value = abs(value)
+	if value == 0.0 or math.isnan(value):
+		return ''
+	for iso_scale in REVERSED_SCALE:
+		if value > iso_scale['multiplier']:
+			scale = iso_scale
+			break
 	else:
 		message = "'{}' does not have a defined base.".format(value)
 		raise ValueError(message)
-		
-	return suffix
+
+	base = scale['suffix']
+	return base
 
 def getMultiplier(base):
+	""" Converts a numerical suffix to the corresponding numerical multiplier.
+		Ex. 'K' -> 1000, 'u' -> 1E-6
+	"""
+	if not isinstance(base, str): return math.nan
+	if len(base) > 1: 
+		base = base.lower()
+		if base.endswith('s'):
+			base = base[:-1]
 
-	if base == 'n':
-		multiplier = 1E-9
-	elif base == 'u':
-		multiplier = 1E-6
-	elif base == 'm':
-		multiplier = 1E-3
-	elif base == '':
-		multiplier = 1.0
-	elif base == 'K':
-		multiplier = 1E3
-	elif base == 'M':
-		multiplier = 1E6
-	elif base == 'B':
-		multiplier = 1E9
-	elif base == 'T':
-		multiplier = 1E12
+	for iso_scale in SCALE:
+		prefix = iso_scale['prefix']
+		suffix = iso_scale['suffix']
+		string = iso_scale['string']
+		if base == prefix or base == suffix or base == string:
+			multiplier = iso_scale['multiplier']
+			break
 	else:
 		message = "'{}' is not a valid base.".format(base)
 		raise ValueError(message)
@@ -61,7 +153,7 @@ def getMultiplier(base):
 	return multiplier
 
 
-def humanReadable(value, base = None, to_string = True):
+def humanReadable(value, base = None, to_string = True, precision = 2):
 	""" Converts a number into a more easily-read string.
 		Ex. 101000 -> '101T' or (101, 'T')
 		Parameters
@@ -75,11 +167,16 @@ def humanReadable(value, base = None, to_string = True):
 			If True, the number(s) will be automatically converted to a formatted
 			string. Otherwise, a tuple will be returned with the reduced number
 			as well as the suffix.
+		precision: int; default 2
+			The number of decimal places to show.
 		Returns
 		-------
 		str, list<str>
 			The reformatted number.
 	"""
+	template =  '{0:.' + str(int(precision)) + 'f}{1}'
+	_toString = lambda v, b:template.format(v, b) if v != 0.0 else template.format(0, b)
+
 	if not isinstance(value, list):
 		value = [value]
 
@@ -95,7 +192,7 @@ def humanReadable(value, base = None, to_string = True):
 	result = [(i/multiplier, base) for i in value]
 
 	if to_string:
-		_toString = lambda v,b: '{0:.2f}{1}'.format(v, b) if v != 0.0 else "0.00"
+
 		result = [_toString(i[0], i[1]) for i in result]
 
 	if len(result) == 1:
@@ -113,7 +210,7 @@ def isNumber(value):
 	return result
 
 
-def toNumber(value):
+def toNumber(value, default = math.nan):
 	""" Attempts to convert the passed object to a number.
 		Returns
 		-------
@@ -130,7 +227,10 @@ def toNumber(value):
 		if '.' in value:
 			converted_number = float(value)
 		else:
-			converted_number = int(value)
+			try:
+				converted_number = int(value)
+			except:
+				converted_number = default
 	elif isinstance(value, (int, float)):
 		converted_number = value
 	elif isinstance(value, datetime.datetime):
@@ -142,14 +242,17 @@ def toNumber(value):
 		try:
 			converted_number = float(value)
 		except TypeError:
-			converted_number = math.nan
+			converted_number = default
 	return converted_number
 
 def standardDeviation(values):
-	""" Returns the standard deviation of a list of values. """
-	return numpy.std(values)
+	array = numpy.array(values)
+	return array.std()
 
 if __name__ == "__main__":
-	test_value = datetime.datetime(2015, 6, 6)
-	test_value = toNumber(test_value)
-	print(test_value)
+	test_value = 12345
+	test_value = -123456
+
+
+	result = humanReadable(test_value, precision = 2)
+	print(result)

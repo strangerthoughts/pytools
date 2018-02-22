@@ -4,7 +4,6 @@ from .. import numbertools
 import os
 import pandas
 import csv
-from ._pandas_table import PandasTable as Table
 
 def getTableType(io, **kwargs):
 	""" Determines what the general layout of the

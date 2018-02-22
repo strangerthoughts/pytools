@@ -1,38 +1,8 @@
 import os
 import pandas
 
-class AbstractTable:
-	@classmethod
-	def fromDataframe(cls, io, **kwargs):
-		""" Returns a new Table object from a pandas.DataFrame object.
-			Keyword arguments are passed on to the Table constructor.
-			Parameters
-			----------
-				io: pandas.DataFrame
-					The input dataframe
-			
-		"""
-		return cls(io, **kwargs)
-	
-	@classmethod
-	def fromList(cls, io):
-		""" Creates a table from a list of dictionaries.
-			Parameters
-			----------
-				io: list<dict<>>
-					A list of dictionaries to convert to a table.
-		"""
 
-		df = pandas.DataFrame(io)
-		df = cls(df)
-		return df
-
-	def toDataframe(self):
-		return self.df
-
-
-
-class CompositeTable(AbstractTable):
+class Table:
 	""" Wrapper around a pandas.DataFrame object that allows convienient handling
 		of tabular data. It is designed such that selection of row values based
 		on other values is both fast and easy.
@@ -56,6 +26,9 @@ class CompositeTable(AbstractTable):
 		""" Calls the corresponding method on self.df it it is not already defined. """
 		return getattr(self.df, key)
 
+	def __len__(self):
+		return len(self.df)
+
 	def __init__(self, io, **kwargs):
 
 		
@@ -72,10 +45,6 @@ class CompositeTable(AbstractTable):
 		self.index_map = dict()
 		# Adds the index map and resets the index
 		self._resetIndex()
-
-	def __len__(self):
-		""" Returns the number of rows present in the table. """
-		return len(self.df)
 
 	def __call__(self, on, where = None, column = None, value = None, **kwargs):
 		""" Selects an element from the table.
@@ -354,25 +323,6 @@ class CompositeTable(AbstractTable):
 		else:
 			print("ERROR: Could not save the database to", filename)
 
-	def concat(self, io):
-		""" Adds a dataframe from a file to the existing internal dataframe
-			Parameters
-			----------
-				io: string, pandas.DataFrame
-					The database to add
-			Returns
-			----------
-				function : None
-		"""
-		if isinstance(io, str):
-			newdf = self._load_file(io)
-		elif isinstance(io, pandas.DataFrame):
-			newdf = io
-		else:
-			raise ValueError("{0} cannot be concatenated with the current DataFrame!".format(type(io)))
-			   
-		self.df = pandas.concat([self.df, newdf], ignore_index = True)
-		self._resetIndex()
 
 
 	# Select data from the table
@@ -727,13 +677,6 @@ class CompositeTable(AbstractTable):
 		else:
 			result = value in self.get_column(column)
 		return result
-
-	def iterrows(self):
-		""" Iterates over the rows in the table. The index is corresponds to
-		the labeled index rather than the location (0-based) index.
-		"""
-		for index, row in self.df.iterrows():
-			yield index, row 
 
 	def searchColumn(self, column, string):
 		values = self.get_column(column)
