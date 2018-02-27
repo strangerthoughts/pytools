@@ -1,8 +1,7 @@
-import datetime
 import math
 from numbers import Number
 import numpy
-
+from typing import Union, List
 
 SCALE = [
 	{
@@ -112,7 +111,7 @@ SCALE = [
 SCALE = sorted(SCALE, key = lambda s: s['multiplier'])
 REVERSED_SCALE = sorted(SCALE, key = lambda s: s['multiplier'], reverse = True)
 
-def getBase(value):
+def getBase(value:float):
 	""" Returns the SI base for a given value """
 
 	value = abs(value)
@@ -129,7 +128,7 @@ def getBase(value):
 	base = scale['suffix']
 	return base
 
-def getMultiplier(base):
+def getMultiplier(base:str):
 	""" Converts a numerical suffix to the corresponding numerical multiplier.
 		Ex. 'K' -> 1000, 'u' -> 1E-6
 	"""
@@ -153,7 +152,7 @@ def getMultiplier(base):
 	return multiplier
 
 
-def humanReadable(value, base = None, to_string = True, precision = 2):
+def humanReadable(value, base:str = None, to_string:bool = True, precision:int = 2)->Union[str,List[str]]:
 	""" Converts a number into a more easily-read string.
 		Ex. 101000 -> '101T' or (101, 'T')
 		Parameters
@@ -189,28 +188,28 @@ def humanReadable(value, base = None, to_string = True, precision = 2):
 
 	multiplier = getMultiplier(base)
 
-	result = [(i/multiplier, base) for i in value]
+	human_readable_number = [(i/multiplier, base) for i in value]
 
 	if to_string:
 
-		result = [_toString(i[0], i[1]) for i in result]
+		human_readable_number = [_toString(i[0], i[1]) for i in result]
 
-	if len(result) == 1:
-		result = result[0]
+	if len(human_readable_number) == 1:
+		human_readable_number = human_readable_number[0]
 
-	return result
+	return human_readable_number
 
 
-def isNumber(value):
+def isNumber(value:Union[str,Number])->bool:
 	if isinstance(value, str):
-		result = value.isdigit()
+		is_number = value.isdigit()
 	else: 
-		result = isinstance(value, Number)
+		is_number = isinstance(value, Number)
 
-	return result
+	return is_number
 
 
-def toNumber(value, default = math.nan):
+def toNumber(value:Union[str,Number], default:Number = math.nan)->Number:
 	""" Attempts to convert the passed object to a number.
 		Returns
 		-------
@@ -233,11 +232,7 @@ def toNumber(value, default = math.nan):
 				converted_number = default
 	elif isinstance(value, (int, float)):
 		converted_number = value
-	elif isinstance(value, datetime.datetime):
-		year = value.year
-		month = value.month
-		day = value.day
-		converted_number = year + (month/12) + (day/365)
+
 	else:
 		try:
 			converted_number = float(value)

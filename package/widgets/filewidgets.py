@@ -74,7 +74,6 @@ class DuplicateFiles:
 					checked_files[file_key] = [abs_path]
 
 			_dnames = [i for i in dirnames if i in ignored_folders]
-			_dnames = [dirnames.remove(i) for i in _dnames]
 
 
 		_duplicates = [v for k, v in checked_files.items() if len(v) > 1]
@@ -85,6 +84,7 @@ class DuplicateFiles:
 	def removeDuplicates(self, confirm = False, keep = 'first'):
 		total_size = 0
 		total_files = 0
+
 		for duplicate_files in self.duplicates:
 			for i in duplicate_files[1:]:
 				total_files += 1

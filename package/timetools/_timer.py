@@ -1,7 +1,13 @@
 import time
+from typing import Union
+
 import numpy
-from ._duration import Duration 
+
+from ._duration import Duration
 from .. import numbertools
+
+Number = Union[int, float]
+
 
 class Timer:
 	""" A class with convienient timing methods.
@@ -11,9 +17,10 @@ class Timer:
 			both the average execution time and standard deviation.
 	
 	"""
+
 	def __init__(self, func = None, *args, **kwargs):
 		self.start_time = time.clock()
-		self.end_time = 0.0 
+		self.end_time = 0.0
 		if func is not None:
 			self.timeFunction(func, 100, *args, **kwargs)
 
@@ -23,13 +30,13 @@ class Timer:
 	def __repr__(self):
 		return "Timer({0})".format(self.to_iso())
 
-	def duration(self):
+	def duration(self) -> float:
 		self.end_time = time.clock()
 		_duration = self.end_time - self.start_time
-		#_duration = Duration(seconds = _duration)
+		# _duration = Duration(seconds = _duration)
 		return _duration
 
-	def isover(self, limit = 10.0):
+	def isover(self, limit: Number = 10.0):
 		""" Checks if more time has elapsed than the supplied limit
 			Parameters
 			----------
@@ -43,7 +50,7 @@ class Timer:
 		result = self.duration() > limit
 		return result
 
-	def togo(self, done, total, iso = False):
+	def togo(self, done: int, total: int, iso: bool = False) -> Duration:
 		""" Calculates the remaining time until a loop is finished
 			executing
 			Parameters
@@ -65,14 +72,14 @@ class Timer:
 			remaining = Duration(remaining, 'Seconds').to_iso()
 		return remaining
 
-	def reset(self):
+	def reset(self) -> None:
 		self.start_time = time.clock()
 
-	def split(self, label = 'the previous process'):
+	def split(self, label: str = 'the previous process'):
 		""" Prints the elapsed time, then resets the timer
 			Parameters
 			----------
-				label: string, int; default "the previous process"
+				label: string; default "the previous process"
 					Used to indicate which process was timed. If int, will
 					print the number of milliseconds required to run the 
 					previous loop instead
@@ -83,11 +90,11 @@ class Timer:
 		if isinstance(label, int):
 			string = self.timeit(label)
 		else:
-			string = "Finished {0} in {1}".format(label, self.to_iso())
+			string = "Finished {} in {}".format(label, self.to_iso())
 		print(string, flush = True)
 		self.reset()
 
-	def benchmark(self, loops = 1):
+	def benchmark(self, loops: int = 1):
 		""" Returns a dictionary with information on the loop timing
 		
 			Returns
@@ -105,8 +112,8 @@ class Timer:
 
 		result = {
 			'duration': Duration(duration),
-			'perLoop': per_loop,
-			'loops': loops
+			'perLoop':  per_loop,
+			'loops':    loops
 		}
 		return result
 
@@ -133,7 +140,7 @@ class Timer:
 		else:
 			loops = 100
 		_results = list()
-		
+
 		for i in range(loops):
 			self.reset()
 			func(*args, **kwargs)
@@ -149,7 +156,7 @@ class Timer:
 		print("{}s ± {}s per loop [{} loops][{}s, {}s]".format(avg, std, loops, minimum, maximum))
 		return avg, std
 
-	def timeit(self, loops = 1, label = None):
+	def timeit(self, loops: int = 1, label: str = None):
 		""" Calculates the time for a loop(s) to execute. Resets the timer.
 			Parameters
 			----------
@@ -168,23 +175,25 @@ class Timer:
 		benchmark = self.benchmark(loops)
 		duration = benchmark['duration']
 		per_loop = numbertools.humanReadable(benchmark['perLoop'])
-		
-		if label is None: message = ""
-		else: message = label + ': '
-		
+
+		if label is None:
+			message = ""
+		else:
+			message = label + ': '
+
 		message = message + "{0}s per loop ({1:.2f}s for {2:n} loop(s)) ".format(per_loop, duration, loops)
-		
+
 		self.reset()
 		return message
 
-	def to_iso(self):
+	def to_iso(self) -> str:
 		"""Returns an ISO duration representation of the elapsed time."""
 		seconds = self.duration()
 		return Duration(seconds, unit = 'Seconds').toiso()
 
-	def show(self, label = None):
-		if label is not None:   label += ': '
-		else:                   label = ''
+	def show(self, label: str = None) -> None:
+		if label is not None:
+			label += ': '
+		else:
+			label = ''
 		print(label, "{0:.3f} seconds...".format(self.duration()), flush = True)
-
-

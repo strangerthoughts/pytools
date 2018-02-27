@@ -1,7 +1,6 @@
 
 import pandas
 from unidecode import unidecode
-import tabletools
 
 ####################################### Private Methods ############################################
 def _isCode(string):
@@ -57,19 +56,3 @@ def findSimilarNames(code):
 ####################################### Parsing Methods ############################################
 
 
-def parseTable(io, column = "countryCode"):
-	""" Loops through a table with either region codes or names
-		and prints any missing names and/or codes.
-		Parameters
-		----------
-			io: string, pandas.DataFrame, list<dict<>>
-				Table to loop through.
-			column: string
-				The column to parse.
-	"""
-	table = tabletools.Table(io, skiprows = 1).df
-	for index, row in table.iterrows():
-		key_label = row[column]
-		info = lookup(key_label)
-		
-		print(info['iso3Code'], '\t', info['countryName'])

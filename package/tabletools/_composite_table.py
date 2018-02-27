@@ -1,5 +1,10 @@
 import os
 import pandas
+from typing import Union, List, Tuple, Any, Iterable
+
+ColumnLabel = Union[str, int]
+RowValue = Union[str, float, int]
+InputTable = Any
 
 
 class Table:
@@ -29,16 +34,15 @@ class Table:
 	def __len__(self):
 		return len(self.df)
 
-	def __init__(self, io, **kwargs):
+	def __init__(self, io: InputTable, **kwargs):
 
-		
-		if kwargs.get('sheetname') == 'all': 
+		if kwargs.get('sheetname') == 'all':
 			kwargs['sheetname'] = None
 		else:
 			kwargs['sheetname'] = kwargs.get('sheetname', 0)
 		kwargs['skiprows'] = kwargs.get('skiprows')
 
-		self.df = self._parseInput(io, **kwargs)
+		self.df: pandas.DataFrame = self._parseInput(io, **kwargs)
 		self.original_indexer = kwargs.get('indexer', True)
 		# Holds the indicies of specific groups within the database.
 		# This is much faster than finding the indices on the fly
@@ -98,7 +102,7 @@ class Table:
 		kwargs['default'] = kwargs.get('default')
 
 		try:
-			
+
 			if isinstance(on, list):
 				# Assume chainSelect
 				element = self.chainSelect(on, **kwargs)
@@ -109,7 +113,7 @@ class Table:
 				# Replace a value
 				element = self.put_value(on, where, column, value)
 			else:
-				message =  "The provided parameters to Table.__call__ are not valid: \n"
+				message = "The provided parameters to Table.__call__ are not valid: \n"
 				message += "\ton = {},\n\twhere = {},\n\tcolumn = {},\n\tvalue = {}".format(
 					on, where, column, value
 				)
@@ -126,7 +130,7 @@ class Table:
 		return element
 
 	def __iter__(self):
-		for i in self.df.iterrows(): 
+		for i in self.df.iterrows():
 			yield i[1]
 
 	def __getitem__(self, index):
@@ -137,14 +141,14 @@ class Table:
 		string = "Table(shape = ({x}x{y}))".format(
 			x = len(self),
 			y = len(self.df.columns)
-		)  
+		)
 		return string
 
 	# Private Methods
 	def _boolselect(self, boolarray):
 		return self.df[boolarray]
 
-	def _generate_index(self, column):
+	def _generate_index(self, column) -> pandas.Index:
 		""" generates an index for all unique values in a column.
 			Each key is a unique value present in the column, and each value is a list
 			of the indices where that value is present.
@@ -153,14 +157,16 @@ class Table:
 		indexed_series = dict()
 		if self.original_indexer:
 			for index, value in self.df[column].items():
-				try:    indexed_series[value].append(index)
-				except KeyError: indexed_series[value] = [index]
+				try:
+					indexed_series[value].append(index)
+				except KeyError:
+					indexed_series[value] = [index]
 			indexed_series = {k: pandas.Index(v) for k, v in indexed_series.items()}
 		else:
 			indexed_series = pandas.Index(self.df[column])
 		return indexed_series
 
-	def _get_indices(self, on, where):
+	def _get_indices(self, on: ColumnLabel, where: RowValue):
 		""" Gets the row indices corresponding to rows with a value of 
 			'where' in column 'on'.
 			Parameters
@@ -181,7 +187,7 @@ class Table:
 		else:
 			return self.index_map[on].get_loc(where)
 
-	def _parseInput(self, io, **kwargs):
+	def _parseInput(self, io: InputTable, **kwargs):
 		""" Parses the input to the Table constructor. 
 			
 			Parameters
@@ -191,12 +197,9 @@ class Table:
 
 				other types will be passed to pandas.DataFrame()
 		"""
-		if isinstance(io, str):
-			self.filename = io  # Used for self.melt()
-		else:
-			self.filename = ""
 
 		if isinstance(io, str):
+			self.filename = io
 			table = self._loadFromFilesystem(io, **kwargs)
 		elif isinstance(io, pandas.DataFrame):
 			table = io
@@ -213,23 +216,18 @@ class Table:
 					message = "Could not load '{}' as a table.".format(str(io))
 					print(message)
 					raise exception
-				
-
 
 		return table
 
-	def _set_dtype(self, column, dtype):
-		self.df[column] = self.df[column].astype(dtype)
-
 	@staticmethod
-	def _reduceData(data):
+	def _reduceData(data: pandas.DataFrame) -> pandas.DataFrame:
 		""" Transforms a dataframe/series/list into a single element if only one row in present. """
 		if len(data.index) == 1:
 			data = data.iloc[0]
 		return data
 
 	# Load and Save data to the filesystem
-	def _loadFromFilesystem(self, io, **kwargs):
+	def _loadFromFilesystem(self, io: str, **kwargs):
 		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
 			Parameters
 			----------
@@ -253,8 +251,8 @@ class Table:
 			_load_dfs = list()
 			for fn in os.listdir(directory):
 				if '~' in fn: continue
-				filename = os.path.join(directory, fn)
-				_load_dfs.append(self._load_file(filename, **kwargs))
+				fname = os.path.join(directory, fn)
+				_load_dfs.append(self._load_file(fname, **kwargs))
 			df = pandas.concat(_load_dfs)
 		else:
 			message = "The string passed to tabletools.Table() is not a valid filename or folder: {}".format(str(io))
@@ -262,71 +260,62 @@ class Table:
 
 		return df
 
-	@staticmethod
-	def _load_file(filename, **kwargs):
+	def _load_file(self, file_name: str, **kwargs):
 		""" Returns a dataframe of the suppled file
 		"""
-		extension = os.path.splitext(filename)[-1]
+		extension = os.path.splitext(file_name)[-1]
+		default_args = {
+			'.csv': {'delimiter': ','},
+			'.tsv': {'delimiter': '\t'},
+			'.fsv': {'delimiter': '\f'}
+		}
+		arguments = {**default_args.get(extension), **kwargs}
+		arguments = self._cleanArguments(extension, arguments)
 		if extension in {'.xls', '.xlsx', '.xlsm'}:
-			df = pandas.read_excel(filename, **kwargs)
-		elif extension in {'.csv', '.tsv', '.fsv'}:
-			if 'sheetname' in kwargs: kwargs.pop('sheetname')
-			if extension == '.csv': sep = ','
-			elif extension == '.tsv': sep = '\t'
-			else: sep = '\f'
-			kwargs['delimiter'] = sep
-			df = pandas.read_csv(filename, **kwargs)
-		elif extension == '.txt':
-			# Text file formatted as a table
-			if 'sheetname' in kwargs: kwargs.pop('sheetname')
-			df = pandas.read_table(filename, **kwargs)
+
+			df = pandas.read_excel(file_name, **arguments)
+		elif extension in {'.csv', '.tsv', '.fsv', '.txt'}:
+			if 'sheetname' in arguments: arguments.pop('sheetname')
+			df = pandas.read_table(file_name, **arguments)
 		elif extension == '.pkl':
-			df = pandas.read_pickle(filename)
-		elif extension == '.db':
-			from sqlalchemy import create_engine
-			engine = create_engine('sqlite:///{0}'.format(filename))
-			df = pandas.read_sql(filename, engine)
+			df = pandas.read_pickle(file_name)
 		else:
-			raise NameError("{0} does not have a valid extension!".format(filename))
+			raise NameError("{} does not have a valid extension!".format(file_name))
 		return df
 
-	def save(self, filename, **kwargs):
+	def save(self, save_file: str, **kwargs):
 		""" Saves the database. Keyword arguements will be passed to pandas.
 			Parameters
 			----------
-				filename: string
+				save_file: string
 					The location on the disk to save the database to
 					Supports .xlsx, .pkl, .csv, .db
 			Returns
 			---------
 				function : None
 		"""
-		file_format = os.path.splitext(filename)[1]
-		
+		file_format = os.path.splitext(save_file)[1]
+
 		if file_format in {'.xls', '.xlsx'}:
-			self.df.to_excel(filename, **kwargs)
-			
+			self.df.to_excel(save_file, **kwargs)
+
 		elif file_format == '.pkl':
-			self.df.to_pickle(filename, **kwargs)
+			self.df.to_pickle(save_file, **kwargs)
 
 		elif file_format in {'.csv', '.tsv', '.fsv'}:
-			if file_format == '.csv': sep = ','
-			elif file_format == '.tsv': sep = '\t'
-			else: sep = '\f'
-			self.df.to_csv(filename, encoding = 'utf-8', sep = sep, **kwargs)
-
-		elif file_format == '.db':
-			from sqlalchemy import create_engine
-			engine = create_engine('sqlite:///{0}'.format(filename))
-			self.df.to_sql('Patient Database', engine, **kwargs)
+			if file_format == '.csv':
+				sep = ','
+			elif file_format == '.tsv':
+				sep = '\t'
+			else:
+				sep = '\f'
+			self.df.to_csv(save_file, encoding = 'utf-8', sep = sep, **kwargs)
 
 		else:
-			print("ERROR: Could not save the database to", filename)
-
-
+			print("ERROR: Could not save the database to", save_file)
 
 	# Select data from the table
-	def chainSelect(self, keys, **kwargs):
+	def chainSelect(self, keys: List[Tuple[str, Any]], **kwargs):
 		""" Retrieves data from the database based on several 
 			different criteria.
 			Parameters
@@ -358,7 +347,8 @@ class Table:
 			series = self._reduceData(series)
 		return series
 
-	def get_value(self, on, where, column = None, **kwargs):
+	def get_value(self, on: ColumnLabel, where: RowValue, column: ColumnLabel = None, **kwargs) -> Union[
+		pandas.DataFrame, pandas.Series]:
 		""" Retrieves a value from the database
 			Parameters
 			----------
@@ -377,7 +367,7 @@ class Table:
 				default_value: None
 			Returns
 			----------
-				rows: pandas.Series, pandas.DataFrame
+				pandas.Series, pandas.DataFrame
 					The rows where the 'on' column contains the 'where'
 					value. If a single row is found, it will be returned
 					as a pandas.Series object.
@@ -385,7 +375,7 @@ class Table:
 		return_single_result = kwargs.get('extract_one', True)
 		to_dataframe = kwargs.get('to_dataframe', False)
 		indices = self._get_indices(on, where)
-		
+
 		if self.original_indexer:
 			if column is None:
 				return_this = self.df.loc[indices]
@@ -407,7 +397,7 @@ class Table:
 				return_this = pandas.DataFrame(return_this)
 		return return_this
 
-	def get_column(self, column, to_series = False):
+	def get_column(self, column: ColumnLabel, to_series: bool = False) -> Union[List, pandas.Series]:
 		""" Retrieves all values in one of the database columns
 			Parameters
 			----------
@@ -420,11 +410,13 @@ class Table:
 				column : numpy.ndarray
 					The column values
 		"""
-		if not to_series: column = self.df[column].values
-		else: column = self.df[column]
+		if to_series:
+			column = self.df[column]
+		else:
+			column = self.df[column].values
 		return column
 
-	def search(self, on, value, contains = True):
+	def search(self, on: ColumnLabel, value: RowValue, contains: bool = True) -> pandas.Series:
 		""" Searches a column for a value and returns a DataFrame of every row
 			where in the 'on' column contains the 'value' as a substring 
 			Parameters
@@ -443,14 +435,14 @@ class Table:
 				result : pandas.DataFrame
 		"""
 		if not isinstance(value, str):
-			raise ValueError("{0} is not a string!".format(value))
-		if contains:
+			result = self.df[on] == value
+		elif contains:
 			result = self.df[on].str.contains(value)
 		else:
 			result = ~self.df[on].str.contains(value)
 		return self._boolselect(result)
 
-	def select(self, on, where, comparison = '=='):
+	def select(self, on: ColumnLabel, where: RowValue, comparison: str = '=='):
 		""" Parameters
 			----------
 				on: column label
@@ -492,11 +484,11 @@ class Table:
 		return result
 
 	# Manipulate attributes and data in the Table.
-	def put_column(self, column, iterable):
+	def put_column(self, column: ColumnLabel, iterable: Iterable):
 		""" Inserts 'iterable' under column name 'column' """
 		self.df[column] = iterable
 
-	def put_value(self, on, where, column, value):
+	def put_value(self, on: ColumnLabel, where: RowValue, column: ColumnLabel, value: RowValue):
 		""" Parameters
 			----------
 				on: column label
@@ -521,7 +513,6 @@ class Table:
 		)
 
 		return value
-
 
 	def melt(self, **kwargs):
 		""""Unpivots" a DataFrame from wide format to long format, optionally leaving
@@ -552,11 +543,11 @@ class Table:
 			value_name : scalar; default 'value'
 				Name to use for the 'value' column.
 		"""
-		kwargs['id_vars'] 	= kwargs.get('identifiers', kwargs['id_vars'])
-		kwargs['value_vars']= kwargs.get('variables', 	kwargs.get('value_vars'))
-		kwargs['var_name'] 	= kwargs.get('subjects', 	kwargs.get('var_name', 'variable'))
-		kwargs['value_name']= kwargs.get('values', 		kwargs.get('value_name', 'value'))
-		kwargs['to_file'] 	= kwargs.get('to_file')
+		kwargs['id_vars'] = kwargs.get('identifiers', kwargs['id_vars'])
+		kwargs['value_vars'] = kwargs.get('variables', kwargs.get('value_vars'))
+		kwargs['var_name'] = kwargs.get('subjects', kwargs.get('var_name', 'variable'))
+		kwargs['value_name'] = kwargs.get('values', kwargs.get('value_name', 'value'))
+		kwargs['to_file'] = kwargs.get('to_file')
 
 		new_table = pandas.melt(self.df, **kwargs)
 		new_table = self.fromDataframe(new_table)
@@ -567,8 +558,9 @@ class Table:
 			elif self.filename != "":
 				fn = os.path.splitext(self.filename)
 				fn = fn[0] + '.melt' + fn[1]
-			else: fn = None  # No usable filename
-			if fn: 
+			else:
+				fn = None  # No usable filename
+			if fn:
 				new_table.save(fn)
 
 		return new_table
@@ -623,40 +615,19 @@ class Table:
 			message = "Did not pass a column name to merge on."
 			raise KeyError(message)
 
-		if not isinstance(other, pandas.DataFrame): 
+		if not isinstance(other, pandas.DataFrame):
 			other = other.toDataframe()
 
 		new_df = pandas.merge(self.toDataframe, other, **kwargs)
 		new_table = self.fromDataframe(new_df)
 		return new_table
-	
+
 	def _resetIndex(self):
 		""" Updates the sorted order and index of the database after changes
 			are made
 		"""
 		self.df.reset_index(drop = True, inplace = True)
 		self.index_map = dict()
-
-	def remove_columns(self, *columns):
-		""" Removes the given columns
-			Parameters
-			----------
-				*columns: column label
-					The columns to delete
-			Returns
-			----------
-				function : None
-		"""
-		for c in columns:
-			if c in self.columns:
-				del self.df[c]
-	
-	# Methods based on the values contained in the table.
-	def _fuzzySearch(self, value, column):
-		""" Uses fuzzywuzzy to search for similar items in the selected column. """
-		from fuzzywuzzy import process
-		result = process.extractOne(value, self.get_column(column))
-		return result
 
 	def isin(self, value, column):
 		""" Checks whether a value is in one of the database columns.
@@ -678,7 +649,7 @@ class Table:
 			result = value in self.get_column(column)
 		return result
 
-	def searchColumn(self, column, string):
-		values = self.get_column(column)
-		values = [i for i in values if (isinstance(i, str) and string in i)]
-		return values
+
+if __name__ == "__main__":
+	filename = r"C:\Users\Progi\Google Drive\Region Data\Global\WEOApr2017all.xlsx"
+	pandas.read_table(filename)

@@ -1,9 +1,11 @@
-
 import datetime
 import re
-from numbers import Number
+from typing import Dict, Tuple
+
 from ._timestamp import Timestamp
 
+
+# Number = Union[int,float]
 class Duration(datetime.timedelta):
 	""" Inherits from datetime.timedelta. Designed to parse
 		many forms of timedelta representations.
@@ -65,10 +67,9 @@ class Duration(datetime.timedelta):
 		if len(args) == 0:
 			datetime_keys = kwargs
 		else:
-			datetime_keys = cls._parseInput(*args, **kwargs)
+			datetime_keys = cls._parseInput(*args)
 		return super().__new__(cls, **datetime_keys)
 
-	
 	def __repr__(self):
 		string = "Duration('{}')".format(self.toiso())
 		return string
@@ -86,25 +87,26 @@ class Duration(datetime.timedelta):
 			generic_values['seconds'] = generic.seconds
 			generic_values['microseconds'] = generic.microseconds
 			return generic_values
-		except Exception: pass
+		except Exception:
+			pass
 		# Try extracting the total number of seconds contained in the object
 		try:
 			generic_values['seconds'] = generic.total_seconds()
 			return generic_values
-		except AttributeError: pass
+		except AttributeError:
+			pass
 
 		# Try to extract a more usable object type
 		try:
 			generic_values = generic.to_timedelta()
 			return cls._parseGenericObject(generic_values)
-		except Exception as exception:
+		except Exception:
 
 			message = "Unsupported generic type: {} ({})".format(generic, type(generic))
-			raise exception(message)
-
+			raise ValueError(message)
 
 	@classmethod
-	def _parseInterval(cls, value):
+	def _parseInterval(cls, value: str) -> Dict[str, int]:
 		""" Parses an ISO interval.
 			Supported Formats:
 				<start>/<end>      Ex. "2007-03-01T13:00:00Z/2008-05-11T15:30:00Z"
@@ -117,9 +119,12 @@ class Duration(datetime.timedelta):
 		leftright = value.split('/')
 		left = leftright[0]
 		right = leftright[1] if len(leftright) != 1 else ""
-		if '-' in left and '-' in right: result = cls(Timestamp(right) - Timestamp(left))
-		elif '-' not in left:  result = cls._parseiso(left)
-		elif '-' not in right: result = cls._parseiso(right)
+		if '-' in left and '-' in right:
+			result = cls(Timestamp(right) - Timestamp(left))
+		elif '-' not in left:
+			result = cls._parseiso(left)
+		elif '-' not in right:
+			result = cls._parseiso(right)
 		else:
 			message = "Invalid format passed to timetools.{}: {}".format(str(cls), value)
 			raise TypeError(message)
@@ -127,22 +132,24 @@ class Duration(datetime.timedelta):
 		return result
 
 	@classmethod
-	def _parseiso(cls, string):
+	def _parseiso(cls, string) -> Dict[str, int]:
 		""" Parses a string with formatted as an ISO duration: PnnYnnMnnWnnDTnnHnnMnnST """
 		matches = cls.duration_regex.search(string).groupdict()
 		is_negative = string[0] == '-'
 		for k, v in matches.items():
-			if v is None: v = 0
-			else: v = float(v)
+			if v is None:
+				v = 0
+			else:
+				v = float(v)
 			if is_negative: v = -v
 			matches[k] = v
 		if 'years' in matches:  matches['days'] += 365 * matches.pop('years')
-		if 'months' in matches: matches['days'] += 30  * matches.pop('months')
+		if 'months' in matches: matches['days'] += 30 * matches.pop('months')
 
 		return matches
 
 	@classmethod
-	def _parseInput(cls, *args, **kwargs):
+	def _parseInput(cls, *args):
 		""" Chooses which parse to apply to the input, if supported."""
 		element = args[0]
 		if isinstance(element, datetime.timedelta):
@@ -151,9 +158,9 @@ class Duration(datetime.timedelta):
 			result = cls._parseString(element)
 		elif isinstance(element, tuple):
 			result = cls._parseTuple(element)
-		elif isinstance(element, (int, float, Number)):
-			result = cls._parseNumber(element, **kwargs)
-		else: result = cls._parseGenericObject(element, **kwargs)
+
+		else:
+			result = cls._parseGenericObject(element)
 		return result
 
 	@classmethod
@@ -162,56 +169,33 @@ class Duration(datetime.timedelta):
 		message = "_parseNumericString is not implemented."
 		raise NotImplementedError(message)
 
-	@classmethod
-	def _parseNumber(cls, number, **kwargs):
-		""" parses a (number, unit) tuple. """
-		days = 0
-		seconds = 0
-		microseconds = 0
-		if 'unit' in kwargs:
-			# Remove any other time values (seconds/days/etc.)
-			kwargs = {kwargs['unit'].lower(): number}
 
-		for key, item in kwargs.items():
-			key = key.lower()
-			if key == 'seconds':   seconds += item
-			elif key == 'minutes': seconds += 60*item
-			elif key == 'hours':   seconds += 3600*item
-			elif key == 'days':    days += item
-			elif key == 'weeks':   days = 7 * item
-			elif key == 'months':  days = 30*item
-			elif key == 'years':   days = 365*item
-			elif key == 'microseconds': microseconds += item
-			elif key == 'milliseconds': microseconds += item / 1000
-		result = {
-			'microseconds': microseconds,
-			'seconds': seconds,
-			'days': days
-		}
-		return result
 
 	@classmethod
-	def _parseString(cls, string):
-		if '/' not in string: result = cls._parseiso(string)
+	def _parseString(cls, string: str) -> Dict[str, int]:
+		if '/' not in string:
+			result = cls._parseiso(string)
 		elif len([i for i in string if not i.isdigit()]) < 3:
 			result = cls._parseNumericString(string)
-		else: result = cls._parseInterval(string)
+		else:
+			result = cls._parseInterval(string)
 		return result
 
 	@classmethod
-	def _parseTimedeltaObj(cls, obj):
+	def _parseTimedeltaObj(cls, obj: datetime.timedelta) -> Dict[str, int]:
 		""" Parses durations formatted as Y:M:D:H:M:S. """
 		result = {
-			'days': obj.days,
-			'hours': 0,
-			'minutes': 0,
-			'seconds': obj.seconds,
+			'days':         obj.days,
+			'hours':        0,
+			'minutes':      0,
+			'seconds':      obj.seconds,
 			'microseconds': obj.microseconds
 		}
 
 		return result
+
 	@staticmethod
-	def _parseTuple(value):
+	def _parseTuple(value: Tuple[int, int, int, int, int, int]):
 		""" Returns a Duration object generated from a tuple of time values.
 			Format: (years, months, days, hours, minutes, seconds[,microseconds])
 		"""
@@ -222,18 +206,19 @@ class Duration(datetime.timedelta):
 		days += 365 * years + 30 * seconds
 
 		result = {
-			'days': days,
-			'hours': hours,
-			'minutes': minutes,
-			'seconds': seconds,
+			'days':         days,
+			'hours':        hours,
+			'minutes':      minutes,
+			'seconds':      seconds,
 			'microseconds': microseconds
 		}
 
 		return result
+
 	######################### Public methods that return a Duration object #########################
 
 	@classmethod
-	def fromDict(cls, keys):
+	def fromDict(cls, keys: Dict[str, int]):
 		""" Parses a dict of time values. """
 		return cls(**keys)
 
@@ -246,26 +231,27 @@ class Duration(datetime.timedelta):
 	def fromTuple(cls, value):
 		result = cls._parseTuple(value)
 		return cls.fromDict(result)
+
 	##################### Public Methods to convert the timedelta to another format ################
 
-	def todict(self):
+	def todict(self) -> Dict[str, int]:
 		""" Returns a dictionary that can be used to instantiate another timedelta or Duration object. """
 		result = {
-			'days': self.days,
-			'seconds': self.seconds,
+			'days':         self.days,
+			'seconds':      self.seconds,
 			'microseconds': self.microseconds
 		}
 		return result
 
-	def tolongdict(self):
+	def tolongdict(self) -> Dict[str, int]:
 		""" Returns a dictionary with more human readable date and time keys. """
 
 		is_negative = self.totalSeconds() < 0
-		if is_negative: 
+		if is_negative:
 			original = abs(self)
 			original = {
-				'days': original.days,
-				'seconds': original.seconds,
+				'days':         original.days,
+				'seconds':      original.seconds,
 				'microseconds': original.microseconds
 			}
 		else:
@@ -282,16 +268,15 @@ class Duration(datetime.timedelta):
 		longdict['minutes'], longdict['seconds'] = divmod(seconds, 60)
 		longdict['seconds'] += original['microseconds'] / 1000000
 
-		
 		# Since timedelta objects subtract positive numbers from the largest unit for negative timestamps, need to convert back,
 
 		return longdict
 
-	def isoformat(self, compact = True):
+	def isoformat(self, compact: bool = True):
 		""" To make calls compatible with Timestamp.isoformat() """
 		return self.toiso(compact)
 
-	def toiso(self, compact = True):
+	def toiso(self, compact: bool = True) -> str:
 		""" Converts the timedelta to an ISO Duration string. By default, 
 			weeks are used instead of months, so the original duration string
 			used to create to Duration object may differ (but will be equivilant to)
@@ -304,7 +289,7 @@ class Duration(datetime.timedelta):
 		is_negative = self.totalSeconds() < 0
 		values = self.tolongdict()
 		datetime_map = [
-			'P', ('years', 'Y'), ('months', 'M'), ('weeks', 'W'), ('days', 'D'), 
+			'P', ('years', 'Y'), ('months', 'M'), ('weeks', 'W'), ('days', 'D'),
 			'T', ('hours', 'H'), ('minutes', 'M'), ('seconds', 'S')]
 		datetime_values = list()
 
@@ -317,29 +302,29 @@ class Duration(datetime.timedelta):
 				datetime_values.append(("", key))
 
 		isostring = "".join("{}{}".format(i, j) for i, j in datetime_values)
-		
+
 		if compact:
 			if isostring == 'PT' and not compact:  # Duration of 0 seconds
 				isostring = 'PT0S'
-			#isostring[0] == 'P' and isostring[1] == 'T': isostring = isostring[1:]
-			#elif isostring[-1] == 'T': isostring = isostring[:1]
+		# isostring[0] == 'P' and isostring[1] == 'T': isostring = isostring[1:]
+		# elif isostring[-1] == 'T': isostring = isostring[:1]
 
 		if is_negative:
 			isostring = '-' + isostring
 		return isostring
 
-	def totalSeconds(self):
+	def totalSeconds(self) -> float:
 		return self.total_seconds()
 
-	def totalDays(self):
+	def totalDays(self) -> float:
 		values = self.todict()
-		days = values['days'] + (24*3600*values['seconds'])
+		days = values['days'] + (24 * 3600 * values['seconds'])
 		return days
 
-	def totalYears(self):
+	def totalYears(self) -> float:
 		return self.totalDays() / 365
 
-	def to_numeric(self, units):
+	def to_numeric(self, units: str) -> float:
 		"""Backwords-compatible method"""
 		units = units.lower()
 		if units == 'days':
@@ -347,12 +332,12 @@ class Duration(datetime.timedelta):
 		elif units == 'years':
 			value = self.totalYears()
 		elif units == 'months':
-			value = self.totalYears()*12
+			value = self.totalYears() * 12
 		else:
 			message = "The units provided '{}' are not supported.".format(units)
 			raise ValueError(message)
 
 		return value
 
-	def toNumeric(self, units):
+	def toNumeric(self, units: str):
 		return self.to_numeric(units)
