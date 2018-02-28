@@ -1,9 +1,10 @@
 import os
 from fuzzywuzzy import fuzz
-from typing import Iterable, Dict,Any
-from .utilities import *
-from .. import tabletools
 
+from .utilities import *
+from pytools import tabletools
+from typing import *
+import pathlib
 ####################################### Local Variables ############################################
 LOCAL_PATH = os.path.dirname(__file__)
 
@@ -12,7 +13,7 @@ COUNTRY_TABLE = tabletools.Table(os.path.join(LOCAL_PATH, "data", "country-codes
 
 
 ####################################### Private Methods ############################################
-def _isCode(string: str):
+def _isCode(string: str)->bool:
 	""" Determines if a string represents a form of regional code """
 	is_code = "-" in string
 	is_code = is_code or any(c.isdigit() for c in string)
@@ -20,7 +21,7 @@ def _isCode(string: str):
 	return is_code
 
 
-def _convertToASCII(iterable: Iterable, col: str = None):
+def _convertToASCII(iterable: Union[str,Iterable[str]], col: str = None)->List[str]:
 	""" Converts a list of strings to a list of ascii strings. Non-string values
 		are converted to an empty string.
 		Parameters
@@ -49,7 +50,7 @@ def _convertToASCII(iterable: Iterable, col: str = None):
 # Methods to match region names with region codes and vice versa
 
 
-def findSimilarNames(code: str):
+def findSimilarNames(code: str)->List[str]:
 	""" Searches for similar ways of spelling the names
 		of countries, states, or other regions.
 		Parameters
@@ -57,10 +58,10 @@ def findSimilarNames(code: str):
 			code: string [ISO-3 code]
 	"""
 
-	similar_names = {
+	similar_names_index:Dict[str,List[str]] = {
 	}
 
-	similar_names = similar_names.get(code)
+	similar_names = similar_names_index.get(code)
 	return similar_names
 
 
@@ -68,7 +69,7 @@ class LookupRegionCode:
 	def __init__(self):
 		self.column_cache = dict()
 
-	def __call__(self, label: str, kind: str = "country", label_type = None):
+	def __call__(self, label: str, kind: str = "country", label_type:Optional[str] = None)->str:
 		if label_type is None:
 			label_type = self._checkIfStringIsCode(label)
 		kind = 'countries' if kind == 'country' else 'regions'
@@ -226,18 +227,6 @@ FILE_CACHE = {
 lookup = LookupRegionCode()
 
 
-def test1():
-	filename = "C:\\Users\\Deitrickc\\Google Drive\\Harmonized Data\\World\\Annual_Exchange_Rates.xls"
-	table = tabletools.Table(filename, sheetname = 0)
-	for index, row in table:
-		country_name = row['countryName']
-		result = lookup(country_name)
-
-		if result is not None:
-			print("{}\t{}".format(result['regionName'], result['iso3Code']))
-		else:
-			print(country_name)
-
 
 if __name__ == "__main__":
-	test1()
+	pass

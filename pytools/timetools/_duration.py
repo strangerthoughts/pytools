@@ -69,7 +69,8 @@ class Duration(datetime.timedelta):
 		else:
 			datetime_keys = cls._parseInput(*args)
 		return super().__new__(cls, **datetime_keys)
-
+	def __str__(self):
+		return self.toiso()
 	def __repr__(self):
 		string = "Duration('{}')".format(self.toiso())
 		return string

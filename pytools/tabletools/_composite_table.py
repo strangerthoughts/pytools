@@ -1,10 +1,12 @@
 import os
 import pandas
-from typing import Union, List, Tuple, Any, Iterable
+from typing import *
+
+GenericTable = Union[pandas.DataFrame, 'Table']
 
 ColumnLabel = Union[str, int]
 RowValue = Union[str, float, int]
-InputTable = Any
+InputTable = Union[str,List[Dict], pandas.DataFrame,'Table']
 
 
 class Table:
@@ -148,7 +150,7 @@ class Table:
 	def _boolselect(self, boolarray):
 		return self.df[boolarray]
 
-	def _generate_index(self, column) -> pandas.Index:
+	def _generate_index(self, column: ColumnLabel) -> pandas.Index:
 		""" generates an index for all unique values in a column.
 			Each key is a unique value present in the column, and each value is a list
 			of the indices where that value is present.
@@ -565,7 +567,7 @@ class Table:
 
 		return new_table
 
-	def merge(self, other, **kwargs):
+	def merge(self, other:GenericTable, **kwargs):
 		""" Merges a pandas.DataFrame object with the current database. The
 			default behavior is to merge the rows of 'other' that match a 
 			specific key contained in the current table.
@@ -649,7 +651,3 @@ class Table:
 			result = value in self.get_column(column)
 		return result
 
-
-if __name__ == "__main__":
-	filename = r"C:\Users\Progi\Google Drive\Region Data\Global\WEOApr2017all.xlsx"
-	pandas.read_table(filename)

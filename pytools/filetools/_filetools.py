@@ -1,7 +1,7 @@
 
 import hashlib
 import os
-
+from typing import List
 
 
 def checkDir(path, full = False):
@@ -35,7 +35,7 @@ def checkDir(path, full = False):
 
 
 
-def generateFileMd5(filename, blocksize=2**20):
+def generateFileMd5(filename:str, blocksize:int=2**20)->str:
 	""" Generates the md5sum of a file. Does
 		not require a lot of memory.
 		Parameters
@@ -59,7 +59,7 @@ def generateFileMd5(filename, blocksize=2**20):
 	return m.hexdigest()
 
 
-def listAllFiles(folder, **kwargs):
+def listAllFiles(folder:str, **kwargs):
 	""" Lists all files in a folder. Includes subfolders.
 		Parameters
 		----------
@@ -109,7 +109,7 @@ def listAllFiles(folder, **kwargs):
 
 
 
-def searchFiles(string, folder):
+def searchFiles(string:str, folder:str)->List[str]:
 	found = []
 	all_files = listAllFiles(folder)
 	for subfn in all_files:

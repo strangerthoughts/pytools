@@ -2,11 +2,15 @@ import os
 import shlex
 import subprocess
 from .. import timetools
+from typing import *
 
+Filename = str
 
 
 class Terminal:
-	def __init__(self, command, label = "", expected_output = None, command_filename = None, output_filename = None, verbose = 0, show_output = False):
+	def __init__(self, command: str, label: str = "", expected_output: Union[Filename, List[Filename]] = None,
+				 command_filename: Filename = None, output_filename: Optional[Filename] = None,
+				 verbose: Union[int, str] = 0, show_output: bool = False):
 		"""
 			Parameters
 			----------
@@ -14,7 +18,7 @@ class Terminal:
 					The command to excecute.
 				label: string
 					A label to identify the process as it runs. Used mainly for debugging or to show 
-					theprogress of multiple commands excecuted after each other.
+					the progress of multiple commands excecuted after each other.
 				expected_output = string, list<string> [PATH]
 					Files created by the command, if applicable. If the output files are not created,
 					will raise an error.
@@ -49,21 +53,21 @@ class Terminal:
 		self.runCommand()
 
 		self.duration = timetools.Duration(self.end_time - self.start_time)
-	
+
 	def __str__(self):
 		return self._terminal_string
-	
-	def runCommand(self):
+
+	def runCommand(self)->str:
 		command_arguments = shlex.split(self.command)
 		if any(not os.path.exists(fn) for fn in self.expected_output):
-
-			#self._printCommand(command_arguments)
+			# self._printCommand(command_arguments)
 			process = subprocess.Popen(command_arguments, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
 			self.output = str(process.stdout.read(), 'utf-8')
 		self.end_time = timetools.now()
 		self.duration = timetools.Duration(self.end_time - self.start_time)
 		self._showOutput(command_arguments)
 		return self.output
+
 	@staticmethod
 	def _generateInputFileStatusString(arguments):
 		string = "Input Files: \n"
@@ -93,7 +97,7 @@ class Terminal:
 		if 'status' in self.verbose:
 			selected_output.append(status_string)
 		if 'output' in self.verbose:
-			if  len(self.output) <= 300: #character limit
+			if len(self.output) <= 300:  # character limit
 				selected_output.append("\tOutput:\n" + self.output)
 			else:
 				selected_output.append("\tOutput:\n" + self.output[:300])
@@ -113,17 +117,18 @@ class Terminal:
 		self._terminal_string = display_string
 
 	def _generateTerminalStatusString(self):
-		_status_string =  "\tTerminal Status:\n"
+		_status_string = "\tTerminal Status:\n"
 		for k, v in sorted(self.getStatus().items()):
 			if k == 'outputFiles': continue
-			if k == 'outputStatus': 
+			if k == 'outputStatus':
 				_status_string += "\t\toutputStatus\n"
 				for fns, fnf in v:
 					_status_string += "\t\t\t{}\t{}\n".format(fns, fnf)
 			else:
-				_status_string += "\t\t{}\t{}\n".format(k,v)
+				_status_string += "\t\t{}\t{}\n".format(k, v)
 
 		return _status_string
+
 	@staticmethod
 	def _generateCommandArgumentString(command_arguments):
 		command_string = "\tCommand Arguments:\n"
@@ -147,11 +152,11 @@ class Terminal:
 		return expected_output_string
 
 	@property
-	def status(self):
+	def status(self)->bool:
 		completed_successfully = all(os.path.exists(fn) for fn in self.expected_output)
 		return completed_successfully
 
-	def getStatus(self):
+	def getStatus(self)->Dict[str,Any]:
 		""" The status of the terminal.
 		"""
 		self.end_time = timetools.now()
@@ -159,17 +164,18 @@ class Terminal:
 		output_status = [(os.path.exists(fn), fn) for fn in self.expected_output]
 		eo = self.expected_output[0] if len(self.expected_output) == 1 else self.expected_output
 		status = {
-			'status': 		self.status,
+			'status':       self.status,
 			'outputStatus': output_status,
-			'startTime': 	self.start_time,
-			'endTime': 		self.end_time,
-			'duration': 	self.duration.isoFormat(),
+			'startTime':    self.start_time,
+			'endTime':      self.end_time,
+			'duration':     self.duration.isoFormat(),
 			'outputFiles':  eo
 		}
 
 		return status
+
 	@staticmethod
-	def toFile(string, filename):
+	def toFile(string:str, filename:Filename):
 		try:
 			with open(filename, 'a') as console_file:
 				console_file.write(string)

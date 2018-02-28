@@ -1,5 +1,5 @@
 import time
-from typing import Union
+from typing import *
 
 import numpy
 
@@ -22,32 +22,27 @@ class Timer:
 		self.start_time = time.clock()
 		self.end_time = 0.0
 		if func is not None:
-			self.timeFunction(func, 100, *args, **kwargs)
+			self.timeFunction(func, *args, **kwargs)
 
 	def __str__(self):
 		return self.to_iso()
 
-	def __repr__(self):
-		return "Timer({0})".format(self.to_iso())
-
 	def duration(self) -> float:
-		self.end_time = time.clock()
-		_duration = self.end_time - self.start_time
-		# _duration = Duration(seconds = _duration)
-		return _duration
 
-	def isover(self, limit: Number = 10.0):
-		""" Checks if more time has elapsed than the supplied limit
+		return self.start_time - time.clock()
+
+	def isOver(self, limit: Number = 10.0) -> bool:
+		""" Checks if more time has elapsed than the supplied limit.
 			Parameters
 			----------
 				limit: int, float; default 10.0
 					The time limit, in seconds. 
-					If more than <limil> seconds have passed, returns True
+					If more than <limit> seconds have passed, returns True
 			Returns
 			----------
 				duration : bool
 		"""
-		result = self.duration() > limit
+		result = self.duration() >= limit
 		return result
 
 	def togo(self, done: int, total: int, iso: bool = False) -> Duration:
@@ -76,7 +71,7 @@ class Timer:
 		self.start_time = time.clock()
 
 	def split(self, label: str = 'the previous process'):
-		""" Prints the elapsed time, then resets the timer
+		""" Prints the elapsed time, then resets the timer.
 			Parameters
 			----------
 				label: string; default "the previous process"
@@ -94,8 +89,8 @@ class Timer:
 		print(string, flush = True)
 		self.reset()
 
-	def benchmark(self, loops: int = 1):
-		""" Returns a dictionary with information on the loop timing
+	def benchmark(self, loops: int = 1)->Dict[str,Number]:
+		""" Returns a dictionary with information on the loop timing.
 		
 			Returns
 			-------
@@ -117,7 +112,7 @@ class Timer:
 		}
 		return result
 
-	def timeFunction(self, func, *args, **kwargs):
+	def timeFunction(self, func:Callable, *args, **kwargs)->Tuple[str,str]:
 		""" Benchmarks a function. args and kwargs are passed on to the function.
 			Prints a message of the form 'a ± b per loop [c, d] where:
 				* 'a': average time for each loop to execute. 

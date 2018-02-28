@@ -1,9 +1,9 @@
 import math
 from numbers import Number
-import numpy
-from typing import Union, List
 
-SCALE = [
+from typing import *
+
+SCALE: List[Dict[str, Union[None,str,int,float]]] = [
 	{
 		'prefix':     'atto',
 		'suffix':     'a',
@@ -111,14 +111,14 @@ SCALE = [
 SCALE = sorted(SCALE, key = lambda s: s['multiplier'])
 REVERSED_SCALE = sorted(SCALE, key = lambda s: s['multiplier'], reverse = True)
 
-def getBase(value:float):
+def getBase(value:SupportsAbs):
 	""" Returns the SI base for a given value """
 
 	value = abs(value)
 	if value == 0.0 or math.isnan(value):
 		return ''
 	for iso_scale in REVERSED_SCALE:
-		if value > iso_scale['multiplier']:
+		if value >= iso_scale['multiplier']:
 			scale = iso_scale
 			break
 	else:
@@ -192,7 +192,7 @@ def humanReadable(value, base:str = None, to_string:bool = True, precision:int =
 
 	if to_string:
 
-		human_readable_number = [_toString(i[0], i[1]) for i in result]
+		human_readable_number = [_toString(i[0], i[1]) for i in human_readable_number]
 
 	if len(human_readable_number) == 1:
 		human_readable_number = human_readable_number[0]
@@ -201,15 +201,27 @@ def humanReadable(value, base:str = None, to_string:bool = True, precision:int =
 
 
 def isNumber(value:Union[str,Number])->bool:
+	"""Tests if the value is a number.
+		Examples
+		--------
+			'abc'->False
+			123.123 -> True
+			'123.123' -> True
+
+	"""
 	if isinstance(value, str):
-		is_number = value.isdigit()
+		try:
+			float(value)
+			is_number = True
+		except ValueError:
+			is_number = False
 	else: 
 		is_number = isinstance(value, Number)
 
 	return is_number
 
 
-def toNumber(value:Union[str,Number], default:Number = math.nan)->Number:
+def toNumber(value:Union[str,Number], default:Number = math.nan)->float:
 	""" Attempts to convert the passed object to a number.
 		Returns
 		-------
@@ -222,27 +234,17 @@ def toNumber(value:Union[str,Number], default:Number = math.nan)->Number:
 	"""
 	if isinstance(value, (list, tuple, set)):
 		converted_number = [toNumber(i) for i in value]
-	elif isinstance(value, str):
-		if '.' in value:
-			converted_number = float(value)
-		else:
-			try:
-				converted_number = int(value)
-			except:
-				converted_number = default
-	elif isinstance(value, (int, float)):
-		converted_number = value
-
 	else:
 		try:
 			converted_number = float(value)
+		except ValueError:
+			converted_number = default
 		except TypeError:
 			converted_number = default
+
 	return converted_number
 
-def standardDeviation(values):
-	array = numpy.array(values)
-	return array.std()
+
 
 if __name__ == "__main__":
 	test_value = 12345

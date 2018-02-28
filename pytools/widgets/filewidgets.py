@@ -1,6 +1,6 @@
 from .. import filetools
 import os
-from progressbar import ProgressBar
+
 
 from pprint import pprint
 from  functools import partial
@@ -46,9 +46,9 @@ class DuplicateFiles:
 		for i in os.walk(folder):
 			total_files += len(i[2])
 		print("Searching through {} total files".format(total_files))
-		pbar = ProgressBar(max_value = total_files)
+
 		for index, directory in enumerate(os.walk(folder)):
-			pbar.update(index)
+
 			path, dirnames, filenames = directory
 			for basename in filenames:
 				abs_path = os.path.join(path, basename)

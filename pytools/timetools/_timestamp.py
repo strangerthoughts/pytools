@@ -1,33 +1,12 @@
 import datetime
 import re
-from pprint import pprint
-from typing import Dict, Tuple, Union
+
+from typing import *
 
 # noinspection PyArgumentList
 DateDictType = Dict[str, int]
 DateTimeTuple = Tuple[int, int, int, int, int, int, int]
-iso_date_pattern = """
-	^
-	(?P<iso>
-		(?P<date>
-			(?P<year>[\d]{4})
-			[-]
-			(?P<month>[\d]{1,2})
-			[-]
-			(?P<day>[\d]{1,2})
-		)?
-		[T\s]?
-		(?P<time>
-			(?P<hour>[\d]{0,2})
-			[:]
-			(?P<minute>[\d]{0,2})
-			[:]
-			(?P<second>[\d]{0,2})
-		)?
-	)
-"""
 
-regular_date_pattern = """"""
 
 class Timestamp(datetime.datetime):
 	timestamp_regex = r"""(?:(?P<year>[\d]{4})-(?P<month>[\d]{2})-(?P<day>[\d]{2}))?
@@ -39,15 +18,14 @@ class Timestamp(datetime.datetime):
 	verbal_regex = re.compile(verbal_regex, re.VERBOSE)
 
 	def __new__(cls, *args, **kwargs):
+		value_format = kwargs.get('value_format')
 		if len(args) == 1:
-			result = cls._parseInput(args[0])
-		elif len(args) == 3:
-			result = {'year': args[0], 'month': args[1], 'day': args[2]}
-			result.update(kwargs)
+			result = cls._parseInput(args[0], value_format)
 		elif len(args) != 0:
-			result = args
+			result = cls._parseInput(args, value_format)
 		else:
 			result = kwargs
+
 		if isinstance(result, dict):
 			# noinspection PyArgumentList
 			return super().__new__(
@@ -67,8 +45,17 @@ class Timestamp(datetime.datetime):
 		return string
 
 	@staticmethod
-	def _cleandict(item: Dict[Union[str,bytes], Union[int,str]]) -> Dict[str, int]:
+	def _cleandict(item: Dict[Union[str, bytes], Union[int, str]]) -> Dict[str, int]:
+
 		item = {k: (int(v) if v else 0) for k, v in item.items()}
+		year = item.get('year')
+		if year:
+			if year < 1000:
+				if year < 20:
+					year += 2000
+				else:
+					year += 1900
+			item['year'] = year
 		return item
 
 	@classmethod
@@ -129,78 +116,184 @@ class Timestamp(datetime.datetime):
 		return time_values
 
 	@classmethod
-	def _parseInput(cls, value)->Dict[str,int]:
+	def _parseInput(cls, value: Any, value_format = Optional[str]) -> Dict[str, int]:
 		if isinstance(value, str):
-			result = cls._parseDateTimeString(value)
+			result = cls._parseDateTimeString(value, value_format)
 		elif isinstance(value, (tuple, list)):
-			result = cls._parseTuple(value)
+			result = cls._parseTuple(value, value_format)
 		elif isinstance(value, dict):
 			result = cls._parseDict(value)
 		else:
 			result = cls._parseGenericObject(value)
 
+		result = cls._cleandict(result)
+
 		return result
+
 	@classmethod
 	def _parseDict(cls, value):
 		return value
+
 	@classmethod
-	def _parseDateTimeString(cls, string: str) -> Dict[str, int]:
-		""" parses a string formatted as a generic YY/MM/DD string. """
-		if '-' in string or ':' in string:
-			result = cls._parseTimestamp(string)
-		elif ' ' in string:
+	def _parseDateTimeString(cls, string: str, value_format = Optional[str]) -> Dict[str, int]:
+		""" parses a string formatted as any of the common formats.
+			Parameters
+			----------
+			string: str
+				The string to parse.
+			value_format: str; default None
+				The datetime parser to use. defaults to iso.
+				* 'american': 'MM/DD/YY' or 'MM/DD/YYYY'
+				* 'anglo': 'DD/MM/YY' or 'DD/MM/YYYY'
+				* 'iso': 'YYYY/MM/DD' or 'YYYY-MM-DD'
+
+		"""
+
+		result = cls._parseTimestamp(string, value_format)
+		if not result['status']:
 			result = cls._parseVerbalDate(string)
-		else:
-			result = cls._parseNumericString(string)
+
 		return result
 
 	@classmethod
-	def _parseNumericString(cls, string: str) -> Dict[str, int]:
-		""" Parses a date formatted as YY[YY]MMDD. """
-		extra, day = string[:-2], string[-2:]
-		year, month = extra[:-2], extra[-2:]
-		debug_info = {
-			'string': string,
-			'year':   year,
-			'month':  month,
-			'day':    day
-		}
-		pprint(debug_info)
-		year = int(year)
-		if year < 100:
-			if year < 20:
-				year += 2000
+	def _parseTimestamp(cls, string: str, value_type: Optional[str] = None) -> Dict[str, Union[bool, str]]:
+		""" Parses any iso timestamp
+		Examples
+		--------
+			'2018-02-27'                    -> ['2018', '02', '27']
+			'2018-02-27T20:08:23+00:00'     -> ['2018', '02', '27', '20', '08', '23', '00', '00']
+			'2018-02-27T20:08:23Z'          -> ['2018', '02', '27', '20', '08', '23', '']
+			'20180227T200823Z'              -> ['20180227', '200823', '']
+			'2018-W09'                      -> ['2018', '', '09']
+			'2018-W09-2'                    -> ['2018', '', '09', '2']
+		"""
+
+		values = re.split('[^\d]', string)
+
+		if not value_type:
+			if 'w' in string:
+				value_type = 'iso-week'
+			elif len(values) >= 6:
+				value_type = 'iso'
 			else:
-				year += 1900
+				try:
+					a = int(values[0])
+					b = int(values[1])
+					c = int(values[2])
+					if a > 31:
+						value_type = 'iso'
+					elif c > 31:
+						if a <13:
+							value_type = 'american'
+						else:
+							value_type = 'europe'
+					else:
+						if a<13:
+							value_type = 'american'
+						elif b<13:
+							value_type = 'europe'
+						else:
+							value_type = 'iso'
+				except ValueError:
+					value_type = None
 
-		result = {
-			'year':   int(year),
-			'month':  int(month),
-			'day':    int(day),
-			'hour':   0,
-			'minute': 0,
-			'second': 0
+
+		if value_type == 'iso-week':
+			# is week
+			month = hour = minute = second = None
+			year, _, week, *day = values
+			if len(day) == 1:
+				day = day[0]
+			else:
+				day = None
+
+		elif value_type == 'iso':
+			if len(values) < 6:
+				year, month, day = values[:3]
+				hour = minute = second = None
+			else:
+				year, month, day, hour, minute, second = values[:6]
+			week = None
+		elif value_type == 'numeric':
+			year, month, day, hour, minute, second = cls._parseTimestampNumerical(values)
+			week = None
+		elif value_type == 'american':
+			month, day, year = values[:3]
+			hour = minute = second = week = None
+		elif value_type == 'europe':
+			day, month, year = values[:3]
+			hour = minute = second = week = None
+		else:
+			year = month = day = hour = minute = second = week = None
+
+		if '+' in string:
+			timezone = string.split('+')[-1]
+		elif string[-1].isalpha():
+			timezone = string[-1]
+		else:
+			timezone = None
+
+		status = all([year, month, day]) or all([year, week])
+
+		match = {
+			'year':     year,
+			'month':    month,
+			'day':      day,
+			'week':     week,
+			'hour':     hour,
+			'minute':   minute,
+			'second':  second,
+			'timezone': timezone,
+			'status':   status
 		}
-		return result
 
-	@classmethod
-	def _parseTimestamp(cls, string: str) -> Dict[str, int]:
-		""" Parses a date and/or time formated as YYYY-MM-DDThh:mm:ss"""
-		match = cls.timestamp_regex.search(string).groupdict()
-		match = cls._cleandict(match)
 		return match
 
 	@classmethod
-	def _parseTuple(cls, value: Tuple) -> Dict[str, int]:
-		if len(value) == 3:
-			keys = ('year', 'month', 'day')
+	def _parseTimestampNumerical(cls, values: List[str]) -> Tuple[str, str, str, str, str, str]:
+		"""parses timestamps of the form YYYYMMDD"""
+
+		date_values = values[0]
+		time_values = values[1]
+		index = 4 if len(date_values) > 6 else 2
+		year = date_values[:index]
+		month = date_values[index:index + 2]
+		day = date_values[index + 2:index + 4]
+		if time_values:
+			hour = time_values[:2]
+			minute = time_values[2:4]
+			second = time_values[4:]
 		else:
-			keys = ('year', 'month', 'day', 'hour', 'minute', 'second')
-		datetime_dict = dict(zip(keys, value))
+			hour = minute = second = None
+
+		return year, month, day, hour, minute, second
+
+	@classmethod
+	def _parseTuple(cls, value: Tuple, value_type:str='date') -> Dict[str, int]:
+		if len(value) == 3:
+			if value_type == 'date':
+				year,month,day = value
+				hour=minute=second=None
+			else:
+				year=month=day = None
+				hour,minute,second = value
+		elif len(value) >= 6:
+			year,month,day,hour,minute,second = value[:6]
+		else:
+			year=month=day=hour=minute=second=None
+		datetime_dict = {
+			'year': year,
+			'month': month,
+			'day': day,
+			'hour': hour,
+			'minute': minute,
+			'second': second,
+			'status': all([year, month, day]) or all([hour,minute,second])
+		}
 		return datetime_dict
 
 	@classmethod
-	def _parseVerbalDate(cls, value: str) -> Union[Dict[str, int],None]:
+	def _parseVerbalDate(cls, value: str) -> Union[Dict[str, int], None]:
 		# Parsed dates formatted verbally. Ex. 7 Oct 2015
 		# print("Value: ", value)
 		# print(cls.verbal_regex.search(value).groups())
@@ -228,9 +321,10 @@ class Timestamp(datetime.datetime):
 		_month = _months.index(_month) + 1
 
 		result = {
-			'year':  int(_year),
-			'month': int(_month),
-			'day':   int(_day)
+			'year':   _year,
+			'month':  _month,
+			'day':    _day,
+			'status': all([_year, _month, _day])
 		}
 		return result
 
