@@ -1,6 +1,6 @@
 import time
 from typing import *
-
+import datetime
 import numpy
 
 from ._duration import Duration
@@ -29,7 +29,7 @@ class Timer:
 
 	def duration(self) -> float:
 
-		return self.start_time - time.clock()
+		return time.clock() - self.start_time
 
 	def isOver(self, limit: Number = 10.0) -> bool:
 		""" Checks if more time has elapsed than the supplied limit.
@@ -184,7 +184,8 @@ class Timer:
 	def to_iso(self) -> str:
 		"""Returns an ISO duration representation of the elapsed time."""
 		seconds = self.duration()
-		return Duration(seconds, unit = 'Seconds').toiso()
+
+		return Duration(datetime.timedelta(seconds = seconds), unit = 'Seconds').toiso()
 
 	def show(self, label: str = None) -> None:
 		if label is not None:

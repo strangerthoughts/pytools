@@ -31,7 +31,10 @@ class Table:
 
 	def __getattr__(self, key):
 		""" Calls the corresponding method on self.df it it is not already defined. """
-		return getattr(self.df, key)
+		if key in dir(self.df):
+			return getattr(self.df, key)
+		else:
+			raise AttributeError
 
 	def __len__(self):
 		return len(self.df)
@@ -271,12 +274,13 @@ class Table:
 			'.tsv': {'delimiter': '\t'},
 			'.fsv': {'delimiter': '\f'}
 		}
-		arguments = {**default_args.get(extension), **kwargs}
-		arguments = self._cleanArguments(extension, arguments)
+
+		#arguments = self._cleanArguments(extension, arguments)
 		if extension in {'.xls', '.xlsx', '.xlsm'}:
 
-			df = pandas.read_excel(file_name, **arguments)
+			df = pandas.read_excel(file_name, **kwargs)
 		elif extension in {'.csv', '.tsv', '.fsv', '.txt'}:
+			arguments = {**default_args.get(extension), **kwargs}
 			if 'sheetname' in arguments: arguments.pop('sheetname')
 			df = pandas.read_table(file_name, **arguments)
 		elif extension == '.pkl':

@@ -221,7 +221,7 @@ def isNumber(value:Union[str,Number])->bool:
 	return is_number
 
 
-def toNumber(value:Union[str,Number], default:Number = math.nan)->float:
+def toNumber(value:Union[str,Number], default:Number = math.nan)->Union[float,int]:
 	""" Attempts to convert the passed object to a number.
 		Returns
 		-------
@@ -242,14 +242,12 @@ def toNumber(value:Union[str,Number], default:Number = math.nan)->float:
 		except TypeError:
 			converted_number = default
 
+	if not math.isnan(converted_number) and math.floor(converted_number) == converted_number:
+		converted_number = int(converted_number)
+
 	return converted_number
 
 
-
 if __name__ == "__main__":
-	test_value = 12345
-	test_value = -123456
-
-
-	result = humanReadable(test_value, precision = 2)
-	print(result)
+	print(toNumber('123.456'))
+	print(toNumber('123.000'))
