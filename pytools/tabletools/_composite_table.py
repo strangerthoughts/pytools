@@ -1,12 +1,12 @@
 import os
 import pandas
 from typing import *
-
+from pathlib import Path
 GenericTable = Union[pandas.DataFrame, 'Table']
 
 ColumnLabel = Union[str, int]
 RowValue = Union[str, float, int]
-InputTable = Union[str,List[Dict], pandas.DataFrame,'Table']
+InputTable = Union[str, Path, List[Dict], pandas.DataFrame, 'Table']
 
 
 class Table:
@@ -36,9 +36,6 @@ class Table:
 		else:
 			raise AttributeError
 
-	def __len__(self):
-		return len(self.df)
-
 	def __init__(self, io: InputTable, **kwargs):
 
 		if kwargs.get('sheetname') == 'all':
@@ -46,6 +43,7 @@ class Table:
 		else:
 			kwargs['sheetname'] = kwargs.get('sheetname', 0)
 		kwargs['skiprows'] = kwargs.get('skiprows')
+
 
 		self.df: pandas.DataFrame = self._parseInput(io, **kwargs)
 		self.original_indexer = kwargs.get('indexer', True)
@@ -107,7 +105,6 @@ class Table:
 		kwargs['default'] = kwargs.get('default')
 
 		try:
-
 			if isinstance(on, list):
 				# Assume chainSelect
 				element = self.chainSelect(on, **kwargs)
@@ -137,10 +134,6 @@ class Table:
 	def __iter__(self):
 		for i in self.df.iterrows():
 			yield i[1]
-
-	def __getitem__(self, index):
-		# Try return self.df.__getitem__(index)
-		return self.df.__getitem__(index)
 
 	def __str__(self):
 		string = "Table(shape = ({x}x{y}))".format(
@@ -197,19 +190,16 @@ class Table:
 			
 			Parameters
 			----------
-			io: str, pandas.DataFrame, pandas.Series, list<dict<>>
+			io: str,Path, pandas.DataFrame, pandas.Series, list<dict<>>
 				path to a file or folder with valid table files.
 
 				other types will be passed to pandas.DataFrame()
 		"""
-
-		if isinstance(io, str):
-			self.filename = io
-			table = self._loadFromFilesystem(io, **kwargs)
+		if isinstance(io, (str, Path)):
+			self.filename = Path(io)
+			table = self._loadFromFilesystem(self.filename, **kwargs)
 		elif isinstance(io, pandas.DataFrame):
 			table = io
-		elif isinstance(io, pandas.Series):
-			table = io.to_frame().transpose()
 		else:
 			try:
 				table = pandas.DataFrame(io, **kwargs)
@@ -232,11 +222,11 @@ class Table:
 		return data
 
 	# Load and Save data to the filesystem
-	def _loadFromFilesystem(self, io: str, **kwargs):
+	def _loadFromFilesystem(self, io: Path, **kwargs):
 		""" Loads a file. Acceptable keyword arguments will be passed to pandas.
 			Parameters
 			----------
-				io: string [PATH]
+				io: Path
 					The database file. If a directory is given, will attempt to
 					load all valid database files in the directory
 					Available filetypes: .xlsx, .pkl, .csv, .db
@@ -249,14 +239,13 @@ class Table:
 			----------
 				self._load_file : pandas.DataFrame or dict(sheetname: pandas.DataFrame)
 		"""
-		if os.path.isfile(io):
+		if io.is_file():
 			df = self._load_file(io, **kwargs)
-		elif os.path.isdir(io):  # path is a folder
+		elif io.is_dir():  # path is a folder
 			directory = io
 			_load_dfs = list()
-			for fn in os.listdir(directory):
-				if '~' in fn: continue
-				fname = os.path.join(directory, fn)
+			for fname in directory.iterdir():
+				if '~' in fname or fname.is_dir(): continue
 				_load_dfs.append(self._load_file(fname, **kwargs))
 			df = pandas.concat(_load_dfs)
 		else:
@@ -265,17 +254,18 @@ class Table:
 
 		return df
 
-	def _load_file(self, file_name: str, **kwargs):
+	def _load_file(self, file_name: Path, **kwargs):
 		""" Returns a dataframe of the suppled file
 		"""
-		extension = os.path.splitext(file_name)[-1]
+		extension = file_name.suffix
 		default_args = {
 			'.csv': {'delimiter': ','},
 			'.tsv': {'delimiter': '\t'},
 			'.fsv': {'delimiter': '\f'}
 		}
 
-		#arguments = self._cleanArguments(extension, arguments)
+		# arguments = self._cleanArguments(extension, arguments)
+		file_name = str(file_name.absolute())
 		if extension in {'.xls', '.xlsx', '.xlsm'}:
 
 			df = pandas.read_excel(file_name, **kwargs)
@@ -571,7 +561,7 @@ class Table:
 
 		return new_table
 
-	def merge(self, other:GenericTable, **kwargs):
+	def merge(self, other: GenericTable, **kwargs):
 		""" Merges a pandas.DataFrame object with the current database. The
 			default behavior is to merge the rows of 'other' that match a 
 			specific key contained in the current table.
@@ -654,4 +644,3 @@ class Table:
 		else:
 			result = value in self.get_column(column)
 		return result
-
