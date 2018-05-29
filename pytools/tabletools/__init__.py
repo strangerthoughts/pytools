@@ -1,1 +1,1 @@
-from ._composite_table import Table
+from .data_table import DataTable
