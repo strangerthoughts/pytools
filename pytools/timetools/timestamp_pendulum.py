@@ -6,7 +6,10 @@
 """
 
 import pendulum
-from typing import Any
+from typing import Any, Dict, Tuple, Union
+
+STuple = Tuple[int,...]
+TTuple = Tuple[int, int, int]
 
 
 def _attempt_to_get_attribute(obj: Any, key: str, default = 0):
@@ -18,6 +21,59 @@ def _attempt_to_get_attribute(obj: Any, key: str, default = 0):
 
 
 class Timestamp(pendulum.DateTime):
+	def __new__(self, *args, **kwargs):
+		if len(args) == 1:
+			value = args[0]
+		elif len(args) > 1:
+			return self.from_values(*args)
+		else:
+			value = None
+		if value is not None:
+			return self.parse(value)
+		result = super().__new__(self, **kwargs)
+
+		return result
+	@classmethod
+	def parse(cls, value: Any) -> 'Timestamp':
+		if isinstance(value, str):
+			result = cls.from_string(value)
+		elif isinstance(value, (list, tuple)):
+			result = cls.from_tuple(value)
+		elif isinstance(value, dict):
+			result = cls.from_keys(value)
+		else:
+			result = cls.from_object(value)
+		return result
+
+	@classmethod
+	def from_dict(cls, **kwargs) -> 'Timestamp':
+		return cls(**kwargs)
+
+	@classmethod
+	def from_keys(cls, keys: Dict[str, int]) -> 'Timestamp':
+		return cls.from_dict(**keys)
+	@classmethod
+	def from_tuple(cls, value:Union[STuple, TTuple])->'Timestamp':
+		if len(value) == 3:
+			year, month, day = value
+			hour, minute, second = 0, 0, 0
+			other = []
+		else:
+			year, month, day, hour, minute, second, *other = value
+
+		data = {
+			'year': year,
+			'month': month,
+			'day': day,
+			'hour': hour,
+			'minute': minute,
+			'second': second
+		}
+		if len(other) > 0:
+			data['microsecond'] = other[0]
+		else:
+			data['microsecond'] = 0
+		return cls.from_dict(**data)
 
 	@classmethod
 	def from_object(cls, obj: Any) -> 'Timestamp':
@@ -60,9 +116,39 @@ class Timestamp(pendulum.DateTime):
 		-------
 		pendulum.DateTime
 		"""
-		month, day, year = list(map(int, value.split('/')))
+		if ' ' in value:
+			dates, times = value.split(' ')
+		elif 'T' in value:
+			dates, times = value.split('T')
+		else:
+			dates = value
+			times = ""
 
-		return cls.from_values(year, month, day)
+		month, day, year = list(map(int, dates.split('/')))
+
+		if times:
+			hour, minute, second, *other = list(map(int, times.split(':')))
+		else:
+			hour, minute, second = 0, 0, 0
+
+		keys = {
+			'year':   year,
+			'month':  month,
+			'day':    day,
+			'hour':   hour,
+			'minute': minute,
+			'second': second
+		}
+
+		return cls.from_dict(**keys)
+
+	@classmethod
+	def from_string(cls, value: str) -> 'Timestamp':
+		try:
+			obj = pendulum.parse(value)
+		except:
+			obj = cls.from_verbal_date(value)
+		return cls.from_object(obj)
 
 	@staticmethod
 	def from_values(year, month, day, hour = 0, minute = 0, second = 0, microsecond = 0):
