@@ -14,23 +14,23 @@ TTuple = Tuple[int, int, int]
 
 def _attempt_to_get_attribute(obj: Any, key: str, default = 0):
 	try:
-		value = getattr(obj, key)
+		attribute = getattr(obj, key)
 	except AttributeError:
-		value = default
-	return value
+		attribute = default
+	return attribute
 
 
 class Timestamp(pendulum.DateTime):
-	def __new__(self, *args, **kwargs):
+	def __new__(cls, *args, **kwargs):
 		if len(args) == 1:
 			value = args[0]
 		elif len(args) > 1:
-			return self.from_values(*args)
+			return cls.from_values(*args)
 		else:
 			value = None
 		if value is not None:
-			return self.parse(value)
-		result = super().__new__(self, **kwargs)
+			return cls.parse(value)
+		result = super().__new__(cls, **kwargs)
 
 		return result
 	@classmethod
@@ -98,7 +98,6 @@ class Timestamp(pendulum.DateTime):
 		minute = _attempt_to_get_attribute(obj, 'minute', 0)
 		second = _attempt_to_get_attribute(obj, 'second', 0)
 		microsecond = _attempt_to_get_attribute(obj, 'microsecond', 0)
-		tz = _attempt_to_get_attribute(obj, 'microsecond', 0)
 
 		result = cls.from_values(year, month, day, hour, minute, second, microsecond)
 
@@ -165,7 +164,4 @@ class Timestamp(pendulum.DateTime):
 
 
 if __name__ == "__main__":
-	import datetime
-
-	value = "12/28/2017"
-	print(Timestamp.from_verbal_date(value))
+	pass

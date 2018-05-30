@@ -144,10 +144,10 @@ class Timer:
 		minimum = min(_results)
 		maximum = max(_results)
 
-		minimum = numbertools.humanReadable(minimum)
-		maximum = numbertools.humanReadable(maximum)
-		avg = numbertools.humanReadable(_results.mean())
-		std = numbertools.humanReadable(_results.std())
+		minimum = numbertools.human_readable(minimum)
+		maximum = numbertools.human_readable(maximum)
+		avg = numbertools.human_readable(_results.mean())
+		std = numbertools.human_readable(_results.std())
 		print("{}s ± {}s per loop [{} loops][{}s, {}s]".format(avg, std, loops, minimum, maximum))
 		return avg, std
 
@@ -169,7 +169,7 @@ class Timer:
 		"""
 		benchmark = self.benchmark(loops)
 		duration = benchmark['duration']
-		per_loop = numbertools.humanReadable(benchmark['perLoop'])
+		per_loop = numbertools.human_readable(benchmark['perLoop'])
 
 		if label is None:
 			message = ""

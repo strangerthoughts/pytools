@@ -24,7 +24,7 @@ class Plot:
 		self.data = dict()
 
 		def formatter(x, pos):
-			return numbertools.humanReadable(x, precision = 1)
+			return numbertools.human_readable(x, precision = 1)
 
 		# The basic plots
 		self.figure, self.chart = plt.subplots(figsize = self.options['figsize'])

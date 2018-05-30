@@ -1,7 +1,7 @@
 import math
 from numbers import Number
 
-from typing import *
+from typing import List, Dict, Union, SupportsAbs, Any
 
 SCALE: List[Dict[str, Union[None,str,int,float]]] = [
 	{
@@ -111,11 +111,14 @@ SCALE: List[Dict[str, Union[None,str,int,float]]] = [
 SCALE = sorted(SCALE, key = lambda s: s['multiplier'])
 REVERSED_SCALE = sorted(SCALE, key = lambda s: s['multiplier'], reverse = True)
 
-def getBase(value:SupportsAbs):
+def is_null(number:Any):
+	return number is None or math.isnan(number)
+
+def get_base(value:SupportsAbs):
 	""" Returns the SI base for a given value """
 
 	value = abs(value)
-	if value == 0.0 or math.isnan(value):
+	if value == 0.0 or is_null(value):
 		return ''
 	for iso_scale in REVERSED_SCALE:
 		if value >= iso_scale['multiplier']:
@@ -128,7 +131,7 @@ def getBase(value:SupportsAbs):
 	base = scale['suffix']
 	return base
 
-def getMultiplier(base:str):
+def get_multiplier(base:str):
 	""" Converts a numerical suffix to the corresponding numerical multiplier.
 		Ex. 'K' -> 1000, 'u' -> 1E-6
 	"""
@@ -152,7 +155,7 @@ def getMultiplier(base:str):
 	return multiplier
 
 
-def humanReadable(value, base:str = None, to_string:bool = True, precision:int = 2)->Union[str,List[str]]:
+def human_readable(value, base:str = None, to_string:bool = True, precision:int = 2)->Union[str,List[str]]:
 	""" Converts a number into a more easily-read string.
 		Ex. 101000 -> '101T' or (101, 'T')
 		Parameters
@@ -182,11 +185,11 @@ def humanReadable(value, base:str = None, to_string:bool = True, precision:int =
 	if base is None:
 		values = [i for i in value if not math.isnan(i)]
 		if len(values) > 0:
-			base = getBase(min(values))
+			base = get_base(min(values))
 		else:
 			return 'nan'
 
-	multiplier = getMultiplier(base)
+	multiplier = get_multiplier(base)
 
 	human_readable_number = [(i/multiplier, base) for i in value]
 
@@ -200,7 +203,7 @@ def humanReadable(value, base:str = None, to_string:bool = True, precision:int =
 	return human_readable_number
 
 
-def isNumber(value:Union[str,Number])->bool:
+def is_number(value:Union[str,Number])->bool:
 	"""Tests if the value is a number.
 		Examples
 		--------
@@ -221,7 +224,7 @@ def isNumber(value:Union[str,Number])->bool:
 	return is_number
 
 
-def toNumber(value:Union[str,Number], default:Number = math.nan)->Union[float,int]:
+def to_number(value:Union[str,Number], default:Number = math.nan)->Union[float,int]:
 	""" Attempts to convert the passed object to a number.
 		Returns
 		-------
@@ -232,8 +235,9 @@ def toNumber(value:Union[str,Number], default:Number = math.nan)->Union[float,in
 				* datetime.datetime -> float (with units of 'years')
 				* generic -> float if float() works, else math.nan
 	"""
+
 	if isinstance(value, (list, tuple, set)):
-		converted_number = [toNumber(i) for i in value]
+		converted_number = [to_number(i) for i in value]
 	else:
 		try:
 			converted_number = float(value)
@@ -242,12 +246,12 @@ def toNumber(value:Union[str,Number], default:Number = math.nan)->Union[float,in
 		except TypeError:
 			converted_number = default
 
-	if not math.isnan(converted_number) and math.floor(converted_number) == converted_number:
+	if not is_null(converted_number) and math.floor(converted_number) == converted_number:
 		converted_number = int(converted_number)
 
 	return converted_number
 
 
 if __name__ == "__main__":
-	print(toNumber('123.456'))
-	print(toNumber('123.000'))
+	print(to_number('123.456'))
+	print(to_number('123.000'))
