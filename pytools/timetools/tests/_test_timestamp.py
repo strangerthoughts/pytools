@@ -1,4 +1,4 @@
-from pytools.timetools.timestamp_pendulum import Timestamp
+from pytools.timetools._timestamp import Timestamp
 from unittest import TestCase, main
 import datetime
 class TimestampTest(TestCase):
