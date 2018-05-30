@@ -224,7 +224,7 @@ def is_number(value:Union[str,Number])->bool:
 	return is_number
 
 
-def to_number(value:Union[str,Number], default:Number = math.nan)->Union[float,int]:
+def to_number(value:Union[str,Number], default:Any = math.nan)->Union[float,int]:
 	""" Attempts to convert the passed object to a number.
 		Returns
 		-------
