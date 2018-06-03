@@ -71,6 +71,7 @@ class Duration(pendulum.Duration):
 		"""
 		if isinstance(value, str):
 			result = pendulum.parse(value)
+			result = cls.from_object(result)
 		elif isinstance(value, dict):
 			result = cls.from_keys(value)
 

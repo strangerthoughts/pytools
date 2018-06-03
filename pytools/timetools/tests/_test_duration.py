@@ -28,7 +28,8 @@ class DurationTest(DurationTestData):
 
 		self.key = pendulum.duration(self.days, self.seconds, self.microseconds)
 
-	def test_iso_duration(self):
+
+	def test_from_iso_duration(self):
 		result = Duration(self.str_iso_duration_data)
 		self.assertEqual(self.key, result)
 
@@ -84,6 +85,9 @@ class DurationTest(DurationTestData):
 		self.assertEqual(self.key, from_init1)
 		self.assertEqual(self.key, from_init2)
 
-
+	def test_to_iso_duration(self):
+		d  = Duration(self.str_iso_duration_data)
+		result = d.to_iso()
+		self.assertEqual("P1W5DT20M45.000123S", result)
 if __name__ == "__main__":
 	main()

@@ -1,9 +1,14 @@
 from pytools.timetools._timestamp import Timestamp
 from unittest import TestCase, main
 import datetime
-class TimestampTest(TestCase):
+
+
+class TimestampTestSetup(TestCase):
 	def setUp(self):
 		self.key = datetime.datetime.now()
+		# Key without microseconds
+		self.mkey = datetime.datetime(self.key.year, self.key.month, self.key.day, self.key.hour, self.key.minute,
+			self.key.second)
 		self.datekey = datetime.datetime(self.key.year, self.key.month, self.key.day)
 
 		self.year = self.key.year
@@ -15,21 +20,32 @@ class TimestampTest(TestCase):
 		self.second = self.key.second
 		self.microsecond = self.key.microsecond
 
+		self.rtuple = (self.year, self.month, self.day, self.hour, self.minute, self.second, self.microsecond)
 
-	def test_from_verbal_date(self):
+		try:
+			self.timestamp = Timestamp(self.key)
+		except:
+			self.timestamp = None
+
+
+class TimestampParsingTest(TimestampTestSetup):
+	def test_from_american_date(self):
 		string = f"{self.month}/{self.day}/{self.year}"
 
-		from_method = Timestamp.from_verbal_date(string)
+		from_method = Timestamp.from_american_date(string)
 		from_init = Timestamp(string)
 
 		self.assertEqual(self.datekey, from_method)
 		self.assertEqual(self.datekey, from_init)
 
+	def test_from_verbal_date(self):
+		pass
+
 	def test_from_short_dict(self):
 		sd = {
-			'year': self.year,
+			'year':  self.year,
 			'month': self.month,
-			'day': self.day
+			'day':   self.day
 		}
 
 		from_method1 = Timestamp.from_dict(**sd)
@@ -44,12 +60,12 @@ class TimestampTest(TestCase):
 
 	def test_from_long_dict(self):
 		ld = {
-			'year': self.year,
-			'month': self.month,
-			'day': self.day,
-			'hour': self.hour,
-			'minute': self.minute,
-			'second': self.second,
+			'year':        self.year,
+			'month':       self.month,
+			'day':         self.day,
+			'hour':        self.hour,
+			'minute':      self.minute,
+			'second':      self.second,
 			'microsecond': self.microsecond
 		}
 
@@ -86,6 +102,33 @@ class TimestampTest(TestCase):
 
 		self.assertEqual(self.key, from_method)
 		self.assertEqual(self.key, from_init)
+
+
+class TimestampTypingTest(TimestampTestSetup):
+	def test_from_obj_type(self):
+		result = Timestamp.from_object(self.key)
+
+		self.assertIsInstance(result, Timestamp)
+
+	def test_from_dict(self):
+		data = {
+			'year':  self.year,
+			'month': self.month,
+			'day':   self.day
+		}
+		result = Timestamp.from_dict(**data)
+		self.assertIsInstance(result, Timestamp)
+
+	def test_from_values(self):
+		result = Timestamp(*self.rtuple)
+
+
+class TimestampRepresentTest(TimestampTestSetup):
+	def test_to_iso(self):
+		ts = Timestamp.from_object(self.mkey)
+
+		self.assertEqual(ts, Timestamp(ts.to_iso()))
+
 
 if __name__ == "__main__":
 	main()

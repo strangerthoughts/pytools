@@ -104,7 +104,7 @@ class Timestamp(pendulum.DateTime):
 		return result
 
 	@classmethod
-	def from_verbal_date(cls, value: str) -> pendulum.DateTime:
+	def from_american_date(cls, value: str) -> pendulum.DateTime:
 		"""
 			Parses a date formatted as DD/MM/YY(YY), as is common in the US.
 		Parameters
@@ -140,18 +140,43 @@ class Timestamp(pendulum.DateTime):
 		}
 
 		return cls.from_dict(**keys)
+	@classmethod
+	def from_verbal_date(cls, value: str):
+		# 17 Dec 2012
+		value = value.lower()
+
+		short_months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+		long_months  = ["january", "february", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+
+		day, month, year = value.split(' ')
+		day = int(day)
+		year = int(year)
+		if len(month) == 3:
+			month = short_months.index(month)+1
+		else:
+			month = long_months.index(month)+1
+		
+		data = {
+			'day': day,
+			'month': month,
+			'year': year
+		}
+		return cls.from_dict(**data)
 
 	@classmethod
 	def from_string(cls, value: str) -> 'Timestamp':
 		try:
 			obj = pendulum.parse(value)
 		except:
-			obj = cls.from_verbal_date(value)
+			try:
+				obj = cls.from_american_date(value)
+			except:
+				obj = cls.from_verbal_date(value)
 		return cls.from_object(obj)
 
-	@staticmethod
-	def from_values(year, month, day, hour = 0, minute = 0, second = 0, microsecond = 0):
-		result = pendulum.DateTime(
+	@classmethod
+	def from_values(cls, year, month, day, hour = 0, minute = 0, second = 0, microsecond = 0)->'Timestamp':
+		result = dict(
 			year = year,
 			month = month,
 			day = day,
@@ -160,7 +185,11 @@ class Timestamp(pendulum.DateTime):
 			second = second,
 			microsecond = microsecond
 		)
-		return result
+		return cls.from_dict(**result)
+	
+	def to_iso(self)->str:
+
+		return self.to_datetime_string()
 
 
 if __name__ == "__main__":
