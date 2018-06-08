@@ -9,6 +9,7 @@ from .. import numbertools
 Number = Union[int, float]
 
 
+
 class Timer:
 	""" A class with convienient timing methods.
 		.timeit -> Times a number of loops

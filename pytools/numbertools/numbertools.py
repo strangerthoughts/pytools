@@ -1,9 +1,10 @@
 import math
 from numbers import Number
 
-from typing import List, Union, SupportsAbs, Any
+from typing import List, Union, SupportsAbs, Any, Sequence
 from dataclasses import dataclass, field
 
+NumberType = Union[int,float]
 
 @dataclass
 class Scale:
@@ -27,13 +28,13 @@ SCALE: List[Scale] = [
 	Scale('femto', 'f', 1E-15),
 	Scale('pico', 'p', 1E-12),
 	Scale('nano', 'n', 1E-9),
-	Scale('micro', 'u', 1E-9),
+	Scale('micro', 'u', 1E-6),
 	Scale('milli', 'm', 1E-3),
-	Scale('centi', 'c', 1E-2),
-	Scale('deci', 'd', 1E-1),
+	#Scale('centi', 'c', 1E-2),
+	#Scale('deci', 'd', 1E-1),
 	Scale('', '', 1),
-	Scale('deca', 'da', 1E1),
-	Scale('hecto', 'h', 1E2),
+	#Scale('deca', 'da', 1E1),
+	#Scale('hecto', 'h', 1E2),
 	Scale('kilo', 'K', 1E3),
 	Scale('mega', 'M', 1E6),
 	Scale('giga', 'B', 1E9),
@@ -91,7 +92,7 @@ def get_multiplier(base: str):
 	return multiplier
 
 
-def human_readable(value, base: str = None, to_string: bool = True, precision: int = 2) -> Union[str, List[str]]:
+def human_readable(value:NumberType, base: str = None, to_string: bool = True, precision: int = 2) -> Union[str, List[str]]:
 	""" Converts a number into a more easily-read string.
 		Ex. 101000 -> '101T' or (101, 'T')
 		Parameters
@@ -138,7 +139,7 @@ def human_readable(value, base: str = None, to_string: bool = True, precision: i
 	return human_readable_number
 
 
-def is_number(value: Union[str, Number]) -> bool:
+def is_number(value: Union[Any,Sequence[Any]]) -> Union[bool,List[bool]]:
 	"""Tests if the value is a number.
 		Examples
 		--------
@@ -147,6 +148,8 @@ def is_number(value: Union[str, Number]) -> bool:
 			'123.123' -> True
 
 	"""
+	if isinstance(value, (list,tuple)):
+		return [is_number(i) for i in value]
 	if isinstance(value, str):
 		try:
 			float(value)
@@ -159,7 +162,7 @@ def is_number(value: Union[str, Number]) -> bool:
 	return value_is_number
 
 
-def to_number(value: Union[str, Number], default: Any = math.nan) -> Union[float, int]:
+def to_number(value: Union[Any, Sequence[Any]], default: Any = math.nan) -> Union[NumberType, List[NumberType]]:
 	""" Attempts to convert the passed object to a number.
 		Returns
 		-------
@@ -167,19 +170,17 @@ def to_number(value: Union[str, Number], default: Any = math.nan) -> Union[float
 				* list,tuple,set -> list of Number
 				* int,float -> int, float
 				* str -> int, float
-				* datetime.datetime -> float (with units of 'years')
 				* generic -> float if float() works, else math.nan
 	"""
 
-	if isinstance(value, (list, tuple, set)):
-		converted_number = [to_number(i) for i in value]
-	else:
-		try:
-			converted_number = float(value)
-		except ValueError:
-			converted_number = default
-		except TypeError:
-			converted_number = default
+	if isinstance(value, (list,tuple,set)):
+		return [to_number(i, default) for i in value]
+	try:
+		converted_number = float(value)
+	except ValueError:
+		converted_number = default
+	except TypeError:
+		converted_number = default
 
 	if not is_null(converted_number) and math.floor(converted_number) == converted_number:
 		converted_number = int(converted_number)
