@@ -28,7 +28,7 @@ SCALE: List[Scale] = [
 	Scale('femto', 'f', 1E-15),
 	Scale('pico', 'p', 1E-12),
 	Scale('nano', 'n', 1E-9),
-	Scale('micro', MU, 1E-6),
+	Scale('micro', 'u', 1E-6),
 	Scale('milli', 'm', 1E-3),
 	#Scale('centi', 'c', 1E-2),
 	#Scale('deci', 'd', 1E-1),
@@ -47,11 +47,15 @@ SCALE = sorted(SCALE)
 REVERSED_SCALE = sorted(SCALE, reverse = True)
 
 
-def is_null(number: Any):
-	return number is None or math.isnan(number)
+def is_null(number: Any)->bool:
+	try:
+		result = number is None or math.isnan(float(number))
+	except:
+		result = True
 
+	return result
 
-def get_base(value: SupportsAbs):
+def get_base(value: SupportsAbs)->str:
 	""" Returns the SI base for a given value """
 
 	value = abs(value)
@@ -69,7 +73,7 @@ def get_base(value: SupportsAbs):
 	return base
 
 
-def get_multiplier(base: str):
+def get_multiplier(base: str)->float:
 	""" Converts a numerical suffix to the corresponding numerical multiplier.
 		Ex. 'K' -> 1000, 'u' -> 1E-6
 	"""
