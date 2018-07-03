@@ -12,13 +12,13 @@
 	timing yaml with 2.53MB file
 		13.99s ± 364.66ms per loop [5 loops][13.32s, 14.40s]
 """
-
 import yaml
 import poyo
 import json
 from pathlib import Path
 from pytools.timetools import Timer
 import strictyaml
+from typing import Dict
 
 folder = Path(__file__).with_name("data")
 if not folder.exists():
@@ -34,12 +34,12 @@ yaml_large_file = folder / "large_dataset.yaml"
 small_sample = {
 	'Hello World':     {
 		'madness': 'This is madness',
-		'gh': 'https://github.com/{0}.git'
+		'gh':      'https://github.com/{0}.git'
 	},
 	'NullValue':       None,
 	'Yay #python':     'Cool!',
 	'default_context': {
-		'123':             456.789,
+		'123':           456.789,
 		'doc_tools':     ['mkdocs', 'sphinx', None],
 		'docs':          True,
 		'email':         'raphael@hackebrot.de',
@@ -75,19 +75,38 @@ def generate_configuration_files():
 	yaml_small_file.write_text(yaml.dump(small_table, default_flow_style = False))
 
 
-# with large_yaml_file.open('w') as file3:
-#	yaml.dump(large_table, file3)
+def time_json_write(data: Dict, filename: Path) -> Path:
+	filename.write_text(json.dumps(data, indent = 4, sort_keys = True))
+	return filename
+
+
+def time_yaml_write(data: Dict, filename: Path) -> Path:
+	yaml_string = yaml.dump(data, default_flow_style = False)
+	filename.write_text(yaml_string)
+	return filename
+
+
+def time_yaml_cdump_write(data: Dict, filename: Path) -> Path:
+	yaml_string = yaml.dump(data, default_flow_style = False, Dumper = yaml.CDumper)
+	filename.write_text(yaml_string)
+	return filename
 
 
 def time_json_read(filename: Path):
 	json.loads(filename.read_text())
 
 
-def time_yaml_read(filename: Path):
-	yaml.load(filename.open())
+def time_pyyaml_read(filename: Path):
+	yaml.load(filename.read_text())
+
+
+def time_pyyaml_cloader_read(filename: Path):
+	yaml.load(filename.open(), Loader = yaml.CLoader)
+
 
 def time_strictyaml_read(filename: Path):
 	strictyaml.load(filename.read_text())
+
 
 def time_poyo_read(filename: Path):
 	poyo.parse_string(filename.read_text())
@@ -96,15 +115,34 @@ def time_poyo_read(filename: Path):
 if __name__ == "__main__":
 	generate_configuration_files()
 	timer = Timer()
+	sample = json.loads(json.dumps(small_sample))
+	json_filename = time_json_write(sample, json_small_file)
+	yaml_filename = time_yaml_write(sample, yaml_small_file)
+
+	print("timing json write")
+	timer.timeFunction(time_json_write, sample, json_small_file)
+	print()
+
+	print("timing yaml write")
+	print("pyyaml")
+	timer.timeFunction(time_yaml_write, sample, yaml_small_file)
+	print("pyyaml cDumper")
+	timer.timeFunction(time_yaml_cdump_write, sample, yaml_small_file)
+	print()
 
 	print("timing json with {:.2f}MB file".format(json_small_file.stat().st_size / 1024 ** 2))
 	timer.timeFunction(time_json_read, json_small_file)
+	print()
 
 	print("timing yaml with {:.2f}MB file".format(yaml_small_file.stat().st_size / 1024 ** 2))
-	timer.timeFunction(time_yaml_read, yaml_small_file, loops = 5)
+	print("pyyaml")
+	timer.timeFunction(time_pyyaml_read, yaml_small_file)
 
-	print("timing syaml with {:.2f}MB file".format(yaml_small_file.stat().st_size / 1024 ** 2))
-	timer.timeFunction(time_strictyaml_read, yaml_small_file, loops = 5)
+	print("pyyaml cloader")
+	timer.timeFunction(time_pyyaml_cloader_read, yaml_small_file, loops = 100)
 
-	print("timing poyo with {:.2f}MB file".format(yaml_small_file.stat().st_size / 1024**2))
+	print("strictyaml")
+	timer.timeFunction(time_strictyaml_read, yaml_small_file, loops = 100)
+
+	print("poyo".format(yaml_small_file.stat().st_size / 1024 ** 2))
 	timer.timeFunction(time_poyo_read, yaml_small_file)
