@@ -1,24 +1,32 @@
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tkr
-from typing import *
+from typing import List, Dict, Optional, Union, SupportsFloat, SupportsInt, Tuple
 from pytools import numbertools
-from numbers import Number
+from dataclasses import dataclass
+from pathlib import Path
 
-SeriesType = List[Tuple[Number, Number]]
+NumberType = Union[SupportsFloat, SupportsInt]
+SeriesType = List[Tuple[NumberType, NumberType]]
 
 plt.style.use('fivethirtyeight')
 
+@dataclass
+class ScatterPlotOptions:
+	# Hold options relevant to the scatter plot. Implemented to make the usable options clearer.
+	figsize:Tuple[int,int] = (20, 10)
+	style: str = 'fivethirtyeight'
+
 
 class ScatterPlot:
-	def __init__(self, x: SeriesType, y: Optional[SeriesType] = None, **kwargs):
+	def __init__(self, data: Optional[SeriesType] = None, **kwargs):
 		self._series_variables = dict()
-		kwargs = self._get_default_keyword_arguments(kwargs)
+		self.options = self._get_default_keyword_arguments(kwargs)
 		self.options = kwargs
 		self._create_initial_plot()
 
 		self.add_labels(**kwargs)
 
-		self.add_series(x, y, **kwargs)
+		self.add_series(data, **kwargs)
 
 	def _create_initial_plot(self) -> None:
 		# Holds keyword arguments for every series.
@@ -32,32 +40,34 @@ class ScatterPlot:
 		self.ax.yaxis.set_major_formatter(tkr.FuncFormatter(formatter))
 
 	@staticmethod
-	def _get_default_keyword_arguments(kwargs: Dict) -> Dict:
-		kwargs['figsize'] = kwargs.get('figsize', (20, 10))
-		kwargs['style'] = kwargs.get('style', 'fivethirtyeight')
-		return kwargs
+	def _get_default_keyword_arguments(kwargs: Dict) -> ScatterPlotOptions:
+		options = ScatterPlotOptions(
+			figsize = kwargs.get('figsize', (20, 10)),
+			style = kwargs.get('style', 'fivethirtyeight')
+		)
+		return options
 
-	def add_labels(self, **kwargs) -> None:
+	def add_labels(self, title:str=None, xlabel:str=None,ylabel:str=None) -> None:
 		""" labels various parts of the map.
-			Keyword Arguments
+			Parameters
 			-----------------
-				title: string
-					The title of the plot
-				xlabel: string
-				ylabel: string
+			title: string
+				The title of the plot
+			xlabel: string
+			ylabel: string
 		"""
 
-		if 'title' in kwargs:
-			self.figure.suptitle(kwargs['title'])
-		if 'xlabel' in kwargs:
-			plt.xlabel(kwargs['xlabel'])
-		if 'ylabel' in kwargs:
-			plt.ylabel(kwargs['ylabel'])
+		if title:
+			self.figure.suptitle(title)
+		if xlabel:
+			plt.xlabel(xlabel)
+		if ylabel:
+			plt.ylabel(ylabel)
 
 	def add_legend(self, kwargs):
 		pass
 
-	def add_series(self, x: SeriesType, y: Optional[SeriesType] = None, **kwargs):
+	def add_series(self, x: SeriesType, y: Optional[SeriesType] = None, **kwargs)->None:
 		""" Adds a set of x and y value pairs to the plot.
 			Parameters
 			----------
@@ -65,14 +75,15 @@ class ScatterPlot:
 				With the full set of x-y pairs or the x values to plot.
 			y: list<number>
 				Only needed if 'x' only contains the x values.
+
 			Keyword Arguments
 			-----------------
-				'x', 'y': list<number> [Required if 'series' is None and 'y' is given]
-					x-values to pair with the additional 'y' keyword.
-				color: string
-					The desired color for the series.
-				label: string
-					name of the series. if absent, a name will automatically be generated.
+			'x', 'y': list<number> [Required if 'series' is None and 'y' is given]
+				x-values to pair with the additional 'y' keyword.
+			color: string
+				The desired color for the series.
+			label: string
+				name of the series. if absent, a name will automatically be generated.
 		"""
 		if y is None:
 			x, y = zip(*x)
@@ -83,7 +94,7 @@ class ScatterPlot:
 		self.ax.scatter(x = x, y = y, c = color, label = label)
 
 	@staticmethod
-	def render(filename: str = None):
+	def render(filename: Union[str,Path] = None)->None:
 		""" Renders the plot """
 		if filename is None:
 			plt.show()
