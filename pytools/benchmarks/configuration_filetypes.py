@@ -21,6 +21,7 @@ from pathlib import Path
 from pytools.timetools import Timer
 import strictyaml
 from typing import Dict
+import datetime
 
 folder = Path(__file__).with_name("data")
 if not folder.exists():
@@ -56,11 +57,13 @@ small_sample = {
 		'some:int':      1000000,
 		'trueish':       'Falseeeeeee'
 	},
-	'zZz':             True}
-from pprint import pprint
-
-pprint(small_sample)
-print("", flush = True)
+	'zZz':             True,
+	'pythonTypes':     {
+		'a': ('a', 'b', 'c', 1, 2, 3),
+		# 'b': {'a', 'a', 'a', 2, 2, 2},
+		'c': datetime.datetime.now()
+	}
+}
 
 
 def generate_configuration_files():
@@ -135,7 +138,9 @@ def time_poyo_read(filename: Path):
 	poyo.parse_string(filename.read_text())
 
 
-if __name__ == "__main__":
+# print(yaml.safe_dump(json.loads(json.dumps(small_sample))))
+print(yaml.safe_dump(small_sample))
+if __name__ == "__main__" and 0:
 	generate_configuration_files()
 	timer = Timer()
 	sample = json.loads(json.dumps(small_sample))
@@ -147,12 +152,15 @@ if __name__ == "__main__":
 	print("timing json write")
 	timer.timeFunction(time_json_write, sample, json_small_file)
 	print()
+
 	print("timing hjson write")
 	timer.timeFunction(time_hjson_write, sample, hjson_filename)
 	print()
+
 	print("timing toml write")
 	timer.timeFunction(time_toml_write, sample, toml_filename)
 	print("timing yaml write")
+
 	print("pyyaml")
 	timer.timeFunction(time_yaml_write, sample, yaml_small_file)
 	print("pyyaml cDumper")
