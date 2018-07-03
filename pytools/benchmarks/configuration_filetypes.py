@@ -13,50 +13,70 @@
 		13.99s ± 364.66ms per loop [5 loops][13.32s, 14.40s]
 """
 
-
 import yaml
+import poyo
 import json
 from pathlib import Path
 from pytools.timetools import Timer
+import strictyaml
 
 folder = Path(__file__).with_name("data")
 if not folder.exists():
 	folder.mkdir()
-small_json_file = folder / "small_dataset.json"
-medium_json_file = folder / "medium_dataset.json"
-large_json_file = folder / "large_dataset.json"
+json_small_file = folder / "small_dataset.json"
+json_medium_file = folder / "medium_dataset.json"
+json_large_file = folder / "large_dataset.json"
 
-small_yaml_file = folder / "small_dataset.yaml"
-medium_yaml_file = folder / "medium_dataset.yaml"
-large_yaml_file = folder / "large_dataset.yaml"
+yaml_small_file = folder / "small_dataset.yaml"
+yaml_medium_file = folder / "medium_dataset.yaml"
+yaml_large_file = folder / "large_dataset.yaml"
+
+small_sample = {
+	'Hello World':     {
+		'madness': 'This is madness',
+		'gh': 'https://github.com/{0}.git'
+	},
+	'NullValue':       None,
+	'Yay #python':     'Cool!',
+	'default_context': {
+		'123':             456.789,
+		'doc_tools':     ['mkdocs', 'sphinx', None],
+		'docs':          True,
+		'email':         'raphael@hackebrot.de',
+		'foo':           'hallo #welt',
+		'greeting':      'こんにちは',
+		'gui':           False,
+		'lektor':        '0.0.0.0:5000',
+		'relative-root': '/',
+		'some:int':      1000000,
+		'trueish':       'Falseeeeeee'
+	},
+	'zZz':             True}
+from pprint import pprint
+
+pprint(small_sample)
+print("", flush = True)
 
 
 def generate_configuration_files():
 	import pandas
-	dataset = Path.home() / "Downloads" / "WEOApr2017all.xlsx"
+	dataset = Path.home() / "Downloads" / "WEOApr2018all.xlsx"
 
 	table = pandas.read_excel(dataset)
 
-	small_table = table[:int(len(table) / 20)]
-	medium_table = table[:int(len(table) / 5)]
-	large_table = table
+	small_table = small_sample
 
 	# Generate json
-	small_table.to_json(str(small_json_file))
-	medium_table.to_json(str(medium_json_file))
-	large_table.to_json(str(large_json_file))
+	json_small_file.write_text(json.dumps(small_table, indent = 4, sort_keys = True))
+	# json_medium_file.write_text(json.dumps(med))
+	# large_table.to_json(str(large_json_file))
 
 	# generate yaml
-	small_table = json.loads(small_json_file.read_text())
-	medium_table = json.loads(medium_json_file.read_text())
-	large_table = json.loads(large_json_file.read_text())
+	yaml_small_file.write_text(yaml.dump(small_table, default_flow_style = False))
 
-	with small_yaml_file.open('w') as file1:
-		yaml.dump(small_table, file1)
-	with medium_yaml_file.open('w') as file2:
-		yaml.dump(medium_table, file2)
-	with large_yaml_file.open('w') as file3:
-		yaml.dump(large_table, file3)
+
+# with large_yaml_file.open('w') as file3:
+#	yaml.dump(large_table, file3)
 
 
 def time_json_read(filename: Path):
@@ -66,11 +86,25 @@ def time_json_read(filename: Path):
 def time_yaml_read(filename: Path):
 	yaml.load(filename.open())
 
+def time_strictyaml_read(filename: Path):
+	strictyaml.load(filename.read_text())
+
+def time_poyo_read(filename: Path):
+	poyo.parse_string(filename.read_text())
+
 
 if __name__ == "__main__":
 	generate_configuration_files()
 	timer = Timer()
-	print("timing json with {:.2f}MB file".format(medium_json_file.stat().st_size/1024**2))
-	timer.timeFunction(time_json_read, medium_json_file)
-	print("timing yaml with {:.2f}MB file".format(medium_yaml_file.stat().st_size/1024**2))
-	timer.timeFunction(time_yaml_read,medium_yaml_file, loops = 5)
+
+	print("timing json with {:.2f}MB file".format(json_small_file.stat().st_size / 1024 ** 2))
+	timer.timeFunction(time_json_read, json_small_file)
+
+	print("timing yaml with {:.2f}MB file".format(yaml_small_file.stat().st_size / 1024 ** 2))
+	timer.timeFunction(time_yaml_read, yaml_small_file, loops = 5)
+
+	print("timing syaml with {:.2f}MB file".format(yaml_small_file.stat().st_size / 1024 ** 2))
+	timer.timeFunction(time_strictyaml_read, yaml_small_file, loops = 5)
+
+	print("timing poyo with {:.2f}MB file".format(yaml_small_file.stat().st_size / 1024**2))
+	timer.timeFunction(time_poyo_read, yaml_small_file)
