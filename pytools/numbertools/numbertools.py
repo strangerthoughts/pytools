@@ -5,7 +5,7 @@ from typing import List, Union, SupportsAbs, Any, Sequence
 from dataclasses import dataclass, field
 
 NumberType = Union[int,float]
-
+MU = "μ"
 @dataclass
 class Scale:
 	prefix: str
@@ -28,7 +28,7 @@ SCALE: List[Scale] = [
 	Scale('femto', 'f', 1E-15),
 	Scale('pico', 'p', 1E-12),
 	Scale('nano', 'n', 1E-9),
-	Scale('micro', 'u', 1E-6),
+	Scale('micro', MU, 1E-6),
 	Scale('milli', 'm', 1E-3),
 	#Scale('centi', 'c', 1E-2),
 	#Scale('deci', 'd', 1E-1),
