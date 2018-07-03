@@ -1,5 +1,5 @@
 import time
-from typing import *
+from typing import Callable, Union, Dict, Tuple
 import datetime
 import numpy
 
@@ -29,7 +29,6 @@ class Timer:
 		return self.to_iso()
 
 	def duration(self) -> float:
-
 		return time.clock() - self.start_time
 
 	def isOver(self, limit: Number = 10.0) -> bool:

@@ -29,6 +29,8 @@ class TestNumbertools(unittest.TestCase):
 
 		self.assertEqual('12345678901.23B', human_readable(value, 'B'))
 
+		self.assertRaises(TypeError, human_readable, self)
+
 
 
 	def test_is_number(self):
