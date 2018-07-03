@@ -1,1 +1,1 @@
-from .pyplot import Plot
+from .scatter_plot import ScatterPlot

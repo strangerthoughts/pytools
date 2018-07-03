@@ -1,60 +1,37 @@
+"""
+	A version of timetools built on Pendulum. Pendulum has a number of great features, but suffers from the
+	same drawbacks as other Date/time modules when creating an object from another object or uncommon format.
+	Pendulum also does not offer convienience methods for some datetime representations (ex. ISO durations).
+	Ex. pandas.Timestamp is not compatible with pendulum.datetime.
+"""
+
+import pendulum
 import datetime
-import re
-from typing import Dict, Tuple
-
-from ._timestamp import Timestamp
+from typing import Any, Tuple, Dict
+from dataclasses import dataclass
 
 
-# Number = Union[int,float]
-class Duration(datetime.timedelta):
-	""" Inherits from datetime.timedelta. Designed to parse
-		many forms of timedelta representations.
-		Notes
-		-----
-			Each 1 month duration is converted to a 30 day duration,
-			and each 1 year duration is converted to a 365 day duration.
-		Supported Formats
-		-----------------
-			ISO Duration: string
-				Format: P[nnY][nnM][nnW][nnD]T[nnH][nnM][nn.nnnS] (may be lowercase)
-			ISO Interval: string
-				Format: [Timestamp]/[Timestamp], [ISO Duration]/[Timestamp],
-					[Timestamp]/[ISO Duration]
-				Notes: if a combined timestamp/ duration is given,
-					only the duration part is used.
-			Datetime Tuple: Tuple<number x {6,7}>
-				A tuple containing the number values for each datetime field.
-				Format: (years, months, days, hours, minutes, seconds)
-			Number: Called with Duration([number], [unit]),
-				where 'unit' is any of the datetime.timedelta supported types.
-			Generic Objects: Any object with days/seconds/microseconds attributes, 
-				a .total_seconds() method, or a .to_timedelta() method.
-	"""
-	duration_regex = re.compile(
-		r"""
-		[pP]?
-		((?P<years>[-\d]+)[yY])?[-]?
-		((?P<months>[-\d]+)[mM])?[-]?
-		((?P<weeks>[-\d]+)[wW])?[-]?
-		((?P<days>[-\d]+)[dD])?
-		[tT]?
-		((?P<hours>[-\d]+)[hH])?[-]?
-		((?P<minutes>[-\d]+)[mM])?[-]?
-		((?P<seconds>[-\d]+(.[\d]+)?)[sS])?""",
-		re.VERBOSE
-	)
-	timestamp_regex = re.compile(
-		r"""
-		(?P<date>[\d]{4}-[\d]{2}-[\d]{2})?[\sT]?
-		(?P<time>[\d]{2}:[\d]{2}:[\d]{2}(\.[\d]+)?)?""",
-		re.VERBOSE
-	)
+@dataclass
+class TimedeltaInformation:
+	days: int
+	seconds: int
+	microseconds: int
 
-	def __new__(cls, *args, **kwargs):
+	def to_dict(self):
+		data = {
+			'days':         self.days,
+			'seconds':      self.seconds,
+			'microseconds': self.microseconds
+		}
+		return data
+
+
+class Duration(pendulum.Duration):
+	def __new__(cls, value = None, **kwargs):
 		"""
 			Keyword Arguments
 			-----------------
-			All arguments are optional and default to 0. 
+			All arguments are optional and default to 0.
 			Arguments may be integers or floats, and may be positive or negative.
 				days:         number; defualt 0
 				seconds:      number; default 0
@@ -64,178 +41,133 @@ class Duration(datetime.timedelta):
 				hours:        number; default 0
 				weeks:        number; default 0
 		"""
-		if len(args) == 0:
-			datetime_keys = kwargs
-		else:
-			datetime_keys = cls._parseInput(*args)
-		return super().__new__(cls, **datetime_keys)
+		if value is not None:
+			return cls.parse(value)
+
+
+		return super().__new__(cls, **kwargs)
+
+	# self.duration = pendulum.duration(**duration_keys)
+
 	def __str__(self):
-		return self.toiso()
+		return self.to_iso()
+
 	def __repr__(self):
-		string = "Duration('{}')".format(self.toiso())
-		return string
+		repr_string = "Duration('{}')".format(self.to_iso())
+		return repr_string
 
 	@classmethod
-	def _parseGenericObject(cls, generic):
-		""" Attempts to parse a generic timedelta object. If all attempts
-			to extract information from the object fail and 'force' = True (default),
-			then a 0-length Duration object is created instead.
+	def parse(cls, value: Any) -> TimedeltaInformation:
 		"""
-		generic_values = dict()
-		# Try extracting the day, seconds, and microseconds from the object.
-		try:
-			generic_values['days'] = generic.days
-			generic_values['seconds'] = generic.seconds
-			generic_values['microseconds'] = generic.microseconds
-			return generic_values
-		except Exception:
-			pass
-		# Try extracting the total number of seconds contained in the object
-		try:
-			generic_values['seconds'] = generic.total_seconds()
-			return generic_values
-		except AttributeError:
-			pass
+			Attempts to parse/coerce any object into a timedelta.
+			The given element will be parsed by pendulum.parse, when possible.
+		Parameters
+		----------
+		value
 
-		# Try to extract a more usable object type
-		try:
-			generic_values = generic.to_timedelta()
-			return cls._parseGenericObject(generic_values)
-		except Exception:
+		Returns
+		-------
 
-			message = "Unsupported generic type: {} ({})".format(generic, type(generic))
-			raise ValueError(message)
-
-	@classmethod
-	def _parseInterval(cls, value: str) -> Dict[str, int]:
-		""" Parses an ISO interval.
-			Supported Formats:
-				<start>/<end>      Ex. "2007-03-01T13:00:00Z/2008-05-11T15:30:00Z"
-				<start>/<duration> Ex. "2007-03-01T13:00:00Z/P1Y2M10DT2H30M"
-				<duration>/<end>   Ex. "P1Y2M10DT2H30M/2008-05-11T15:30:00Z"
-			Returns
-			-------
-				Duration
 		"""
-		leftright = value.split('/')
-		left = leftright[0]
-		right = leftright[1] if len(leftright) != 1 else ""
-		if '-' in left and '-' in right:
-			result = cls(Timestamp(right) - Timestamp(left))
-		elif '-' not in left:
-			result = cls._parseiso(left)
-		elif '-' not in right:
-			result = cls._parseiso(right)
+		if isinstance(value, str):
+			result = pendulum.parse(value)
+			result = cls.from_object(result)
+		elif isinstance(value, dict):
+			result = cls.from_keys(value)
+
+		elif isinstance(value, (list, tuple)):
+			result = cls.from_tuple(value)
 		else:
-			message = "Invalid format passed to timetools.{}: {}".format(str(cls), value)
-			raise TypeError(message)
+			result = cls.from_object(value)
 
 		return result
 
 	@classmethod
-	def _parseiso(cls, string) -> Dict[str, int]:
-		""" Parses a string with formatted as an ISO duration: PnnYnnMnnWnnDTnnHnnMnnST """
-		matches = cls.duration_regex.search(string).groupdict()
-		is_negative = string[0] == '-'
-		for k, v in matches.items():
-			if v is None:
-				v = 0
-			else:
-				v = float(v)
-			if is_negative: v = -v
-			matches[k] = v
-		if 'years' in matches:  matches['days'] += 365 * matches.pop('years')
-		if 'months' in matches: matches['days'] += 30 * matches.pop('months')
-
-		return matches
-
-	@classmethod
-	def _parseInput(cls, *args):
-		""" Chooses which parse to apply to the input, if supported."""
-		element = args[0]
-		if isinstance(element, datetime.timedelta):
-			result = cls._parseTimedeltaObj(element)
-		elif isinstance(element, str):
-			result = cls._parseString(element)
-		elif isinstance(element, tuple):
-			result = cls._parseTuple(element)
-
-		else:
-			result = cls._parseGenericObject(element)
-		return result
-
-	@classmethod
-	def _parseNumericString(cls, string):
-		print(string)
-		message = "_parseNumericString is not implemented."
-		raise NotImplementedError(message)
-
-
-
-	@classmethod
-	def _parseString(cls, string: str) -> Dict[str, int]:
-		if '/' not in string:
-			result = cls._parseiso(string)
-		elif len([i for i in string if not i.isdigit()]) < 3:
-			result = cls._parseNumericString(string)
-		else:
-			result = cls._parseInterval(string)
-		return result
-
-	@classmethod
-	def _parseTimedeltaObj(cls, obj: datetime.timedelta) -> Dict[str, int]:
-		""" Parses durations formatted as Y:M:D:H:M:S. """
-		result = {
-			'days':         obj.days,
-			'hours':        0,
-			'minutes':      0,
-			'seconds':      obj.seconds,
-			'microseconds': obj.microseconds
-		}
-
-		return result
-
-	@staticmethod
-	def _parseTuple(value: Tuple[int, int, int, int, int, int]):
-		""" Returns a Duration object generated from a tuple of time values.
-			Format: (years, months, days, hours, minutes, seconds[,microseconds])
-		"""
-		years, months, days, hours, minutes, seconds, *microseconds = value
-
-		if len(microseconds) == 1: microseconds = microseconds[0]
-		if microseconds < 1: microseconds *= 1000000
-		days += 365 * years + 30 * seconds
-
-		result = {
-			'days':         days,
-			'hours':        hours,
-			'minutes':      minutes,
-			'seconds':      seconds,
-			'microseconds': microseconds
-		}
-
-		return result
-
-	######################### Public methods that return a Duration object #########################
-
-	@classmethod
-	def fromDict(cls, keys: Dict[str, int]):
-		""" Parses a dict of time values. """
+	def from_dict(cls, **keys) -> 'Duration':
 		return cls(**keys)
 
 	@classmethod
-	def fromString(cls, string):
-		result = cls._parseString(string)
-		return cls.fromDict(result)
+	def from_keys(cls, keys: Dict[str, int]) -> 'Duration':
+		return cls(**keys)
 
 	@classmethod
-	def fromTuple(cls, value):
-		result = cls._parseTuple(value)
-		return cls.fromDict(result)
+	def from_string(cls, string: str) -> 'Duration':
+		"""
+			Parses a string. Defaults to pendulum.parse
+		Parameters
+		----------
+		string: str
 
-	##################### Public Methods to convert the timedelta to another format ################
+		Returns
+		-------
+		Duration
+		"""
 
-	def todict(self) -> Dict[str, int]:
+		result = pendulum.parse(string)
+
+		return cls.from_object(result)
+
+	@classmethod
+	def from_object(cls, obj: Any) -> 'Duration':
+		"""
+			Attempts to convert a generic object to a timedelta Duration.
+		Parameters
+		----------
+		obj: Any
+
+		Returns
+		-------
+		Duration
+		"""
+		if hasattr(obj, 'as_timedelta'):
+			obj = obj.as_timedelta()  # Converts pendulum.Duration to a timedelta.
+		if isinstance(obj, datetime.timedelta) or hasattr(obj, 'total_seconds'):
+			seconds = obj.total_seconds()
+			days = 0
+			microseconds = 0
+		elif isinstance(obj, pendulum.Duration):
+			seconds = obj.in_seconds()
+			days = 0
+			microseconds = 0
+		else:
+			try:
+				days = obj.days
+				seconds = obj.seconds
+				microseconds = obj.microseconds
+			except AttributeError:
+				message = "Object '{}' with type '{}' cannot be coerced to a time duration.".format(obj, type(obj))
+				raise AttributeError(message)
+
+		result = {
+			'days':         days,
+			'seconds':      seconds,
+			'microseconds': microseconds
+		}
+		return cls.from_dict(**result)
+	@classmethod
+	def from_timedelta(cls, obj:datetime.timedelta)->'Duration':
+		return cls.from_object(obj)
+	@classmethod
+	def from_tuple(cls, value: Tuple) -> 'Duration':
+		"""
+			Attempts to construct a timedelta form an iterable.
+		Parameters
+		----------
+		value: Tuple[int,int,int]
+			The value must consist of three parts: days, seconds, microseconds.
+
+		Returns
+		-------
+		Duration
+		"""
+		if len(value) != 3:
+			message = f"The value passed to Duration.from_tuple must contain exactly 3 values (recieved {value})."
+			raise ValueError(message)
+		keys = ['days', 'seconds', 'microseconds']
+		timedelta_keys = dict(zip(keys, value))
+		return cls.from_dict(**timedelta_keys)
+
+	def to_dict(self) -> Dict[str, int]:
 		""" Returns a dictionary that can be used to instantiate another timedelta or Duration object. """
 		result = {
 			'days':         self.days,
@@ -247,7 +179,7 @@ class Duration(datetime.timedelta):
 	def tolongdict(self) -> Dict[str, int]:
 		""" Returns a dictionary with more human readable date and time keys. """
 
-		is_negative = self.totalSeconds() < 0
+		is_negative = self.total_seconds() < 0
 		if is_negative:
 			original = abs(self)
 			original = {
@@ -256,7 +188,7 @@ class Duration(datetime.timedelta):
 				'microseconds': original.microseconds
 			}
 		else:
-			original = self.todict()
+			original = self.to_dict()
 		longdict = dict()
 		# Get date values
 		days = original['days']
@@ -273,12 +205,8 @@ class Duration(datetime.timedelta):
 
 		return longdict
 
-	def isoformat(self, compact: bool = True):
-		""" To make calls compatible with Timestamp.isoformat() """
-		return self.toiso(compact)
-
-	def toiso(self, compact: bool = True) -> str:
-		""" Converts the timedelta to an ISO Duration string. By default, 
+	def to_iso(self, compact: bool = True) -> str:
+		""" Converts the timedelta to an ISO Duration string. By default,
 			weeks are used instead of months, so the original duration string
 			used to create to Duration object may differ (but will be equivilant to)
 			the output of this method.
@@ -287,7 +215,7 @@ class Duration(datetime.timedelta):
 				compact: bool; default False
 					Whether to omit emty fields.
 		"""
-		is_negative = self.totalSeconds() < 0
+		is_negative = self.total_seconds() < 0
 		values = self.tolongdict()
 		datetime_map = [
 			'P', ('years', 'Y'), ('months', 'M'), ('weeks', 'W'), ('days', 'D'),
@@ -314,31 +242,15 @@ class Duration(datetime.timedelta):
 			isostring = '-' + isostring
 		return isostring
 
-	def totalSeconds(self) -> float:
-		return self.total_seconds()
+	def total_years(self) -> float:
+		"""
+			Returns the total number of years contained in the duration as a float.
+		Returns
+		-------
 
-	def totalDays(self) -> float:
-		values = self.todict()
-		days = values['days'] + (24 * 3600 * values['seconds'])
-		return days
+		"""
+		return self.total_days() / 365
 
-	def totalYears(self) -> float:
-		return self.totalDays() / 365
 
-	def to_numeric(self, units: str) -> float:
-		"""Backwords-compatible method"""
-		units = units.lower()
-		if units == 'days':
-			value = self.totalDays()
-		elif units == 'years':
-			value = self.totalYears()
-		elif units == 'months':
-			value = self.totalYears() * 12
-		else:
-			message = "The units provided '{}' are not supported.".format(units)
-			raise ValueError(message)
-
-		return value
-
-	def toNumeric(self, units: str):
-		return self.to_numeric(units)
+if __name__ == "__main__":
+	pass

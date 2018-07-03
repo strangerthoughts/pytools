@@ -1,149 +1,89 @@
 import math
 from numbers import Number
 
-from typing import *
+from typing import List, Union, SupportsAbs, Any, Sequence
+from dataclasses import dataclass, field
 
-SCALE: List[Dict[str, Union[None,str,int,float]]] = [
-	{
-		'prefix':     'atto',
-		'suffix':     'a',
-		'string':     None,
-		'multiplier': 1E-18
-	},
-	{
-		'prefix':     'femto',
-		'suffix':     'f',
-		'string':     None,
-		'multiplier': 1E-15
-	},
-	{
-		'prefix':     'pico',
-		'suffix':     'p',
-		'string':     None,
-		'multiplier': 1E-12
-	},
-	{
-		'prefix':     'nano',
-		'suffix':     'n',
-		'string':     None,
-		'multiplier': 1E-9
-	},
-	{
-		'prefix':     'micro',
-		'suffix':     'u',  # 'μ'
-		'string':     'millionth',
-		'multiplier': 1E-6
-	},
-	{
-		'prefix':     'milli',
-		'suffix':     'm',
-		'string':     'thousandth',
-		'multiplier': 1E-3
-	},
-	{
-		'prefix':     'centi',
-		'suffix':     'c',
-		'string':     'hundredth',
-		'multiplier': 1E-2
-	},
-	{
-		'prefix':     'deci',
-		'suffix':     'd',
-		'string':     'tenth',
-		'multiplier': .1
-	},
-	{
-		'prefix':     '',
-		'suffix':     '',
-		'string':     'unit',
-		'multiplier': 1
-	},
-	{
-		'prefix':     'deca',
-		'suffix':     'da',
-		'string':     'ten',
-		'multiplier': 10
-	},
-	{
-		'prefix':     'hecto',
-		'suffix':     'h',
-		'string':     'hundred',
-		'multiplier': 100
-	},
-	{
-		'prefix':     'kilo',
-		'suffix':     'K',
-		'string':     'thousand',
-		'multiplier': 1000
-	},
-	{
-		'prefix':     'mega',
-		'suffix':     'M',
-		'string':     'million',
-		'multiplier': 1E6
-	},
-	{
-		'prefix':     'giga',
-		'suffix':     'B',
-		'string':     'billion',
-		'multiplier': 1E9
-	},
-	{
-		'prefix':     'tera',
-		'suffix':     'T',
-		'string':     'trillion',
-		'multiplier': 1E12
-	},
-	{
-		'prefix':     'peta',
-		'suffix':     'P',
-		'string':     '',
-		'multiplier': 1E15
-	},
-	{
-		'prefix':     'exa',
-		'suffix':     'E',
-		'string':     '',
-		'multiplier': 1E18
-	}
+NumberType = Union[int,float]
+
+@dataclass
+class Scale:
+	prefix: str
+	suffix: str
+	multiplier: float
+	alias: List[str] = field(default_factory = list)  # Alternative methods of refering to this multiplier.
+
+	def __ge__(self, other):
+		return self.multiplier >= other.multiplier
+
+	def __lt__(self, other):
+		return self.multiplier < other.multiplier
+
+	def __eq__(self, other):
+		return self.multiplier == other
+
+
+SCALE: List[Scale] = [
+	Scale('atto', 'a', 1E-18),
+	Scale('femto', 'f', 1E-15),
+	Scale('pico', 'p', 1E-12),
+	Scale('nano', 'n', 1E-9),
+	Scale('micro', 'u', 1E-6),
+	Scale('milli', 'm', 1E-3),
+	#Scale('centi', 'c', 1E-2),
+	#Scale('deci', 'd', 1E-1),
+	Scale('', '', 1),
+	#Scale('deca', 'da', 1E1),
+	#Scale('hecto', 'h', 1E2),
+	Scale('kilo', 'K', 1E3),
+	Scale('mega', 'M', 1E6),
+	Scale('giga', 'B', 1E9),
+	Scale('tera', 'T', 1E12),
+	Scale('peta', 'P', 1E15),
+	Scale('exa', 'E', 1E18)
 ]
 
-SCALE = sorted(SCALE, key = lambda s: s['multiplier'])
-REVERSED_SCALE = sorted(SCALE, key = lambda s: s['multiplier'], reverse = True)
+SCALE = sorted(SCALE)
+REVERSED_SCALE = sorted(SCALE, reverse = True)
 
-def getBase(value:SupportsAbs):
+
+def is_null(number: Any):
+	return number is None or math.isnan(number)
+
+
+def get_base(value: SupportsAbs):
 	""" Returns the SI base for a given value """
 
 	value = abs(value)
-	if value == 0.0 or math.isnan(value):
+	if value == 0.0 or is_null(value):
 		return ''
 	for iso_scale in REVERSED_SCALE:
-		if value >= iso_scale['multiplier']:
+		if value >= iso_scale.multiplier:
 			scale = iso_scale
 			break
 	else:
 		message = "'{}' does not have a defined base.".format(value)
 		raise ValueError(message)
 
-	base = scale['suffix']
+	base = scale.suffix
 	return base
 
-def getMultiplier(base:str):
+
+def get_multiplier(base: str):
 	""" Converts a numerical suffix to the corresponding numerical multiplier.
 		Ex. 'K' -> 1000, 'u' -> 1E-6
 	"""
 	if not isinstance(base, str): return math.nan
-	if len(base) > 1: 
+	if len(base) > 1:
 		base = base.lower()
 		if base.endswith('s'):
 			base = base[:-1]
 
 	for iso_scale in SCALE:
-		prefix = iso_scale['prefix']
-		suffix = iso_scale['suffix']
-		string = iso_scale['string']
-		if base == prefix or base == suffix or base == string:
-			multiplier = iso_scale['multiplier']
+		prefix = iso_scale.prefix
+		suffix = iso_scale.suffix
+		if base == prefix or base == suffix or base in iso_scale.alias:
+			multiplier = iso_scale.multiplier
 			break
 	else:
 		message = "'{}' is not a valid base.".format(base)
@@ -152,7 +92,7 @@ def getMultiplier(base:str):
 	return multiplier
 
 
-def humanReadable(value, base:str = None, to_string:bool = True, precision:int = 2)->Union[str,List[str]]:
+def human_readable(value:NumberType, base: str = None, to_string: bool = True, precision: int = 2) -> Union[str, List[str]]:
 	""" Converts a number into a more easily-read string.
 		Ex. 101000 -> '101T' or (101, 'T')
 		Parameters
@@ -173,8 +113,8 @@ def humanReadable(value, base:str = None, to_string:bool = True, precision:int =
 		str, list<str>
 			The reformatted number.
 	"""
-	template =  '{0:.' + str(int(precision)) + 'f}{1}'
-	_toString = lambda v, b:template.format(v, b) if v != 0.0 else template.format(0, b)
+	template = '{0:.' + str(int(precision)) + 'f}{1}'
+	_toString = lambda v, b: template.format(v, b) if v != 0.0 else template.format(0, b)
 
 	if not isinstance(value, list):
 		value = [value]
@@ -182,16 +122,15 @@ def humanReadable(value, base:str = None, to_string:bool = True, precision:int =
 	if base is None:
 		values = [i for i in value if not math.isnan(i)]
 		if len(values) > 0:
-			base = getBase(min(values))
+			base = get_base(min(values))
 		else:
 			return 'nan'
 
-	multiplier = getMultiplier(base)
+	multiplier = get_multiplier(base)
 
-	human_readable_number = [(i/multiplier, base) for i in value]
+	human_readable_number = [(i / multiplier, base) for i in value]
 
 	if to_string:
-
 		human_readable_number = [_toString(i[0], i[1]) for i in human_readable_number]
 
 	if len(human_readable_number) == 1:
@@ -200,7 +139,7 @@ def humanReadable(value, base:str = None, to_string:bool = True, precision:int =
 	return human_readable_number
 
 
-def isNumber(value:Union[str,Number])->bool:
+def is_number(value: Union[Any,Sequence[Any]]) -> Union[bool,List[bool]]:
 	"""Tests if the value is a number.
 		Examples
 		--------
@@ -209,19 +148,21 @@ def isNumber(value:Union[str,Number])->bool:
 			'123.123' -> True
 
 	"""
+	if isinstance(value, (list,tuple)):
+		return [is_number(i) for i in value]
 	if isinstance(value, str):
 		try:
 			float(value)
-			is_number = True
+			value_is_number = True
 		except ValueError:
-			is_number = False
-	else: 
-		is_number = isinstance(value, Number)
+			value_is_number = False
+	else:
+		value_is_number = isinstance(value, Number)
 
-	return is_number
+	return value_is_number
 
 
-def toNumber(value:Union[str,Number], default:Number = math.nan)->Union[float,int]:
+def to_number(value: Union[Any, Sequence[Any]], default: Any = math.nan) -> Union[NumberType, List[NumberType]]:
 	""" Attempts to convert the passed object to a number.
 		Returns
 		-------
@@ -229,25 +170,24 @@ def toNumber(value:Union[str,Number], default:Number = math.nan)->Union[float,in
 				* list,tuple,set -> list of Number
 				* int,float -> int, float
 				* str -> int, float
-				* datetime.datetime -> float (with units of 'years')
 				* generic -> float if float() works, else math.nan
 	"""
-	if isinstance(value, (list, tuple, set)):
-		converted_number = [toNumber(i) for i in value]
-	else:
-		try:
-			converted_number = float(value)
-		except ValueError:
-			converted_number = default
-		except TypeError:
-			converted_number = default
 
-	if not math.isnan(converted_number) and math.floor(converted_number) == converted_number:
+	if isinstance(value, (list,tuple,set)):
+		return [to_number(i, default) for i in value]
+	try:
+		converted_number = float(value)
+	except ValueError:
+		converted_number = default
+	except TypeError:
+		converted_number = default
+
+	if not is_null(converted_number) and math.floor(converted_number) == converted_number:
 		converted_number = int(converted_number)
 
 	return converted_number
 
 
 if __name__ == "__main__":
-	print(toNumber('123.456'))
-	print(toNumber('123.000'))
+	print(to_number('123.456'))
+	print(to_number('123.000'))
