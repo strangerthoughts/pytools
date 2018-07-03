@@ -7,19 +7,20 @@ from numbers import Number
 SeriesType = List[Tuple[Number, Number]]
 
 plt.style.use('fivethirtyeight')
-class Plot:
-	def __init__(self, x: SeriesType, y:Optional[SeriesType]=None, **kwargs):
+
+
+class ScatterPlot:
+	def __init__(self, x: SeriesType, y: Optional[SeriesType] = None, **kwargs):
 		self._series_variables = dict()
-		kwargs = self._getDefaultKeywordArguments(kwargs)
+		kwargs = self._get_default_keyword_arguments(kwargs)
 		self.options = kwargs
-		self._createInitialPlot()
+		self._create_initial_plot()
 
-		self.addLabels(**kwargs)
+		self.add_labels(**kwargs)
 
-		self.addSeries(x, y, **kwargs)
+		self.add_series(x, y, **kwargs)
 
-
-	def _createInitialPlot(self) -> None:
+	def _create_initial_plot(self) -> None:
 		# Holds keyword arguments for every series.
 		self.data = dict()
 
@@ -27,16 +28,16 @@ class Plot:
 			return numbertools.human_readable(x, precision = 1)
 
 		# The basic plots
-		self.figure, self.chart = plt.subplots(figsize = self.options['figsize'])
-		self.chart.yaxis.set_major_formatter(tkr.FuncFormatter(formatter))
+		self.figure, self.ax = plt.subplots(figsize = self.options['figsize'])
+		self.ax.yaxis.set_major_formatter(tkr.FuncFormatter(formatter))
 
 	@staticmethod
-	def _getDefaultKeywordArguments(kwargs: Dict) -> Dict:
+	def _get_default_keyword_arguments(kwargs: Dict) -> Dict:
 		kwargs['figsize'] = kwargs.get('figsize', (20, 10))
 		kwargs['style'] = kwargs.get('style', 'fivethirtyeight')
 		return kwargs
 
-	def addLabels(self, **kwargs) -> None:
+	def add_labels(self, **kwargs) -> None:
 		""" labels various parts of the map.
 			Keyword Arguments
 			-----------------
@@ -53,10 +54,10 @@ class Plot:
 		if 'ylabel' in kwargs:
 			plt.ylabel(kwargs['ylabel'])
 
-	def addLegend(self, kwargs):
+	def add_legend(self, kwargs):
 		pass
 
-	def addSeries(self, x: SeriesType, y: Optional[SeriesType] = None, **kwargs):
+	def add_series(self, x: SeriesType, y: Optional[SeriesType] = None, **kwargs):
 		""" Adds a set of x and y value pairs to the plot.
 			Parameters
 			----------
@@ -76,10 +77,10 @@ class Plot:
 		if y is None:
 			x, y = zip(*x)
 
-		label = kwargs.get('label', self._generateSeriesLabel())
-		color = kwargs.get('color', self._generateSeriesColor())
+		label = kwargs.get('label', self._generate_series_label())
+		color = kwargs.get('color', self._generate_series_color())
 
-		self.chart.scatter(x = x, y = y, c = color, label = label)
+		self.ax.scatter(x = x, y = y, c = color, label = label)
 
 	@staticmethod
 	def render(filename: str = None):
@@ -88,11 +89,11 @@ class Plot:
 			plt.show()
 
 	@staticmethod
-	def _generateSeriesColor() -> str:
+	def _generate_series_color() -> str:
 		color = "#AA5588"
 		return color
 
-	def _generateSeriesLabel(self) -> str:
+	def _generate_series_label(self) -> str:
 		""" Automatically generates a label for a series based on the number
 			of previously generated plots.
 		"""
@@ -132,5 +133,5 @@ if __name__ == "__main__":
 	x_label = 'year'
 	y_label = 'population'
 
-	chart = Plot(data, title = title, x_label = x_label, y_label = y_label)
+	chart = ScatterPlot(data, title = title, x_label = x_label, y_label = y_label)
 	chart.render()
