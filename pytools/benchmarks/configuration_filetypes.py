@@ -15,6 +15,8 @@
 import yaml
 import poyo
 import json
+import hjson
+import toml
 from pathlib import Path
 from pytools.timetools import Timer
 import strictyaml
@@ -26,6 +28,9 @@ if not folder.exists():
 json_small_file = folder / "small_dataset.json"
 json_medium_file = folder / "medium_dataset.json"
 json_large_file = folder / "large_dataset.json"
+
+hjson_small_file = folder / "small_dataset.hjson"
+toml_small_file = folder / "small_dataset.toml"
 
 yaml_small_file = folder / "small_dataset.yaml"
 yaml_medium_file = folder / "medium_dataset.yaml"
@@ -80,6 +85,16 @@ def time_json_write(data: Dict, filename: Path) -> Path:
 	return filename
 
 
+def time_hjson_write(data: Dict, filename: Path) -> Path:
+	filename.write_text(hjson.dumps(data))
+	return filename
+
+
+def time_toml_write(data: Dict, filename: Path) -> Path:
+	filename.write_text(toml.dumps(data))
+	return filename
+
+
 def time_yaml_write(data: Dict, filename: Path) -> Path:
 	yaml_string = yaml.dump(data, default_flow_style = False)
 	filename.write_text(yaml_string)
@@ -94,6 +109,14 @@ def time_yaml_cdump_write(data: Dict, filename: Path) -> Path:
 
 def time_json_read(filename: Path):
 	json.loads(filename.read_text())
+
+
+def time_hjson_read(filename: Path):
+	hjson.loads(filename.read_text())
+
+
+def time_toml_read(filename: Path):
+	toml.loads(filename.read_text())
 
 
 def time_pyyaml_read(filename: Path):
@@ -117,12 +140,18 @@ if __name__ == "__main__":
 	timer = Timer()
 	sample = json.loads(json.dumps(small_sample))
 	json_filename = time_json_write(sample, json_small_file)
+	hjson_filename = time_hjson_write(sample, hjson_small_file)
+	toml_filename = time_toml_write(sample, toml_small_file)
 	yaml_filename = time_yaml_write(sample, yaml_small_file)
 
 	print("timing json write")
 	timer.timeFunction(time_json_write, sample, json_small_file)
 	print()
-
+	print("timing hjson write")
+	timer.timeFunction(time_hjson_write, sample, hjson_filename)
+	print()
+	print("timing toml write")
+	timer.timeFunction(time_toml_write, sample, toml_filename)
 	print("timing yaml write")
 	print("pyyaml")
 	timer.timeFunction(time_yaml_write, sample, yaml_small_file)
@@ -130,11 +159,19 @@ if __name__ == "__main__":
 	timer.timeFunction(time_yaml_cdump_write, sample, yaml_small_file)
 	print()
 
-	print("timing json with {:.2f}MB file".format(json_small_file.stat().st_size / 1024 ** 2))
+	print("timing json with {:.2f}MB file".format(json_filename.stat().st_size / 1024 ** 2))
 	timer.timeFunction(time_json_read, json_small_file)
 	print()
 
-	print("timing yaml with {:.2f}MB file".format(yaml_small_file.stat().st_size / 1024 ** 2))
+	print("timing hjson with {:.2f}MB file".format(hjson_filename.stat().st_size / 1024 ** 2))
+	timer.timeFunction(time_hjson_read, hjson_filename)
+	print()
+
+	# print("timing toml with {:.2f}MB file".format(toml_filename.stat().st_size / 1024**2))
+	# timer.timeFunction(time_toml_read, toml_filename)
+	# print()
+
+	print("timing yaml with {:.2f}MB file".format(yaml_filename.stat().st_size / 1024 ** 2))
 	print("pyyaml")
 	timer.timeFunction(time_pyyaml_read, yaml_small_file)
 
