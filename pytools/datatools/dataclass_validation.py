@@ -161,7 +161,14 @@ def _validate_callable(item, callable_hint):
 	else:
 		return True
 
-
+def validate_dataclass(obj:Any):
+	for key, value_type in obj.fields().items():
+		value = obj.get(key)
+		is_valid = validate_item(key, value_type)
+		if not is_valid:
+			return False
+	else:
+		return True
 @dataclass
 class SchemaTest:
 	name: str
