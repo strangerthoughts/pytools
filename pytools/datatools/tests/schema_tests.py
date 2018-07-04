@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import *
-from pytools.datatools.dataclass_validation import validate_item
+from pytools.datatools.dataclass_validation import validate_item, validate_dataclass
 import unittest
 
 
@@ -77,6 +77,94 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r2)
 		r3 = validate_item(123E3, float)
 		self.assertTrue(r3)
+
+class DataclassTests(unittest.TestCase):
+	def test_simple_dataclass(self):
+		@dataclass
+		class DataClassCard:
+			rank: str
+			suit: str
+
+		r = validate_dataclass(DataClassCard('A', 'B'))
+		self.assertTrue(r)
+		r2 = validate_dataclass(DataClassCard('asfasf', 'aasdasfaf'))
+		self.assertTrue(r2)
+		r3 = validate_dataclass(DataClassCard(self, 'as'))
+		self.assertFalse(r3)
+
+	def test_medium_dataclass(self):
+		@dataclass
+		class CityMetadata:
+			name: str
+			country: str
+			latitude: float
+			longitude: float
+			population: List[Tuple[int, int]]
+			area: Dict[str, Union[int, float]]
+		@dataclass
+		class Country:
+			name: str
+
+		area = {
+			'total': 1213.37,
+			'land': 783.84,
+			'water': 429.53,
+			'metro': 34490
+		}
+		population = [
+			(1970, 7894862),
+			(1980, 7071639),
+			(1990, 7322564),
+			(2000, 8008278),
+			(2010, 8175133),
+			(2017, 8660000)
+		]
+		city_name = 'New York City'
+		country = 'USA'
+		latitude = 40.5
+		longitude = -40.5
+
+		data = CityMetadata(
+			name = city_name,
+			country = country,
+			latitude = latitude, longitude = longitude,
+			population = population,
+			area = area
+		)
+		data2 = CityMetadata(
+			name = city_name,
+			country = country,
+			latitude = latitude,
+			longitude = longitude,
+			population = population + [(2020, 1234.567)],
+			area = area
+		)
+		data3 = CityMetadata(
+			name = city_name,
+			country = country,
+			latitude = latitude,
+			longitude = longitude,
+			population = population,
+			area = {**area, **{'test': 'abc'}}
+		)
+		data4 = CityMetadata(
+			name = city_name,
+			country = Country('USA'),
+			latitude = latitude,
+			longitude = longitude,
+			population = population,
+			area = area
+		)
+		r = validate_dataclass(data)
+		r2 = validate_dataclass(data2)
+		r3 = validate_dataclass(data3)
+		r4 = validate_dataclass(data4)
+		self.assertTrue(r)
+		self.assertFalse(r2)
+		self.assertFalse(r3)
+		self.assertFalse(r4)
+
+
 
 
 if __name__ == "__main__":
