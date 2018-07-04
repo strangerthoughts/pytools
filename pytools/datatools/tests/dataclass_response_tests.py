@@ -139,7 +139,7 @@ class TestDataclassWrapper(TestDataclassResponseBase, unittest.TestCase):
 		data = self.city.to_dict()
 		data['area']['moon'] = 'not valid'
 		with self.assertRaises(ValueError):
-			city = CityWrapped(**data)
+			CityWrapped(**data)
 	def test_dataclass_from_dict(self):
 		data = self.city.to_dict()
 		obj = self.city.from_dict(data)

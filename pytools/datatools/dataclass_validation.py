@@ -1,5 +1,4 @@
 from typing import *
-from dataclasses import dataclass
 
 BUILTIN_TYPES = [int, float, str, list, dict, tuple, set]
 
@@ -22,7 +21,7 @@ def get_typing_origin(item):
 	else:
 		try:
 			origin = item.__origin__
-		except:
+		except AttributeError:
 			origin = None
 	return origin
 
@@ -72,7 +71,7 @@ def validate_item(item, expected_type) -> bool:
 def validate_typing_type(item, expected_type):
 	name = get_type_name(expected_type)
 
-	parameters = get_subtypes(expected_type)
+	#parameters = get_subtypes(expected_type)
 	#origin_result = _validate_origin(expected_type)
 	origin_result = True
 	if name == 'Any':
@@ -109,7 +108,7 @@ def _validate_origin(item) -> bool:
 	origin = get_typing_origin(item)
 	try:
 		result = isinstance(item, origin)
-	except:
+	except (TypeError, ValueError):
 		result = True
 	return result
 
@@ -143,7 +142,7 @@ def _validate_supports(item, supports_hint) -> bool:
 	try:
 		supports_hint(item)
 		result = True
-	except:
+	except (TypeError, ValueError):
 		result = False
 	return result
 

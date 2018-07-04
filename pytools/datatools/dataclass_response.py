@@ -1,15 +1,12 @@
-__all__ = ['Response']
-from pprint import pprint
+__all__ = ['Response', 'datadict']
 from typing import *
 from dataclasses import dataclass, asdict
-from pytools.datatools.dataclass_validation import validate_item, validate_dataclass
-import json
+from pytools.datatools.dataclass_validation import validate_item
 import yaml
-import schema
-from functools import wraps
 from functools import partial
 
 
+# noinspection PyAttributeOutsideInit
 @dataclass
 class Response:
 	"""
@@ -59,7 +56,7 @@ class Response:
 		# return {k: self.get(k) for k in self.keys()}
 		try:
 			result = asdict(self)
-		except:
+		except (TypeError, ValueError):
 			result = dict()
 			for key in self.fields().keys():
 				value = self.get(key)
@@ -69,6 +66,10 @@ class Response:
 				elif hasattr(value, 'as_dict'): value = value.as_dict()
 				result[key] = value
 		return result
+	def to_yaml(self)->str:
+		data = self.to_dict()
+		yaml_string = yaml.safe_dump(data)
+		return yaml_string
 
 	def is_valid(self) -> bool:
 		result = True
@@ -88,6 +89,7 @@ class Response:
 	def from_dict(cls, data = None, **kwargs):
 		if data is None:
 			data = kwargs
+		# noinspection PyArgumentList
 		return cls(**data)
 
 
@@ -117,6 +119,7 @@ def _wrap_dataclass(cls):
 	allowed = ['__getitem__']
 	for key in dir(Response):
 		if (key.startswith('_') or key in dir(cls)) and key not in allowed: continue
+		# noinspection PyCallByClass
 		setattr(cls, key, object.__getattribute__(Response, key))
 	return cls
 
@@ -147,14 +150,4 @@ def datadict(validate = False):
 
 
 if __name__ == "__main__":
-	@datadict()
-	@dataclass
-	class ABCTest:
-		name: str
-		abc: int
-
-
-	a = ABCTest('A', 123)
-
-	for key in dir(a):
-		print(key, '\t', getattr(a, key))
+	pass

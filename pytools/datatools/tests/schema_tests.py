@@ -55,12 +55,6 @@ class TestSchemaValidation(unittest.TestCase):
 		r4 = validate_item(None, Any)
 		self.assertTrue(r4)
 
-	def test_callable(self):
-		r = validate_item(abs, Callable)
-		self.assertTrue(r)
-		r2 = validate_item(abs, Callable[[Any], bool])
-		self.assertTrue(r2)
-
 	def test_str(self):
 		r = validate_item('abc', str)
 		self.assertTrue(r)
@@ -152,6 +146,7 @@ class DataclassTests(unittest.TestCase):
 		self.assertTrue(r)
 		r2 = validate_dataclass(DataClassCard('asfasf', 'aasdasfaf'))
 		self.assertTrue(r2)
+		# noinspection PyTypeChecker
 		r3 = validate_dataclass(DataClassCard(self, 'as'))
 		self.assertFalse(r3)
 
@@ -181,10 +176,12 @@ class DataclassTests(unittest.TestCase):
 
 		data = CityMetadata(name = city_name, country = country, latitude = latitude, longitude = longitude,
 			population = population, area = area)
+		# noinspection PyTypeChecker
 		data2 = CityMetadata(name = city_name, country = country, latitude = latitude, longitude = longitude,
 			population = population + [(2020, 1234.567)], area = area)
 		data3 = CityMetadata(name = city_name, country = country, latitude = latitude, longitude = longitude,
 			population = population, area = {**area, **{'test': 'abc'}})
+		# noinspection PyTypeChecker
 		data4 = CityMetadata(name = city_name, country = Country('USA'), latitude = latitude, longitude = longitude,
 			population = population, area = area)
 		r = validate_dataclass(data)
