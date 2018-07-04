@@ -3,29 +3,26 @@ from dataclasses import dataclass
 
 BUILTIN_TYPES = [int, float, str, list, dict, tuple, set]
 
-
-def validate_list_of_arguments(seq, type_hint):
-	pass
-
-
 def get_typing_origin(item):
 	if item in BUILTIN_TYPES:
 		return item
-	try:
-		origin = item.__origin__
-	except:
-		origin = None
-	if origin is None:
-		item_name = get_type_name(item)
+	item_name = get_type_name(item)
+	if item_name in {'List', 'Dict', 'Tuple', 'Set',}:
+
 		if item_name == 'List':
 			origin = list
 		elif item_name == 'Dict':
 			origin = dict
 		elif item_name == 'Tuple':
 			origin = tuple
-		elif origin == 'Set':
+		elif item_name == 'Set':
 			origin = set
 		else:
+			origin = None
+	else:
+		try:
+			origin = item.__origin__
+		except:
 			origin = None
 	return origin
 
@@ -33,9 +30,6 @@ def get_typing_origin(item):
 class AnyType:
 	def __call__(*args, **kwargs):
 		return True
-
-
-URL = str
 
 
 def get_subtypes(item: Any) -> Tuple:
@@ -79,7 +73,8 @@ def validate_typing_type(item, expected_type):
 	name = get_type_name(expected_type)
 
 	parameters = get_subtypes(expected_type)
-	result = _validate_origin(expected_type)
+	#origin_result = _validate_origin(expected_type)
+	origin_result = True
 	if name == 'Any':
 		result = True
 	elif name in {'Dict', 'Mapping', 'DefaultDict', 'MutableMapping'}:
@@ -98,8 +93,12 @@ def validate_typing_type(item, expected_type):
 		result = _validate_union(item, expected_type)
 	elif name == 'Optional':
 		result = _validate_optional(item, expected_type)
+	elif name == 'Callable':
+		result = _validate_callable(item, expected_type)
+	else:
+		result = True
 
-	return result
+	return result and origin_result
 
 
 def _validate_optional(item, type_hint) -> bool:
@@ -154,14 +153,13 @@ def _validate_union(item, union):
 	result = any(validate_item(item, i) for i in parameters)
 	return result
 
+
 def _validate_callable(item, callable_hint):
 	# TODO make this a little more advanced
-	if not callable(item):
-		return False
-	else:
-		return True
+	return callable(item)
 
-def validate_dataclass(obj:Any):
+
+def validate_dataclass(obj: Any):
 	for key, value_type in obj.__annotations__.items():
 		value = getattr(obj, key)
 		is_valid = validate_item(value, value_type)
@@ -169,17 +167,7 @@ def validate_dataclass(obj:Any):
 			return False
 	else:
 		return True
-@dataclass
-class SchemaTest:
-	name: str
-	age: int
-	gender: Optional[str]
-	union: Union[int, float]
-	op: Union[str, List[str]]
-	elem: Dict[str, Union[int, float]]
 
 
 if __name__ == "__main__":
-	import typing
-	from pprint import pprint
-	pprint(dir(typing))
+	print(validate_item((1,2,3), Tuple[int,int,int]))

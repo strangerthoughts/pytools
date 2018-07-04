@@ -7,6 +7,8 @@ import json
 import yaml
 import schema
 from functools import wraps
+from functools import partial
+
 
 @dataclass
 class Response:
@@ -16,22 +18,33 @@ class Response:
 		Supports unpacking with '**'
 	"""
 
-
 	def __getitem__(self, item: str) -> Any:
-		if item not in self.keys():
-			message = "'{}' does not exist in the keys.".format(item)
+		try:
+			return getattr(self, item)
+		except AttributeError:
+			message = "'{}' has no key '{}'".format(self.__class__.__name__, item)
 			raise KeyError(message)
-		return getattr(self, item)
+		except TypeError:
+			message = "'{}' must be a string".format(item)
+			raise TypeError(message)
+
+	def __post_init__(self):
+		pass
 
 	def get(self, key: Any, default: Any = None) -> Any:
 		try:
 			value = self[key]
-		except KeyError:
+		except (KeyError, TypeError, AttributeError):
 			value = default
 		return value
 
 	def keys(self) -> KeysView:
-		return self._fields.keys()
+		if not hasattr(self, '_keys'):
+			self._keys = self.fields().keys()
+		return self._keys
+
+	def values(self) -> List[Any]:
+		return [self.get(i) for i in self.keys()]
 
 	def fields(self) -> Dict[str, Any]:
 		if not hasattr(self, '_fields'):
@@ -43,7 +56,7 @@ class Response:
 
 	def to_dict(self) -> Dict:
 		# incase asdict fails for some reason
-		#return {k: self.get(k) for k in self.keys()}
+		# return {k: self.get(k) for k in self.keys()}
 		try:
 			result = asdict(self)
 		except:
@@ -69,16 +82,24 @@ class Response:
 		else:
 			is_valid = True
 
-
 		return is_valid
 
-def wrapper(cls, validate = True):
+	@classmethod
+	def from_dict(cls, data = None, **kwargs):
+		if data is None:
+			data = kwargs
+		return cls(**data)
+
+
+def __wrap_dataclass(cls):
 	if not hasattr(cls, '__getitem__'):
 		cls.__getitem__ = Response.__getitem__
 	if not hasattr(cls, 'get'):
 		cls.get = Response.get
 	if not hasattr(cls, 'keys'):
 		cls.keys = Response.keys
+	if not hasattr(cls, 'values'):
+		cls.values = Response.values
 	if not hasattr(cls, 'fields'):
 		cls.fields = Response.fields
 	if not hasattr(cls, 'items'):
@@ -87,67 +108,53 @@ def wrapper(cls, validate = True):
 		cls.to_dict = Response.to_dict
 	if not hasattr(cls, 'is_valid'):
 		cls.is_valid = Response.is_valid
-
-	if validate:
-		valid = cls.is_valid()
-		if not valid:
-			raise ValueError
+	if not hasattr(cls, 'from_dict'):
+		setattr(cls, 'from_dict', partial(Response.from_dict, cls = cls))
 	return cls
 
-def enforce_types(callable):
 
-	def decorate(func):
-		@wraps(func)
+def _wrap_dataclass(cls):
+	allowed = ['__getitem__']
+	for key in dir(Response):
+		if (key.startswith('_') or key in dir(cls)) and key not in allowed: continue
+		setattr(cls, key, object.__getattribute__(Response, key))
+	return cls
+
+
+def datadict(validate = False):
+	def decorator(dcls):
+		"""
+		@dataclass
+		class DataClass(dcls, Response):
+			def __post_init__(self):
+				if hasattr(self, '__post_init__'):
+					super().__post_init__()
+				if validate and not self.is_valid():
+					raise ValueError
+		return DataClass
+		"""
+		dcls = _wrap_dataclass(dcls)
+
 		def wrapper(*args, **kwargs):
-			obj = func(*args, **kwargs)
-			is_valid = validate_dataclass(obj)
-			pprint(obj.fields())
-			if not is_valid:
-				message = "The dataclass does not match the given schema!"
-				raise ValueError(message)
+			obj = dcls(*args, **kwargs)
+			if validate and not obj.is_valid():
+				raise ValueError
 			return obj
+
 		return wrapper
 
-	return decorate(callable)
-
+	return decorator
 
 
 if __name__ == "__main__":
-	@enforce_types
+	@datadict()
 	@dataclass
-	class CityMetadata(Response):
+	class ABCTest:
 		name: str
-		country: str
-		latitude: float
-		longitude: float
-		population_history: List[Tuple[int, int]]
+		abc: int
 
 
-	population = [
-		(1860, 1174778),
-		(1870, 1478103),
-		(1880, 1911698),
-		(1890, 2507414),
-		(1900, 3437202),
-		(1910, 4766883),
-		(1920, 5620048),
-		(1930, 6930446),
-		(1940, 7454995),
-		(1950, 7891957),
-		(1960, 7781984),
-		(1970, 7894862),
-		(1980, 7071639),
-		(1990, 7322564),
-		(2000, 8008278),
-		(2010, 8175133),
-		(2017, 'abc')
-	]
+	a = ABCTest('A', 123)
 
-	data = CityMetadata(
-		'New York City',
-		'USA',
-		40.5, -40.5,
-		population
-	)
-
-
+	for key in dir(a):
+		print(key, '\t', getattr(a, key))

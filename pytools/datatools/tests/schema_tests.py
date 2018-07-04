@@ -60,16 +60,19 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertTrue(r)
 		r2 = validate_item(abs, Callable[[Any], bool])
 		self.assertTrue(r2)
+
 	def test_str(self):
 		r = validate_item('abc', str)
 		self.assertTrue(r)
 		r2 = validate_item(None, str)
 		self.assertFalse(r2)
+
 	def test_int(self):
 		r = validate_item(123, int)
 		self.assertTrue(r)
 		r2 = validate_item(.123, int)
 		self.assertFalse(r2)
+
 	def test_float(self):
 		r = validate_item(123.3, float)
 		self.assertTrue(r)
@@ -77,6 +80,66 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r2)
 		r3 = validate_item(123E3, float)
 		self.assertTrue(r3)
+
+	def test_supports_float(self):
+		r = validate_item(123.456, SupportsFloat)
+		self.assertTrue(r)
+		r2 = validate_item(456, SupportsFloat)
+		self.assertTrue(r2)
+		r3 = validate_item('0.987485', SupportsFloat)
+		self.assertTrue(r3)
+		r4 = validate_item('abc', SupportsFloat)
+		self.assertFalse(r4)
+		r5 = validate_item(None, SupportsFloat)
+		self.assertFalse(r5)
+		r6 = validate_item(self, SupportsFloat)
+		self.assertFalse(r6)
+	def test_supports_int(self):
+		r = validate_item(123, SupportsInt)
+		self.assertTrue(r)
+		r2 = validate_item(123.456, SupportsInt)
+		self.assertTrue(r2)
+		r3 = validate_item('123', SupportsInt)
+		self.assertTrue(r3)
+		r4 = validate_item('abc', SupportsInt)
+		self.assertFalse(r4)
+		r5 = validate_item(None, SupportsInt)
+		self.assertFalse(r5)
+		r6 = validate_item(self, SupportsInt)
+		self.assertFalse(r6)
+	def test_supports_abs(self):
+		r = validate_item(839234, SupportsAbs)
+		self.assertTrue(r)
+		r2 = validate_item(-123.63463, SupportsAbs)
+		self.assertTrue(r2)
+		r3 = validate_item('314321', SupportsAbs)
+		self.assertFalse(r3)
+
+	def test_callable(self):
+		r = validate_item(abs, Callable)
+		self.assertTrue(r)
+		r2 = validate_item(lambda s: s, Callable)
+		self.assertTrue(r2)
+		r3 = validate_item(int, Callable[[Any], int])
+		self.assertTrue(r3)
+		r4 = validate_item('assfsaf', Callable)
+		self.assertFalse(r4)
+		r5 = validate_item('afasfs', Callable[[int], float])
+		self.assertFalse(r5)
+		class TestA:
+			def __call__(self):
+				pass
+		class TestB:
+			pass
+		r6 = validate_item(TestA(), Callable)
+		self.assertTrue(r6)
+		r7 = validate_item(TestB, Callable)
+		self.assertTrue(r7)
+		r8 = validate_item(TestB(), Callable)
+		self.assertFalse(r8)
+
+
+
 
 class DataclassTests(unittest.TestCase):
 	def test_simple_dataclass(self):
@@ -101,60 +164,29 @@ class DataclassTests(unittest.TestCase):
 			longitude: float
 			population: List[Tuple[int, int]]
 			area: Dict[str, Union[int, float]]
+
 		@dataclass
 		class Country:
 			name: str
 
 		area = {
-			'total': 1213.37,
-			'land': 783.84,
-			'water': 429.53,
-			'metro': 34490
+			'total': 1213.37, 'land': 783.84, 'water': 429.53, 'metro': 34490
 		}
-		population = [
-			(1970, 7894862),
-			(1980, 7071639),
-			(1990, 7322564),
-			(2000, 8008278),
-			(2010, 8175133),
-			(2017, 8660000)
-		]
+		population = [(1970, 7894862), (1980, 7071639), (1990, 7322564), (2000, 8008278), (2010, 8175133),
+			(2017, 8660000)]
 		city_name = 'New York City'
 		country = 'USA'
 		latitude = 40.5
 		longitude = -40.5
 
-		data = CityMetadata(
-			name = city_name,
-			country = country,
-			latitude = latitude, longitude = longitude,
-			population = population,
-			area = area
-		)
-		data2 = CityMetadata(
-			name = city_name,
-			country = country,
-			latitude = latitude,
-			longitude = longitude,
-			population = population + [(2020, 1234.567)],
-			area = area
-		)
-		data3 = CityMetadata(
-			name = city_name,
-			country = country,
-			latitude = latitude,
-			longitude = longitude,
-			population = population,
-			area = {**area, **{'test': 'abc'}}
-		)
-		data4 = CityMetadata(
-			name = city_name,
-			country = Country('USA'),
-			latitude = latitude,
-			longitude = longitude,
-			population = population,
-			area = area
-		)
+		data = CityMetadata(name = city_name, country = country, latitude = latitude, longitude = longitude,
+			population = population, area = area)
+		data2 = CityMetadata(name = city_name, country = country, latitude = latitude, longitude = longitude,
+			population = population + [(2020, 1234.567)], area = area)
+		data3 = CityMetadata(name = city_name, country = country, latitude = latitude, longitude = longitude,
+			population = population, area = {**area, **{'test': 'abc'}})
+		data4 = CityMetadata(name = city_name, country = Country('USA'), latitude = latitude, longitude = longitude,
+			population = population, area = area)
 		r = validate_dataclass(data)
 		r2 = validate_dataclass(data2)
 		r3 = validate_dataclass(data3)
@@ -163,8 +195,6 @@ class DataclassTests(unittest.TestCase):
 		self.assertFalse(r2)
 		self.assertFalse(r3)
 		self.assertFalse(r4)
-
-
 
 
 if __name__ == "__main__":
