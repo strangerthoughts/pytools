@@ -1,13 +1,14 @@
-__all__ = ['ResponseBase']
+__all__ = ['Response']
 from pprint import pprint
 from typing import *
 from dataclasses import dataclass, asdict
+from pytools.datatools.dataclass_validation import validate_item
 import json
 import yaml
 import schema
 
 @dataclass
-class ResponseBase:
+class Response:
 	"""
 		Converts any dataclass into a dict-like object with type-checking.
 		Adds a .is_valid attribute which is True if all values are of the required type.
@@ -21,8 +22,8 @@ class ResponseBase:
 
 	def __post_init__(self):
 		self._fields: Dict[str, Any] = self.__annotations__
-
-		self.is_valid: bool = self.isValid()
+		if hasattr(self, '__setup__'):
+			self.__setup__()
 
 	def __getitem__(self, item: str) -> Any:
 		if item not in self.keys():
@@ -65,48 +66,24 @@ class ResponseBase:
 				result[key] = value
 		return result
 
-	def isValid(self) -> bool:
-		_valid_types = list()
-		for key, value_type in self._fields.items():
+	def is_valid(self) -> bool:
+		result = True
+		for key, value_type in self.fields().items():
 			value = self.get(key)
-			try:
-				is_type = isinstance(value, value_type)
-			except TypeError:
-				# isinstance doesn't work on generics
-				is_type = True
-			_valid_types.append(is_type)
-			if not is_type and (self.strict == 'warning' or self.strict == 'error'):
-				# message = "Expected type '{}' in field '{}', got '{}' instead ('{}')."
-				message = [is_type, key, value_type, value, type(value)]
-				message = '\t'.join(map(str,message))
-				print(message)
-		is_valid = all(_valid_types)
-		if self.strict == 'error':
-			message = "Recieved an invalid response."
-			raise ValueError(message)
-		return is_valid
-
-
-def extract_schema(annotations: Dict[str, Any]):
-	from schema import Schema, And, Optional
-	pprint(annotations)
-	print()
-	converted_schema = dict()
-	for item_key, item_type in annotations.items():
-		if item_type in {str, int, float, bool}:
-			converted_schema[item_key] = item_type
+			vstatus = validate_item(value, value_type)
+			result = result and vstatus
+			if not result:
+				is_valid = False
+				break
 		else:
-			if item_type is Union:
-				converted_schema[item_key] = item_type
+			is_valid = True
 
-	pprint(converted_schema)
 
-def validate_type(item, expected_type):
-	type_name = get_n
+		return is_valid
 
 if __name__ == "__main__":
 	@dataclass
-	class CityMetadata(ResponseBase):
+	class CityMetadata(Response):
 		name: str
 		country: str
 		latitude: float
@@ -131,7 +108,7 @@ if __name__ == "__main__":
 		(1990, 7322564),
 		(2000, 8008278),
 		(2010, 8175133),
-		(2017, 8622698)
+		(2017, 'abc')
 	]
 
 	data = CityMetadata(
@@ -141,4 +118,4 @@ if __name__ == "__main__":
 		population
 	)
 
-	print(data.is_valid)
+	print(data.is_valid())
