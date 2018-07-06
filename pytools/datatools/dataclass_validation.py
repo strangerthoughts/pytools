@@ -169,4 +169,4 @@ def validate_dataclass(obj: Any):
 
 
 if __name__ == "__main__":
-	print(validate_item((1,2,3), Tuple[int,int,int]))
+	pass

@@ -3,7 +3,8 @@ from typing import *
 from dataclasses import dataclass, asdict
 from pytools.datatools.dataclass_validation import validate_item
 import yaml
-from functools import partial
+import json
+from functools import partial, wraps
 
 
 # noinspection PyAttributeOutsideInit
@@ -65,11 +66,20 @@ class Response:
 				elif hasattr(value, 'todict'): value = value.todict()
 				elif hasattr(value, 'as_dict'): value = value.as_dict()
 				result[key] = value
+		result['class'] = self.__class__.__name__
 		return result
-	def to_yaml(self)->str:
+
+	def to_yaml(self) -> str:
 		data = self.to_dict()
-		yaml_string = yaml.safe_dump(data)
+		try:
+			yaml_string = yaml.safe_dump(data)
+		except (TypeError, ValueError):
+			yaml_string = yaml.safe_dump(json.loads(json.dumps(data)))
 		return yaml_string
+
+	def to_json(self)->str:
+		data = self.to_dict()
+		return json.dumps(data, indent = 2)
 
 	def is_valid(self) -> bool:
 		result = True
@@ -115,39 +125,86 @@ def __wrap_dataclass(cls):
 	return cls
 
 
-def _wrap_dataclass(cls):
+def decorator_with_args(decorator_to_enhance):
+	"""
+	This function is supposed to be used as a decorator.
+	It must decorate an other function, that is intended to be used as a decorator.
+	Take a cup of coffee.
+	It will allow any decorator to accept an arbitrary number of arguments,
+	saving you the headache to remember how to do that every time.
+	"""
+
+	# We use the same trick we did to pass arguments
+
+	def decorator_maker(*args, **kwargs):
+		# We create on the fly a decorator that accepts only a function
+		# but keeps the passed arguments from the maker.
+		@wraps(decorator_to_enhance)
+		def decorator_wrapper(func):
+			# We return the result of the original decorator, which, after all,
+			# IS JUST AN ORDINARY FUNCTION (which returns a function).
+			# Only pitfall: the decorator must have this specific signature or it won’t work:
+			return decorator_to_enhance(func, *args, **kwargs)
+
+		return decorator_wrapper
+
+	return decorator_maker
+
+
+T = TypeVar('T')
+S = TypeVar('S', bound = Response)
+
+
+def _wrap_dataclass(cls: T) -> S:
+	intermediate: S = cls
 	allowed = ['__getitem__']
 	for key in dir(Response):
 		if (key.startswith('_') or key in dir(cls)) and key not in allowed: continue
 		# noinspection PyCallByClass
-		setattr(cls, key, object.__getattribute__(Response, key))
-	return cls
+		setattr(intermediate, key, object.__getattribute__(Response, key))
+	return intermediate
 
 
-def datadict(validate = False):
-	def decorator(dcls):
-		"""
-		@dataclass
-		class DataClass(dcls, Response):
-			def __post_init__(self):
-				if hasattr(self, '__post_init__'):
-					super().__post_init__()
-				if validate and not self.is_valid():
-					raise ValueError
-		return DataClass
-		"""
-		dcls = _wrap_dataclass(dcls)
+def datadict(dcls: T) -> Callable[..., S]:
+	dcls = _wrap_dataclass(dcls)
 
-		def wrapper(*args, **kwargs):
-			obj = dcls(*args, **kwargs)
-			if validate and not obj.is_valid():
-				raise ValueError
-			return obj
+	@wraps(dcls)
+	def wrapper(*args, **kwargs) -> S:
+		obj: S = dcls(*args, **kwargs)
+		return obj
 
-		return wrapper
-
-	return decorator
+	return wrapper
 
 
 if __name__ == "__main__":
-	pass
+	@dataclass
+	class TestA:
+		def show_a(self):
+			pass
+
+
+	@dataclass
+	class TestB:
+		def show_b(self):
+			pass
+
+
+	def decorator(cls):
+		class Wrapper(cls, TestA):
+			pass
+
+		return Wrapper
+
+
+	@decorator
+	class TestC:
+		def show_c(self):
+			pass
+
+
+	c = TestC()
+	print(c.show_a())
+
+
+
+

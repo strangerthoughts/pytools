@@ -107,12 +107,19 @@ class TestDataclassResponseBase(unittest.TestCase):
 
 		self.assertDictEqual(expected_city_value, self.city.to_dict())
 		self.assertDictEqual(expected_country_value, self.country.to_dict())
+
 	def test_dataclass_from_dict(self):
 		data = self.city.to_dict()
 		obj = City.from_dict(data)
 		self.assertEqual(self.city, obj)
 		obj2 = City.from_dict(**data)
 		self.assertEqual(self.city, obj2)
+
+	def dataclass_to_yaml(self):
+		expected_string = ""
+		yaml_string = self.country.to_yaml()
+
+		self.assertEqual(expected_string, yaml_string)
 
 class TestDataclassWrapper(TestDataclassResponseBase, unittest.TestCase):
 	def setUp(self):
@@ -135,28 +142,31 @@ class TestDataclassWrapper(TestDataclassResponseBase, unittest.TestCase):
 			population = 328000000,
 			cities = [self.city]
 		)
+
 	def test_dataclass_validation(self):
 		data = self.city.to_dict()
 		data['area']['moon'] = 'not valid'
 		with self.assertRaises(ValueError):
 			CityWrapped(**data)
+
 	def test_dataclass_from_dict(self):
 		data = self.city.to_dict()
 		obj = self.city.from_dict(data)
 		self.assertEqual(self.city, obj)
-		#obj2 = self.city.from_dict().from_dict(**data)
-		#self.assertEqual(self.city, obj2)
+# obj2 = self.city.from_dict().from_dict(**data)
+# self.assertEqual(self.city, obj2)
+
 
 class TestWrappedVsInherited(unittest.TestCase):
 	def setUp(self):
 		population = [(1970, 7894862), (1980, 7071639), (1990, 7322564), (2000, 8008278), (2010, 8175133),
 			(2017, 8660000)]
 		area = {
-				'total': 1213.37,
-				'land':  783.84,
-				'water': 429.53,
-				'metro': 34490
-			}
+			'total': 1213.37,
+			'land':  783.84,
+			'water': 429.53,
+			'metro': 34490
+		}
 		self.basic_city = City(
 			name = 'New York City',
 			latitude = 40.0,
