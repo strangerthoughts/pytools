@@ -6,7 +6,18 @@ import yaml
 import json
 from functools import partial, wraps
 
-
+def coerce_to_safe_value(item:Any, safe = False)->Any:
+	if hasattr(item, 'asdict'):
+		item = item.asdict()
+	elif hasattr(item, 'to_dict'):
+		item = item.to_dict()
+	elif hasattr(item, 'todict'):
+		item = item.todict()
+	elif hasattr(item, 'as_dict'):
+		item = item.as_dict()
+	if safe and not isinstance(item, (list, set, str, int, float, str, dict)):
+		item = str(item)
+	return item
 # noinspection PyAttributeOutsideInit
 @dataclass
 class Response:
@@ -52,28 +63,28 @@ class Response:
 	def items(self) -> List[Tuple[str, Any]]:
 		return [(k, self.get(k)) for k in self.keys()]
 
-	def to_dict(self) -> Dict:
+	def to_dict(self, safe = False) -> Dict:
 		# incase asdict fails for some reason
 		# return {k: self.get(k) for k in self.keys()}
+		# use safe = True for compatibility with json and yaml.
 		try:
 			result = asdict(self)
 		except (TypeError, ValueError):
 			result = dict()
 			for key in self.fields().keys():
 				value = self.get(key)
-				if hasattr(value, 'asdict'): value = value.asdict()
-				elif hasattr(value, 'to_dict'): value = value.to_dict()
-				elif hasattr(value, 'todict'): value = value.todict()
-				elif hasattr(value, 'as_dict'): value = value.as_dict()
+				if isinstance(value, (list,set,tuple)):
+					value = [coerce_to_safe_value(i, safe) for i in value]
 				result[key] = value
-		result['class'] = self.__class__.__name__
+		result = {k:coerce_to_safe_value(v, safe) for k, v in result.items()}
+		result['__class__'] = self.__class__.__name__
 		return result
 
 	def to_yaml(self) -> str:
-		data = self.to_dict()
+		data = self.to_dict(safe = True)
 		try:
 			yaml_string = yaml.safe_dump(data)
-		except (TypeError, ValueError):
+		except (TypeError, ValueError, yaml.YAMLError):
 			yaml_string = yaml.safe_dump(json.loads(json.dumps(data)))
 		return yaml_string
 
