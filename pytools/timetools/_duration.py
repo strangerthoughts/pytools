@@ -102,10 +102,20 @@ class Duration(pendulum.Duration):
 		-------
 		Duration
 		"""
-
-		result = pendulum.parse(string)
-
-		return cls.from_object(result)
+		if ':' in string:
+			times = string.split(':')
+			if len(times) == 1:
+				hour = minute = 0
+				second = float(times[0])
+			elif len(times) == 2:
+				hour = 0
+				minute, second = map(float,times) # use float to preserve milliseconds
+			else:
+				hour, minute, second = map(float,times)
+			return cls(hours = hour, minutes =  minute, seconds = second)
+		else:
+			result = pendulum.parse(string)
+			return cls.from_object(result)
 
 	@classmethod
 	def from_object(cls, obj: Any) -> 'Duration':
