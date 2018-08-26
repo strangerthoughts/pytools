@@ -1,5 +1,6 @@
 from pprint import pprint
 from typing import Any, Dict, List, Tuple, KeysView
+from dataclasses import dataclass
 class ResponseBase:
 	"""
 		Converts any dataclass into a dict-like object with type-checking.
@@ -11,11 +12,6 @@ class ResponseBase:
 	# 'warning' - print a warning message
 	# 'error' - raise an error.
 	strict = 'silent'  #
-
-	def __post_init__(self):
-		self._fields: Dict[str, Any] = self.__annotations__
-		pprint(self._fields)
-		self.is_valid: bool = self.isValid()
 
 	def __getitem__(self, item: str) -> Any:
 		if item not in self.keys():
@@ -46,6 +42,10 @@ class ResponseBase:
 		# incase asdict fails for some reason
 		return {k: self.get(k) for k in self.keys()}
 
+	@property
+	def _fields(self)->Dict:
+		return self.__annotations__
+	@property
 	def is_valid(self) -> bool:
 
 		_valid_types = list()
@@ -69,15 +69,29 @@ class ResponseBase:
 		return is_valid
 
 
-def dictlike(cls, strict = 'silent'):
-	cls.strict = strict
-	cls.__post_init__ = ResponseBase.__post_init__
+def dictlike(cls, *args, **kwargs):
+
+	cls = _dataclass(cls, *args, **kwargs)
+	cls.strict = False
 	cls.__getitem__ = ResponseBase.__getitem__
 	cls.get = ResponseBase.get
 	cls.keys = ResponseBase.keys
 	cls.fields = ResponseBase.fields
 	cls.items = ResponseBase.items
 	cls.asdict = ResponseBase.asdict
-	cls.toDict = ResponseBase.toDict
-	cls.isValid = ResponseBase.isValid
+	cls.to_dict = ResponseBase.to_dict
+	cls.is_valid = ResponseBase.is_valid
+	cls._fields = ResponseBase._fields
 	return cls
+_dataclass = dataclass
+dataclass = dictlike
+
+if __name__ == "__main__":
+	@dataclass
+	class Point:
+		x:int
+		y:float
+
+	p = Point(12,13.123)
+
+	print(p.to_dict())
