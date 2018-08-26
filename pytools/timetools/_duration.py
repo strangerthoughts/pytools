@@ -261,6 +261,12 @@ class Duration(pendulum.Duration):
 		"""
 		return self.total_days() / 365
 
+	def to_json(self)->str:
+		return str(self)
+	def to_yaml(self)->str:
+		return self.to_json()
+	def json_repr(self):
+		return self.to_json()
 
 if __name__ == "__main__":
 	pass

@@ -7,7 +7,9 @@ import json
 from functools import partial, wraps
 
 def coerce_to_safe_value(item:Any, safe = False)->Any:
-	if hasattr(item, 'asdict'):
+	if hasattr(item, 'json_repr'):
+		item = item.json_repr()
+	elif hasattr(item, 'asdict'):
 		item = item.asdict()
 	elif hasattr(item, 'to_dict'):
 		item = item.to_dict()
@@ -77,15 +79,15 @@ class Response:
 					value = [coerce_to_safe_value(i, safe) for i in value]
 				result[key] = value
 		result = {k:coerce_to_safe_value(v, safe) for k, v in result.items()}
-		result['__class__'] = self.__class__.__name__
+		result['instanceOf'] = self.__class__.__name__
 		return result
 
-	def to_yaml(self) -> str:
+	def to_yaml(self, style = None) -> str:
 		data = self.to_dict(safe = True)
 		try:
-			yaml_string = yaml.safe_dump(data)
+			yaml_string = yaml.safe_dump(data, default_flow_style = style)
 		except (TypeError, ValueError, yaml.YAMLError):
-			yaml_string = yaml.safe_dump(json.loads(json.dumps(data)))
+			yaml_string = yaml.safe_dump(json.loads(json.dumps(data)), default_flow_style = style)
 		return yaml_string
 
 	def to_json(self)->str:
