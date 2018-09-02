@@ -179,6 +179,7 @@ def _wrap_dataclass(cls: T) -> S:
 
 
 def datadict(dcls: T) -> Callable[..., S]:
+	dcls = dataclass(dcls)
 	dcls = _wrap_dataclass(dcls)
 
 	@wraps(dcls)
@@ -190,34 +191,16 @@ def datadict(dcls: T) -> Callable[..., S]:
 
 
 if __name__ == "__main__":
-	@dataclass
+	@datadict
+	#@dataclass
 	class TestA:
-		def show_a(self):
-			pass
-
-
-	@dataclass
-	class TestB:
-		def show_b(self):
-			pass
-
-
-	def decorator(cls):
-		class Wrapper(cls, TestA):
-			pass
-
-		return Wrapper
-
-
-	@decorator
-	class TestC:
-		def show_c(self):
-			pass
-
-
-	c = TestC()
-	print(c.show_a())
-
+		a:str
+		b:int
+		c:float
+	t = TestA('abc', 12, 3.14)
+	print(t)
+	from pprint import pprint
+	pprint(t.to_dict())
 
 
 

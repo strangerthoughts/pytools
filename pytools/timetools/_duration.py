@@ -251,7 +251,8 @@ class Duration(pendulum.Duration):
 		if is_negative:
 			isostring = '-' + isostring
 		return isostring
-
+	def to_timedelta(self)->datetime.timedelta:
+		return self.as_timedelta()
 	def total_years(self) -> float:
 		"""
 			Returns the total number of years contained in the duration as a float.
@@ -269,4 +270,5 @@ class Duration(pendulum.Duration):
 		return self.to_json()
 
 if __name__ == "__main__":
-	pass
+	D = Duration("P13DT5S")
+	print(repr(D))
