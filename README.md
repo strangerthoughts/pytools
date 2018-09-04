@@ -1,6 +1,7 @@
 # Pytools
-A colleciton of tools to make common tasks simpler and more convienient.
+A collection of tools to make common tasks simpler and more convienient.
 It is organized into several subpackages:
+
 - datatools
 - filetools
 - geotools
@@ -10,7 +11,8 @@ It is organized into several subpackages:
 
 ### Datatools
 This package contains an overwritten `dataclass` function as a drop-in replacement for `dataclasses.dataclass`
-This dataclass addes dictionary-like properties to newly created dataclasses.
+adding dictionary-like properties to newly created dataclasses.
+
 #### Sample Usage:
 
 ```python
@@ -31,7 +33,7 @@ class Example:
 ```
 
 ### Filetools
-This package has a few functions usefull unctions when operating with system files.
+This package has a few functions useful unctions when operating with system files.
 
 Available Functions:
 
@@ -54,13 +56,14 @@ Useful functions:
 
     Converts a number or numerical string to a more easily-readable format.
     ```python
-    >>> human_readable(12345.678, base = 'K')
+    >>> from pytools import numbertools
+    >>> numbertools.human_readable(12345.678, base = 'K')
     '12.35K'
 
-    >>> human_readable(10.456E-5, base = 'u')
+    >>> numbertools.human_readable(10.456E-5, base = 'u')
     '104.56u'
 
-    >> >human_readable(10.4561940387432E-5, precision = 4)
+    >>> numbertools.human_readable(10.4561940387432E-5, precision = 4)
     '104.5619u'
     ```
  
@@ -68,27 +71,31 @@ Useful functions:
 
     Attempts to convert the input into a number
     ```python
-    >>> to_number('187')    
+    >>> from pytools import numbertools
+    >>> numbertools.to_number('187')    
     187
   
-    >>> to_number('abcdef')
+    >>> numbertools.to_number('abcdef')
     nan
   
+    >> numbertools.to_number('asdas', default = 0)
+    0
     ```
 
 - is_number
 
     Tests if the input string is a number. Works with floats.
     ```python
-    >>> is_number('123.456')
+    >>> from pytools import numbertools
+    >>> numbertools.is_number('123.456')
     True
 
-    >>> is_number('abc')
+    >>> numbertools.is_number('abc')
     False
     ```
 
 ### tabletools
-Contains the Table class, a drop-in replacement for a pandas DataFrame with additional methods for selecting data.
+Contains the Table class, a drop-in replacement for `pandas.DataFrame` with additional methods for selecting data.
 
 ### timetools
 Contains time and date methods with simple importing and exporting methods.
@@ -103,7 +110,6 @@ Available Classes:
     >>> timestamp = timetools.Timestamp.now()
     >>> str(timestamp)
     '2018-09-03T20:22:05.405436-04:00'
-
     ```
     
 - Duration
@@ -112,7 +118,7 @@ Available Classes:
     ```python
     >>> from pytools import timetools
     >>> duration = timetools.Duration('P11DT4H3S')
-    Duration('P1W4DT4H3.0S')
+    'Duration("P1W4DT4H3.0S")'
     ```
     
 - Timer

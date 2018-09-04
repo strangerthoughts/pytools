@@ -198,9 +198,9 @@ if __name__ == "__main__":
 		b:int
 		c:float
 	t = TestA('abc', 12, 3.14)
-	print(t)
+	#print(t)
 	from pprint import pprint
-	pprint(t.to_dict())
+	#pprint(t.to_dict())
 
 
 
