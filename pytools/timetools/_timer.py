@@ -67,7 +67,7 @@ class Timer:
 		perloop = self.duration() / done
 		remaining = (total - done) * perloop
 		if iso:
-			remaining = Duration(remaining, 'Seconds').to_iso()
+			remaining = Duration(remaining).to_iso()
 		return remaining
 
 	def reset(self) -> None:

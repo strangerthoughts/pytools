@@ -126,7 +126,7 @@ class Timestamp(pendulum.DateTime):
 		month, day, year = list(map(int, dates.split('/')))
 
 		if times:
-			hour, minute, second, *other = list(map(int, times.split(':')))
+			hour, minute, second, *_ = list(map(int, times.split(':')))
 		else:
 			hour, minute, second = 0, 0, 0
 
@@ -167,7 +167,7 @@ class Timestamp(pendulum.DateTime):
 	def from_string(cls, value: str) -> 'Timestamp':
 		try:
 			obj = pendulum.parse(value)
-		except:
+		except (ValueError):
 			try:
 				obj = cls.from_american_date(value)
 			except:

@@ -7,9 +7,6 @@ from typing import List, Any, Union
 
 
 class DataTable:
-	"""
-
-	"""
 
 	def __init__(self, io, **kwargs):
 		self.index_map = dict()

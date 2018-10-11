@@ -9,11 +9,11 @@ It is organized into several subpackages:
 - tabletools
 - timetools
 
-### Datatools
+## Datatools
 This package contains an overwritten `dataclass` function as a drop-in replacement for `dataclasses.dataclass`
 adding dictionary-like properties to newly created dataclasses.
 
-#### Sample Usage:
+### Sample Usage:
 
 ```python
 from pytools.datatools import dataclass
@@ -32,7 +32,7 @@ class Example:
 {first: abc, instanceOf: Example, second: 123, third: 3.14} 
 ```
 
-### Filetools
+###Filetools
 This package has a few functions useful unctions when operating with system files.
 
 Available Functions:
@@ -48,7 +48,7 @@ Available Functions:
 
     Ensures that the given folder exists.
 
-### Numbertools
+## Numbertools
 Common number operations
 
 Useful functions:
@@ -94,10 +94,10 @@ Useful functions:
     False
     ```
 
-### tabletools
+## tabletools
 Contains the Table class, a drop-in replacement for `pandas.DataFrame` with additional methods for selecting data.
 
-### timetools
+## timetools
 Contains time and date methods with simple importing and exporting methods.
 
 Available Classes:

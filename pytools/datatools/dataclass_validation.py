@@ -1,4 +1,4 @@
-from typing import *
+from typing import Any, Tuple
 
 BUILTIN_TYPES = [int, float, str, list, dict, tuple, set]
 
@@ -93,7 +93,7 @@ def validate_typing_type(item, expected_type):
 	elif name == 'Optional':
 		result = _validate_optional(item, expected_type)
 	elif name == 'Callable':
-		result = _validate_callable(item, expected_type)
+		result = _validate_callable(item)
 	else:
 		result = True
 
@@ -153,19 +153,23 @@ def _validate_union(item, union):
 	return result
 
 
-def _validate_callable(item, callable_hint):
+def _validate_callable(item):
 	# TODO make this a little more advanced
 	return callable(item)
 
 
-def validate_dataclass(obj: Any):
+def validate_dataclass(obj: Any)->bool:
+
 	for key, value_type in obj.__annotations__.items():
 		value = getattr(obj, key)
 		is_valid = validate_item(value, value_type)
 		if not is_valid:
-			return False
+			result = False
+			break
 	else:
-		return True
+		result =  True
+
+	return result
 
 
 if __name__ == "__main__":
