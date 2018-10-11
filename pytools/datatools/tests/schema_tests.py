@@ -88,6 +88,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r5)
 		r6 = validate_item(self, SupportsFloat)
 		self.assertFalse(r6)
+
 	def test_supports_int(self):
 		r = validate_item(123, SupportsInt)
 		self.assertTrue(r)
@@ -101,6 +102,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r5)
 		r6 = validate_item(self, SupportsInt)
 		self.assertFalse(r6)
+
 	def test_supports_abs(self):
 		r = validate_item(839234, SupportsAbs)
 		self.assertTrue(r)
@@ -120,19 +122,20 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r4)
 		r5 = validate_item('afasfs', Callable[[int], float])
 		self.assertFalse(r5)
+
 		class TestA:
 			def __call__(self):
 				pass
+
 		class TestB:
 			pass
+
 		r6 = validate_item(TestA(), Callable)
 		self.assertTrue(r6)
 		r7 = validate_item(TestB, Callable)
 		self.assertTrue(r7)
 		r8 = validate_item(TestB(), Callable)
 		self.assertFalse(r8)
-
-
 
 
 class DataclassTests(unittest.TestCase):

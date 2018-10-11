@@ -1,26 +1,23 @@
 import unittest
-from dataclasses import dataclass
+#from dataclasses import dataclass
 from typing import List, Tuple, Union, Dict
-from pytools.datatools.dataclass_response import Response, datadict
+from pytools.datatools import dataclass
 
 
 @dataclass
-class City(Response):
+class City:
 	name: str
 	latitude: float
 	longitude: float
 	population: List[Tuple[int, int]]
 	area: Dict[str, Union[int, float]]
 
-
 @dataclass
-class Country(Response):
+class Country:
 	name: str
 	population: int
 	cities: List[City]
 
-
-@datadict(validate = True)
 @dataclass
 class CityWrapped:
 	name: str
@@ -29,8 +26,6 @@ class CityWrapped:
 	population: List[Tuple[int, int]]
 	area: Dict[str, Union[int, float]]
 
-
-@datadict()
 @dataclass
 class CountryWrapped:
 	name: str

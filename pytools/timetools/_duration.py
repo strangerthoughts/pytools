@@ -44,7 +44,6 @@ class Duration(pendulum.Duration):
 		if value is not None:
 			return cls.parse(value)
 
-
 		return super().__new__(cls, **kwargs)
 
 	# self.duration = pendulum.duration(**duration_keys)
@@ -109,10 +108,10 @@ class Duration(pendulum.Duration):
 				second = float(times[0])
 			elif len(times) == 2:
 				hour = 0
-				minute, second = map(float,times) # use float to preserve milliseconds
+				minute, second = map(float, times)  # use float to preserve milliseconds
 			else:
-				hour, minute, second = map(float,times)
-			return cls(hours = hour, minutes =  minute, seconds = second)
+				hour, minute, second = map(float, times)
+			return cls(hours = hour, minutes = minute, seconds = second)
 		else:
 			result = pendulum.parse(string)
 			return cls.from_object(result)
@@ -154,9 +153,11 @@ class Duration(pendulum.Duration):
 			'microseconds': microseconds
 		}
 		return cls.from_dict(**result)
+
 	@classmethod
-	def from_timedelta(cls, obj:datetime.timedelta)->'Duration':
+	def from_timedelta(cls, obj: datetime.timedelta) -> 'Duration':
 		return cls.from_object(obj)
+
 	@classmethod
 	def from_tuple(cls, value: Tuple) -> 'Duration':
 		"""
@@ -251,8 +252,10 @@ class Duration(pendulum.Duration):
 		if is_negative:
 			isostring = '-' + isostring
 		return isostring
-	def to_timedelta(self)->datetime.timedelta:
+
+	def to_timedelta(self) -> datetime.timedelta:
 		return self.as_timedelta()
+
 	def total_years(self) -> float:
 		"""
 			Returns the total number of years contained in the duration as a float.
@@ -262,12 +265,15 @@ class Duration(pendulum.Duration):
 		"""
 		return self.total_days() / 365
 
-	def to_json(self)->str:
+	def to_json(self) -> str:
 		return str(self)
-	def to_yaml(self)->str:
+
+	def to_yaml(self) -> str:
 		return self.to_json()
+
 	def json_repr(self):
 		return self.to_json()
+
 
 if __name__ == "__main__":
 	D = Duration("P13DT5S")
