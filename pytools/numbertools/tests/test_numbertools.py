@@ -1,10 +1,15 @@
+"""
+	Suite of tests for numbertools
+"""
 import unittest
 
 from pytools.numbertools import get_base, get_multiplier, human_readable, is_number, to_number
 
 
 class TestNumbertools(unittest.TestCase):
+	""" Class to test numbertools"""
 	def test_get_base(self):
+		""" Tests get base"""
 		self.assertEqual('K', get_base(1000))
 		self.assertEqual('n', get_base(1E-9))
 		self.assertEqual('', get_base(0))
@@ -13,6 +18,7 @@ class TestNumbertools(unittest.TestCase):
 		self.assertEqual('u', get_base(1E-6))
 
 	def test_get_multiplier(self):
+		"""tests get multiplier"""
 		self.assertEqual(get_multiplier('n'), 1E-9)
 		self.assertEqual(get_multiplier('K'), 1000)
 		self.assertEqual(get_multiplier('T'), 1000000000000)
@@ -34,6 +40,7 @@ class TestNumbertools(unittest.TestCase):
 
 
 	def test_is_number(self):
+		""" Tests is_number"""
 		self.assertTrue(is_number(123.456))
 		self.assertTrue(is_number('123.456'))
 		self.assertFalse(is_number('abc'))
@@ -45,6 +52,7 @@ class TestNumbertools(unittest.TestCase):
 		self.assertListEqual([True, False, False, True, False], is_number([18, "18.1.1", self, "11.4", "11/4"]))
 
 	def test_to_number(self):
+		# Tests to_number
 		self.assertEqual(123.456, to_number('123.456'))
 		self.assertEqual(1.43E-4, to_number('.000143'))
 		self.assertEqual(12, to_number('12.000'))

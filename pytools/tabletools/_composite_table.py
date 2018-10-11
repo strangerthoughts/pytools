@@ -1,7 +1,13 @@
+"""
+	Implements a drop-in replacement for pandas.DataFrame designed for more convienient insertions and retrieval of
+	single cells. Deprecated in favor of newer pandas updates.
+"""
+from .table_methods import load_table
 import os
 import pandas
-from typing import *
+from typing import List, Union, Dict, Iterable
 from pathlib import Path
+
 GenericTable = Union[pandas.DataFrame, 'Table']
 
 ColumnLabel = Union[str, int]
@@ -25,8 +31,6 @@ class Table:
 		sheetname: string, int; default 0
 			Indicates a specific sheet to load when loading
 			an Excel spreadsheet
-				
-		
 	"""
 
 	def __getattr__(self, key):
@@ -43,7 +47,6 @@ class Table:
 		else:
 			kwargs['sheetname'] = kwargs.get('sheetname', 0)
 		kwargs['skiprows'] = kwargs.get('skiprows')
-
 
 		self.df: pandas.DataFrame = self._parseInput(io, **kwargs)
 		self.original_indexer = kwargs.get('indexer', True)
@@ -240,7 +243,7 @@ class Table:
 				self._load_file : pandas.DataFrame or dict(sheetname: pandas.DataFrame)
 		"""
 		if io.is_file():
-			df = self._load_file(io, **kwargs)
+			df = load_table(io, **kwargs)
 		elif io.is_dir():  # path is a folder
 			directory = io
 			_load_dfs = list()
@@ -254,30 +257,7 @@ class Table:
 
 		return df
 
-	def _load_file(self, file_name: Path, **kwargs):
-		""" Returns a dataframe of the suppled file
-		"""
-		extension = file_name.suffix
-		default_args = {
-			'.csv': {'delimiter': ','},
-			'.tsv': {'delimiter': '\t'},
-			'.fsv': {'delimiter': '\f'}
-		}
 
-		# arguments = self._cleanArguments(extension, arguments)
-		file_name = str(file_name.absolute())
-		if extension in {'.xls', '.xlsx', '.xlsm'}:
-
-			df = pandas.read_excel(file_name, **kwargs)
-		elif extension in {'.csv', '.tsv', '.fsv', '.txt'}:
-			arguments = {**default_args.get(extension), **kwargs}
-			if 'sheetname' in arguments: arguments.pop('sheetname')
-			df = pandas.read_table(file_name, **arguments)
-		elif extension == '.pkl':
-			df = pandas.read_pickle(file_name)
-		else:
-			raise NameError("{} does not have a valid extension!".format(file_name))
-		return df
 
 	def save(self, save_file: str, **kwargs):
 		""" Saves the database. Keyword arguements will be passed to pandas.

@@ -1,3 +1,7 @@
+"""
+	Convienient methods for converting between numbers and strings and number representations.
+"""
+
 import math
 from numbers import Number
 
@@ -8,6 +12,7 @@ NumberType = Union[int,float]
 MU = "μ"
 @dataclass
 class Scale:
+	""" Provides an easy method of checking the magnitude of numbers."""
 	prefix: str
 	suffix: str
 	multiplier: float
@@ -48,9 +53,10 @@ REVERSED_SCALE = sorted(SCALE, reverse = True)
 
 
 def is_null(number: Any)->bool:
+	""" Checks if a value represents a null value."""
 	try:
 		result = number is None or math.isnan(float(number))
-	except:
+	except (TypeError, ValueError):
 		result = True
 
 	return result

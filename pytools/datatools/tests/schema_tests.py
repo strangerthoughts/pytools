@@ -1,11 +1,14 @@
+""" Suite for testing the validation functions. May be replaced by attrs at a later date."""
 from dataclasses import dataclass
-from typing import *
+from typing import List, Dict, Optional, Union, Tuple, SupportsFloat, SupportsInt, SupportsAbs, Callable, Any
 from pytools.datatools.dataclass_validation import validate_item, validate_dataclass
 import unittest
 
 
 class TestSchemaValidation(unittest.TestCase):
+	""" Class to test validation functions."""
 	def test_dict_level_0(self):
+		""" Tests dict"""
 		item = {'a': 1, 'b': 2}
 		r = validate_item(item, Dict)
 		self.assertTrue(r)
@@ -13,6 +16,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertTrue(r)
 
 	def test_optional(self):
+		"""Test optional"""
 		r = validate_item('abc', Optional[str])
 		self.assertTrue(r)
 		r2 = validate_item(None, Optional[str])
@@ -21,6 +25,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r3)
 
 	def test_union(self):
+		""" Tests Union of types"""
 		r = validate_item(123.0, Union[str, float])
 		self.assertTrue(r)
 		r2 = validate_item('abc', Union[str, float])
@@ -33,6 +38,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r5)
 
 	def test_tuple(self):
+		""" Tests Tuple"""
 		r = validate_item((1, 2, 3), Tuple[int, int, int])
 		self.assertTrue(r)
 		r2 = validate_item((1, 'b', 3), Tuple[int, str, int])
@@ -46,6 +52,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r5)
 
 	def test_any(self):
+		""" Tests Any"""
 		r = validate_item(self, Any)
 		self.assertTrue(r)
 		r1 = validate_item('a', Any)
@@ -56,18 +63,21 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertTrue(r4)
 
 	def test_str(self):
+		""" Tests str"""
 		r = validate_item('abc', str)
 		self.assertTrue(r)
 		r2 = validate_item(None, str)
 		self.assertFalse(r2)
 
 	def test_int(self):
+		""" Tests int"""
 		r = validate_item(123, int)
 		self.assertTrue(r)
 		r2 = validate_item(.123, int)
 		self.assertFalse(r2)
 
 	def test_float(self):
+		""" Tests float"""
 		r = validate_item(123.3, float)
 		self.assertTrue(r)
 		r2 = validate_item(123, float)
@@ -76,6 +86,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertTrue(r3)
 
 	def test_supports_float(self):
+		"""Tests Supports float"""
 		r = validate_item(123.456, SupportsFloat)
 		self.assertTrue(r)
 		r2 = validate_item(456, SupportsFloat)
@@ -90,6 +101,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r6)
 
 	def test_supports_int(self):
+		""" Tests supports int"""
 		r = validate_item(123, SupportsInt)
 		self.assertTrue(r)
 		r2 = validate_item(123.456, SupportsInt)
@@ -104,6 +116,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r6)
 
 	def test_supports_abs(self):
+		""" Tests supports abs"""
 		r = validate_item(839234, SupportsAbs)
 		self.assertTrue(r)
 		r2 = validate_item(-123.63463, SupportsAbs)
@@ -112,6 +125,7 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r3)
 
 	def test_callable(self):
+		""" Tests callable"""
 		r = validate_item(abs, Callable)
 		self.assertTrue(r)
 		r2 = validate_item(lambda s: s, Callable)
@@ -124,10 +138,12 @@ class TestSchemaValidation(unittest.TestCase):
 		self.assertFalse(r5)
 
 		class TestA:
+			"""dummy class"""
 			def __call__(self):
 				pass
 
 		class TestB:
+			""" dummy class"""
 			pass
 
 		r6 = validate_item(TestA(), Callable)
@@ -139,9 +155,12 @@ class TestSchemaValidation(unittest.TestCase):
 
 
 class DataclassTests(unittest.TestCase):
+	""" Tests dataclass validation"""
 	def test_simple_dataclass(self):
+		""" Tests a dataclass with only a few attributes"""
 		@dataclass
 		class DataClassCard:
+			""" dummy dataclass"""
 			rank: str
 			suit: str
 
@@ -154,8 +173,10 @@ class DataclassTests(unittest.TestCase):
 		self.assertFalse(r3)
 
 	def test_medium_dataclass(self):
+		""" Tests a class with a few more attributes"""
 		@dataclass
 		class CityMetadata:
+			"""dummy dataclass"""
 			name: str
 			country: str
 			latitude: float
@@ -165,6 +186,7 @@ class DataclassTests(unittest.TestCase):
 
 		@dataclass
 		class Country:
+			""" dummy attribute"""
 			name: str
 
 		area = {

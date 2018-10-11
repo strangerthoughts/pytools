@@ -1,5 +1,6 @@
-
-from ._timestamp import Timestamp
+"""
+	A few code snippets usefull for time-based operations.
+"""
 
 def elapsed(loop_number, loop_block, total_loops, timer):
 	""" Prints a line indicating the elapsed progress of the loop described
@@ -27,6 +28,3 @@ def elapsed(loop_number, loop_block, total_loops, timer):
 				left = time_left),
 				flush = True
 			)
-
-def now():
-	return Timestamp.now()

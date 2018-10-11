@@ -1,3 +1,6 @@
+"""
+	A simple timer for tracking how long snippets of code take to run.
+"""
 import time
 from typing import Callable, Union, Dict, Tuple
 import datetime
@@ -136,7 +139,7 @@ class Timer:
 			loops = 100
 		_results = list()
 
-		for i in range(loops):
+		for _ in range(loops):
 			self.reset()
 			func(*args, **kwargs)
 			_results.append(self.duration())
@@ -188,6 +191,7 @@ class Timer:
 		return Duration(datetime.timedelta(seconds = seconds), unit = 'Seconds').toiso()
 
 	def show(self, label: str = None) -> None:
+		""" Prints the current time elapsed to stdout."""
 		if label is not None:
 			label += ': '
 		else:

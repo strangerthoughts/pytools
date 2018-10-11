@@ -13,11 +13,13 @@ from dataclasses import dataclass
 
 @dataclass
 class TimedeltaInformation:
+	"""Helps keep track of data being passed around."""
 	days: int
 	seconds: int
 	microseconds: int
 
 	def to_dict(self):
+		""" Converts `self` to a dict"""
 		data = {
 			'days':         self.days,
 			'seconds':      self.seconds,
@@ -27,6 +29,10 @@ class TimedeltaInformation:
 
 
 class Duration(pendulum.Duration):
+	"""
+		A drop-in replacement for datetime and Pendulum. Contains a number or
+		useful methods for time timedelta representations.
+	"""
 	def __new__(cls, value = None, **kwargs):
 		"""
 			Keyword Arguments
@@ -83,10 +89,12 @@ class Duration(pendulum.Duration):
 
 	@classmethod
 	def from_dict(cls, **keys) -> 'Duration':
+		""" initializes a `Duration` object from a dictionary using `**` notation."""
 		return cls(**keys)
 
 	@classmethod
 	def from_keys(cls, keys: Dict[str, int]) -> 'Duration':
+		""" initializes a `Duration` object from a dictionary."""
 		return cls(**keys)
 
 	@classmethod
@@ -156,6 +164,7 @@ class Duration(pendulum.Duration):
 
 	@classmethod
 	def from_timedelta(cls, obj: datetime.timedelta) -> 'Duration':
+		""" Wrapper around .from_object that allows explicit initialization from a timedelta."""
 		return cls.from_object(obj)
 
 	@classmethod
@@ -254,6 +263,7 @@ class Duration(pendulum.Duration):
 		return isostring
 
 	def to_timedelta(self) -> datetime.timedelta:
+		""" Returns a timedelta equivilant to `self`"""
 		return self.as_timedelta()
 
 	def total_years(self) -> float:
@@ -266,12 +276,11 @@ class Duration(pendulum.Duration):
 		return self.total_days() / 365
 
 	def to_json(self) -> str:
+		""" Returns a json-safe representation of `self`"""
 		return str(self)
 
 	def to_yaml(self) -> str:
-		return self.to_json()
-
-	def json_repr(self):
+		""" Returns a yaml representation of `self`"""
 		return self.to_json()
 
 

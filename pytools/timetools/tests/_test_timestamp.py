@@ -1,9 +1,13 @@
+"""
+	A suite of tests to ensure timetools.Timestamp is operating properly.
+"""
 from pytools.timetools._timestamp import Timestamp
 from unittest import TestCase, main
 import datetime
 
 
 class TimestampTestSetup(TestCase):
+	""" Sets up the classes used in this suite."""
 	def setUp(self):
 		self.key = datetime.datetime.now()
 		# Key without microseconds
@@ -24,12 +28,14 @@ class TimestampTestSetup(TestCase):
 
 		try:
 			self.timestamp = Timestamp(self.key)
-		except:
+		except (ValueError, TypeError):
 			self.timestamp = None
 
 
 class TimestampParsingTest(TimestampTestSetup):
+	""" Tests the parsing ability of timetools.Timestamp"""
 	def test_from_american_date(self):
+		""" Tests Timestamp's ability to parse MM/DD/YYYY"""
 		string = f"{self.month}/{self.day}/{self.year}"
 
 		from_method = Timestamp.from_american_date(string)
@@ -38,10 +44,8 @@ class TimestampParsingTest(TimestampTestSetup):
 		self.assertEqual(self.datekey, from_method)
 		self.assertEqual(self.datekey, from_init)
 
-	def test_from_verbal_date(self):
-		pass
-
 	def test_from_short_dict(self):
+		""" Tests parsing of date dictionaries."""
 		sd = {
 			'year':  self.year,
 			'month': self.month,
@@ -59,6 +63,7 @@ class TimestampParsingTest(TimestampTestSetup):
 		self.assertEqual(self.datekey, from_init2)
 
 	def test_from_long_dict(self):
+		""" Tests parsing of datetime dictionaries."""
 		ld = {
 			'year':        self.year,
 			'month':       self.month,
@@ -80,6 +85,7 @@ class TimestampParsingTest(TimestampTestSetup):
 		self.assertEqual(self.key, from_init2)
 
 	def test_from_short_tuple(self):
+		""" Tests parsing of date tuples."""
 		st = (self.year, self.month, self.day)
 		from_method = Timestamp.from_tuple(st)
 		from_init = Timestamp(st)
@@ -87,6 +93,7 @@ class TimestampParsingTest(TimestampTestSetup):
 		self.assertEqual(self.datekey, from_init)
 
 	def test_from_long_tuple(self):
+		""" Tests parsing of datetime tuples."""
 		lt = (self.year, self.month, self.day, self.hour, self.minute, self.second, self.microsecond)
 
 		from_method = Timestamp.from_tuple(lt)
@@ -95,6 +102,7 @@ class TimestampParsingTest(TimestampTestSetup):
 		self.assertEqual(self.key, from_init)
 
 	def test_from_values(self):
+		""" Tests parsing of star espression."""
 		args = (self.year, self.month, self.day, self.hour, self.minute, self.second, self.microsecond)
 
 		from_method = Timestamp.from_values(*args)
@@ -105,12 +113,15 @@ class TimestampParsingTest(TimestampTestSetup):
 
 
 class TimestampTypingTest(TimestampTestSetup):
+	""" Tests that the proper types object is returned."""
 	def test_from_obj_type(self):
+		""" Tests parsing from a generic object."""
 		result = Timestamp.from_object(self.key)
 
 		self.assertIsInstance(result, Timestamp)
 
 	def test_from_dict(self):
+		""" Tests .from_dict()"""
 		data = {
 			'year':  self.year,
 			'month': self.month,
@@ -119,11 +130,9 @@ class TimestampTypingTest(TimestampTestSetup):
 		result = Timestamp.from_dict(**data)
 		self.assertIsInstance(result, Timestamp)
 
-	def test_from_values(self):
-		result = Timestamp(*self.rtuple)
-
 
 class TimestampRepresentTest(TimestampTestSetup):
+	""" Tests Timestamp representation methods."""
 	def test_to_iso(self):
 		ts = Timestamp.from_object(self.mkey)
 
