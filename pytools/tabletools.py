@@ -1,9 +1,10 @@
-
 from pathlib import Path
+from typing import Union
 import pandas
-def load_table(self, file_name: Path, **kwargs):
+def read_table(file_name: Union[str,Path], **kwargs):
 	""" Returns a dataframe of the suppled file
 	"""
+	file_name = Path(file_name)
 	extension = file_name.suffix
 	default_args = {
 		'.csv': {'delimiter': ','},

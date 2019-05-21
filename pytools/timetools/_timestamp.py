@@ -6,9 +6,9 @@
 """
 
 import pendulum
-from typing import Any, Dict, Tuple, Union
-
-STuple = Tuple[int,...]
+from typing import Any, Dict, Tuple, Union, Optional
+import re
+STuple = Tuple[int, ...]
 TTuple = Tuple[int, int, int]
 
 
@@ -33,6 +33,13 @@ class Timestamp(pendulum.DateTime):
 		result = super().__new__(cls, **kwargs)
 
 		return result
+
+	def __float__(self) -> float:
+		""" Converts the timestamp to a floating point representation.
+			Ex. float(Timestamp('2018-06-31')) -> 2018.5
+		"""
+		return self.year + (self.day_of_year / 365)
+
 	@classmethod
 	def parse(cls, value: Any) -> 'Timestamp':
 		if isinstance(value, str):
@@ -52,8 +59,9 @@ class Timestamp(pendulum.DateTime):
 	@classmethod
 	def from_keys(cls, keys: Dict[str, int]) -> 'Timestamp':
 		return cls.from_dict(**keys)
+
 	@classmethod
-	def from_tuple(cls, value:Union[STuple, TTuple])->'Timestamp':
+	def from_tuple(cls, value: Union[STuple, TTuple]) -> 'Timestamp':
 		if len(value) == 3:
 			year, month, day = value
 			hour, minute, second = 0, 0, 0
@@ -62,10 +70,10 @@ class Timestamp(pendulum.DateTime):
 			year, month, day, hour, minute, second, *other = value
 
 		data = {
-			'year': year,
-			'month': month,
-			'day': day,
-			'hour': hour,
+			'year':   year,
+			'month':  month,
+			'day':    day,
+			'hour':   hour,
 			'minute': minute,
 			'second': second
 		}
@@ -107,6 +115,7 @@ class Timestamp(pendulum.DateTime):
 	def from_american_date(cls, value: str) -> pendulum.DateTime:
 		"""
 			Parses a date formatted as DD/MM/YY(YY), as is common in the US.
+
 		Parameters
 		----------
 		value:str
@@ -140,28 +149,36 @@ class Timestamp(pendulum.DateTime):
 		}
 
 		return cls.from_dict(**keys)
+
 	@classmethod
-	def from_verbal_date(cls, value: str):
+	def from_verbal_date(cls, value: str)->Optional["Timestamp"]:
 		# 17 Dec 2012
+		verbal_regex_month_first = "(?P<month>[a-z]+)\s(?P<day>[\d]+)[\s,]+(?P<year>[\d]{4})"
+		verbal_regex_day_first = "(?P<day>[\d]+)[\s,]+(?P<month>[a-z]+)\s(?P<year>[\d]{4})"
 		value = value.lower()
 
 		short_months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
-		long_months  = ["january", "february", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+		long_months = ["january", "february", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
 
-		day, month, year = value.split(' ')
-		day = int(day)
-		year = int(year)
-		if len(month) == 3:
-			month = short_months.index(month)+1
-		else:
-			month = long_months.index(month)+1
-		
-		data = {
-			'day': day,
-			'month': month,
-			'year': year
-		}
-		return cls.from_dict(**data)
+		match = re.search(verbal_regex_month_first, value)
+		if not match:
+			match = re.search(verbal_regex_day_first, value)
+		if match:
+			groupdict = match.groupdict()
+			year = int(groupdict['year'])
+			month = groupdict['month']
+			day = int(groupdict['day'])
+			if len(month) == 3:
+				month = short_months.index(month) + 1
+			else:
+				month = long_months.index(month) + 1
+
+			data = {
+				'day':   day,
+				'month': month,
+				'year':  year
+			}
+			return cls.from_dict(**data)
 
 	@classmethod
 	def from_string(cls, value: str) -> 'Timestamp':
@@ -175,7 +192,7 @@ class Timestamp(pendulum.DateTime):
 		return cls.from_object(obj)
 
 	@classmethod
-	def from_values(cls, year, month, day, hour = 0, minute = 0, second = 0, microsecond = 0)->'Timestamp':
+	def from_values(cls, year, month, day, hour = 0, minute = 0, second = 0, microsecond = 0, timezone = None) -> 'Timestamp':
 		result = dict(
 			year = year,
 			month = month,
@@ -186,9 +203,8 @@ class Timestamp(pendulum.DateTime):
 			microsecond = microsecond
 		)
 		return cls.from_dict(**result)
-	
-	def to_iso(self)->str:
 
+	def to_iso(self) -> str:
 		return self.to_datetime_string()
 
 

@@ -2,35 +2,10 @@
 A collection of tools to make common tasks simpler and more convienient.
 It is organized into several subpackages:
 
-- datatools
 - filetools
-- geotools
 - numbertools
-- tabletools
 - timetools
 
-## Datatools
-This package contains an overwritten `dataclass` function as a drop-in replacement for `dataclasses.dataclass`
-adding dictionary-like properties to newly created dataclasses.
-
-### Sample Usage:
-
-```python
-from pytools.datatools import dataclass
-
-@dataclass
-class Example:
-    first: str
-    second: int
-    third: float
-   
->>> example = Example('abc', 123, 3.14)
-
->>> example['second']
-123
->>> example.to_yaml()
-{first: abc, instanceOf: Example, second: 123, third: 3.14} 
-```
 
 ###Filetools
 This package has a few functions useful unctions when operating with system files.
@@ -93,9 +68,6 @@ Useful functions:
     >>> numbertools.is_number('abc')
     False
     ```
-
-## tabletools
-Contains the Table class, a drop-in replacement for `pandas.DataFrame` with additional methods for selecting data.
 
 ## timetools
 Contains time and date methods with simple importing and exporting methods.

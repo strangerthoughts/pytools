@@ -1,9 +1,8 @@
-
 import hashlib
 
 from pathlib import Path
 import os
-import psutil
+
 
 def memoryUsage(show = True, units = 'MB'):
 	""" Gets the current memory usage
@@ -13,27 +12,25 @@ def memoryUsage(show = True, units = 'MB'):
 			memory: int
 				The total number of bytes being used by the current process
 	"""
-
+	import psutil
 	process = psutil.Process(os.getpid())
 	usage = process.memory_info().rss
 	if show:
 		if units == 'MB':
-			value = usage / 1024**2
+			value = usage / 1024 ** 2
 		else:
 			value = usage
 		print("Current memory usage: {0:.2f}{1}".format(value, units), flush = True)
 	else:
 		return usage
 
-def checkDir(path:Path, full = False):
+
+def checkDir(path: Path):
 	""" Creates a folder if it doesn't already exist.
 		Parameters
 		----------
 			path: Path
 				Path to a folder.
-			full: bool; default False
-				If true, will create any parent folders
-				if they do not already exists.
 		Returns
 		-------
 			status: bool
@@ -44,8 +41,7 @@ def checkDir(path:Path, full = False):
 	return path.exists()
 
 
-
-def generateFileMd5(filename:str, blocksize:int=2**20)->str:
+def generateFileMd5(filename: str, blocksize: int = 2 ** 20) -> str:
 	""" Generates the md5sum of a file. Does
 		not require a lot of memory.
 		Parameters
@@ -69,7 +65,5 @@ def generateFileMd5(filename:str, blocksize:int=2**20)->str:
 	return m.hexdigest()
 
 
-
 if __name__ == "__main__":
 	pass
-

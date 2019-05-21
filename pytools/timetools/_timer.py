@@ -6,11 +6,10 @@ from typing import Callable, Union, Dict, Tuple
 import datetime
 import numpy
 
-from ._duration import Duration
-from .. import numbertools
+from pytools.timetools import Duration
+from pytools import numbertools
 
 Number = Union[int, float]
-
 
 
 class Timer:
@@ -92,7 +91,7 @@ class Timer:
 		print(string, flush = True)
 		self.reset()
 
-	def benchmark(self, loops: int = 1)->Dict[str,Number]:
+	def benchmark(self, loops: int = 1) -> Dict[str, Number]:
 		""" Returns a dictionary with information on the loop timing.
 		
 			Returns
@@ -115,7 +114,7 @@ class Timer:
 		}
 		return result
 
-	def timeFunction(self, func:Callable, *args, **kwargs)->Tuple[str,str]:
+	def timeFunction(self, func: Callable, *args, **kwargs) -> Tuple[str, str]:
 		""" Benchmarks a function. args and kwargs are passed on to the function.
 			Prints a message of the form 'a ± b per loop [c, d] where:
 				* 'a': average time for each loop to execute. 
@@ -197,3 +196,35 @@ class Timer:
 		else:
 			label = ''
 		print(label, "{0:.3f} seconds...".format(self.duration()), flush = True)
+
+
+def benchmark(loops = 10, label = None):
+	def my_decorator(func):
+		_loops_to_excecute = loops
+
+		def wrapped(*args, **kwargs):
+			start = time.time()
+			for index in range(loops):
+				result = func(*args, **kwargs)
+			end = time.time()
+			duration = end - start
+
+			per_loop = numbertools.human_readable(duration / _loops_to_excecute)
+			message = f"{per_loop}s per loop ({duration:.2f}s for {_loops_to_excecute:n} loops) "
+			if label:
+				print(label)
+			print(message)
+			return result
+
+		return wrapped
+
+	return my_decorator
+
+
+if __name__ == "__main__":
+	@benchmark(loops = 100)
+	def _function():
+		100 ** 100
+
+
+	_function()

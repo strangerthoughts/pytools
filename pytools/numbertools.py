@@ -8,8 +8,10 @@ from numbers import Number
 from typing import List, Union, SupportsAbs, Any, Sequence
 from dataclasses import dataclass, field
 
-NumberType = Union[int,float]
+NumberType = Union[int, float]
 MU = "μ"
+
+
 @dataclass
 class Scale:
 	""" Provides an easy method of checking the magnitude of numbers."""
@@ -35,11 +37,11 @@ SCALE: List[Scale] = [
 	Scale('nano', 'n', 1E-9),
 	Scale('micro', 'u', 1E-6),
 	Scale('milli', 'm', 1E-3),
-	#Scale('centi', 'c', 1E-2),
-	#Scale('deci', 'd', 1E-1),
+	# Scale('centi', 'c', 1E-2),
+	# Scale('deci', 'd', 1E-1),
 	Scale('', '', 1),
-	#Scale('deca', 'da', 1E1),
-	#Scale('hecto', 'h', 1E2),
+	# Scale('deca', 'da', 1E1),
+	# Scale('hecto', 'h', 1E2),
 	Scale('kilo', 'K', 1E3),
 	Scale('mega', 'M', 1E6),
 	Scale('giga', 'B', 1E9),
@@ -52,7 +54,7 @@ SCALE = sorted(SCALE)
 REVERSED_SCALE = sorted(SCALE, reverse = True)
 
 
-def is_null(number: Any)->bool:
+def is_null(number: Any) -> bool:
 	""" Checks if a value represents a null value."""
 	try:
 		result = number is None or math.isnan(float(number))
@@ -61,7 +63,8 @@ def is_null(number: Any)->bool:
 
 	return result
 
-def get_base(value: SupportsAbs)->str:
+
+def get_base(value: SupportsAbs) -> str:
 	""" Returns the SI base for a given value """
 
 	value = abs(value)
@@ -79,7 +82,7 @@ def get_base(value: SupportsAbs)->str:
 	return base
 
 
-def get_multiplier(base: str)->float:
+def get_multiplier(base: str) -> float:
 	""" Converts a numerical suffix to the corresponding numerical multiplier.
 		Ex. 'K' -> 1000, 'u' -> 1E-6
 	"""
@@ -102,9 +105,10 @@ def get_multiplier(base: str)->float:
 	return multiplier
 
 
-def human_readable(value:NumberType, base: str = None, to_string: bool = True, precision: int = 2) -> Union[str, List[str]]:
+def human_readable(value: NumberType, base: str = None, to_string: bool = True, precision: int = 2) -> Union[str, List[str]]:
 	""" Converts a number into a more easily-read string.
 		Ex. 101000 -> '101T' or (101, 'T')
+
 		Parameters
 		----------
 		value: number, list<number>
@@ -118,6 +122,7 @@ def human_readable(value:NumberType, base: str = None, to_string: bool = True, p
 			as well as the suffix.
 		precision: int; default 2
 			The number of decimal places to show.
+
 		Returns
 		-------
 		str, list<str>
@@ -149,16 +154,17 @@ def human_readable(value:NumberType, base: str = None, to_string: bool = True, p
 	return human_readable_number
 
 
-def is_number(value: Union[Any,Sequence[Any]]) -> Union[bool,List[bool]]:
+def is_number(value: Union[Any, Sequence[Any]]) -> Union[bool, List[bool]]:
 	"""Tests if the value is a number.
+
 		Examples
 		--------
-			'abc'->False
-			123.123 -> True
-			'123.123' -> True
+		'abc'->False
+		123.123 -> True
+		'123.123' -> True
 
 	"""
-	if isinstance(value, (list,tuple)):
+	if isinstance(value, (list, tuple)):
 		return [is_number(i) for i in value]
 	if isinstance(value, str):
 		try:
@@ -172,6 +178,22 @@ def is_number(value: Union[Any,Sequence[Any]]) -> Union[bool,List[bool]]:
 	return value_is_number
 
 
+def _convert_string_to_number(value: str, default = math.nan) -> float:
+	if '/' in value:
+		left, right = value.split('/')
+		left = _convert_string_to_number(left)
+		right = _convert_string_to_number(right)
+		return left / right
+	else:
+		value = value.replace(',', '')  # Remove thousands separator.
+		value = value.strip()
+		try:
+			value = float(value)
+		except:
+			value = default
+		return value
+
+
 def to_number(value: Union[Any, Sequence[Any]], default: Any = math.nan) -> Union[NumberType, List[NumberType]]:
 	""" Attempts to convert the passed object to a number.
 		Returns
@@ -182,15 +204,17 @@ def to_number(value: Union[Any, Sequence[Any]], default: Any = math.nan) -> Unio
 				* str -> int, float
 				* generic -> float if float() works, else math.nan
 	"""
+	if isinstance(value, str):
+		return _convert_string_to_number(value, default)
 
-	if isinstance(value, (list,tuple,set)):
+	if isinstance(value, (list, tuple, set)):
 		return [to_number(i, default) for i in value]
+
 	try:
 		converted_number = float(value)
-	except ValueError:
+	except (ValueError, TypeError):
 		converted_number = default
-	except TypeError:
-		converted_number = default
+
 
 	if not is_null(converted_number) and math.floor(converted_number) == converted_number:
 		converted_number = int(converted_number)
