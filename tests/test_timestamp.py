@@ -1,7 +1,7 @@
 """
 	A suite of tests to ensure timetools.Timestamp is operating properly.
 """
-from pytools import timetools
+from infotools import timetools
 import datetime
 import pandas
 import pytest

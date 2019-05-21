@@ -6,8 +6,8 @@ from typing import Callable, Union, Dict, Tuple
 import datetime
 import numpy
 
-from pytools.timetools import Duration
-from pytools import numbertools
+from infotools.timetools import Duration
+from infotools import numbertools
 
 Number = Union[int, float]
 

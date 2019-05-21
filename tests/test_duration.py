@@ -1,4 +1,4 @@
-from pytools.timetools import Duration
+from infotools.timetools import Duration
 
 import datetime
 import pendulum

@@ -3,7 +3,7 @@
 """
 
 import pytest
-from pytools import numbertools
+from infotools import numbertools
 
 
 @pytest.mark.parametrize(

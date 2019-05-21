@@ -1,4 +1,4 @@
-# Pytools
+# Infotools
 A collection of tools to make common tasks simpler and more convienient.
 It is organized into several subpackages:
 
