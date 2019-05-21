@@ -31,7 +31,7 @@ Useful functions:
 
     Converts a number or numerical string to a more easily-readable format.
     ```python
-    >>> from pytools import numbertools
+    >>> from infotools import numbertools
     >>> numbertools.human_readable(12345.678, base = 'K')
     '12.35K'
 
@@ -46,7 +46,7 @@ Useful functions:
 
     Attempts to convert the input into a number
     ```python
-    >>> from pytools import numbertools
+    >>> from infotools import numbertools
     >>> numbertools.to_number('187')    
     187
   
@@ -61,7 +61,7 @@ Useful functions:
 
     Tests if the input string is a number. Works with floats.
     ```python
-    >>> from pytools import numbertools
+    >>> from infotools import numbertools
     >>> numbertools.is_number('123.456')
     True
 
@@ -78,7 +78,7 @@ Available Classes:
 
     Represents a single time and date. 
     ```python
-    >>> from pytools import timetools
+    >>> from infotools import timetools
     >>> timestamp = timetools.Timestamp.now()
     >>> str(timestamp)
     '2018-09-03T20:22:05.405436-04:00'
@@ -88,7 +88,7 @@ Available Classes:
     
     Represents differences in time
     ```python
-    >>> from pytools import timetools
+    >>> from infotools import timetools
     >>> duration = timetools.Duration('P11DT4H3S')
     'Duration("P1W4DT4H3.0S")'
     ```
