@@ -31,8 +31,10 @@ class Timestamp(pendulum.DateTime):
 		if value is not None:
 			return cls.parse(value)
 		result = super().__new__(cls, **kwargs)
-
 		return result
+
+	def __eq__(self, other):
+		return self.year == other.year and self.month == other.month and self.day == other.day and self.hour == other.hour and self.minute == other.minute and self.second == other.second
 
 	def __float__(self) -> float:
 		""" Converts the timestamp to a floating point representation.
@@ -54,7 +56,8 @@ class Timestamp(pendulum.DateTime):
 
 	@classmethod
 	def from_dict(cls, **kwargs) -> 'Timestamp':
-		return cls(**kwargs)
+		result = cls(**kwargs)
+		return result
 
 	@classmethod
 	def from_keys(cls, keys: Dict[str, int]) -> 'Timestamp':
