@@ -5,13 +5,13 @@ from infotools import timetools
 import datetime
 import pandas
 import pytest
-
+import pendulum
 
 @pytest.fixture
 def timestamp():
 	key = "2019-05-06 00:14:26.246155"
 	ts = datetime.datetime(2019, 5, 6, 0, 14, 26, 246155)
-	return ts
+	return pendulum.parse("2019-05-06 00:14:26.246155Z")
 
 
 @pytest.mark.parametrize(
@@ -25,7 +25,6 @@ def timestamp():
 		"may 6, 2019",
 		"06 may 2019",
 		pandas.Timestamp(year = 2019, month = 5, day = 6)
-
 	]
 )
 def test_parse_timestamp_date(data, timestamp):
@@ -50,3 +49,6 @@ def test_to_float():
 	ts = timetools.Timestamp((2019,2,13))
 	expected = 2019 + (44/365)
 	assert float(ts) == expected
+
+def test_toiso(timestamp):
+	assert timetools.Timestamp(timestamp.to_iso8601_string()).to_iso() == timestamp.to_iso8601_string().split('+')[0]

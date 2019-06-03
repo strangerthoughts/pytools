@@ -205,7 +205,7 @@ class Timestamp(pendulum.DateTime):
 		return cls.from_dict(**result)
 
 	def to_iso(self) -> str:
-		return self.to_datetime_string()
+		return self.to_iso8601_string()
 
 
 if __name__ == "__main__":

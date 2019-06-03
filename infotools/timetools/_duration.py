@@ -39,7 +39,7 @@ class Duration(pendulum.Duration):
 			-----------------
 			All arguments are optional and default to 0.
 			Arguments may be integers or floats, and may be positive or negative.
-				days:         number; defualt 0
+				days:         number; default 0
 				seconds:      number; default 0
 				microseconds: number; default 0
 				milliseconds: number; default 0
