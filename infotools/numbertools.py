@@ -4,7 +4,7 @@
 
 import math
 from numbers import Number
-
+from fuzzywuzzy import process
 from typing import List, Union, SupportsAbs, Any, Sequence
 from dataclasses import dataclass, field
 
@@ -18,7 +18,10 @@ class Scale:
 	prefix: str
 	suffix: str
 	multiplier: float
-	alias: List[str] = field(default_factory = list)  # Alternative methods of refering to this multiplier.
+	alias: List[str] = field(default_factory = list)  # Alternative methods of referring to this multiplier.
+
+	def __post_init__(self):
+		self.alias.append(self.prefix)
 
 	def __ge__(self, other):
 		return self.multiplier >= other.multiplier
@@ -35,24 +38,43 @@ SCALE: List[Scale] = [
 	Scale('femto', 'f', 1E-15),
 	Scale('pico', 'p', 1E-12),
 	Scale('nano', 'n', 1E-9),
-	Scale('micro', 'u', 1E-6),
-	Scale('milli', 'm', 1E-3),
+	Scale('micro', 'u', 1E-6, [MU, 'millionths']),
+	Scale('milli', 'm', 1E-3, ['thousandths']),
 	# Scale('centi', 'c', 1E-2),
 	# Scale('deci', 'd', 1E-1),
-	Scale('', '', 1),
+	Scale('', '', 1, ['unit', 'one']),
 	# Scale('deca', 'da', 1E1),
 	# Scale('hecto', 'h', 1E2),
-	Scale('kilo', 'K', 1E3),
-	Scale('mega', 'M', 1E6),
-	Scale('giga', 'B', 1E9),
-	Scale('tera', 'T', 1E12),
-	Scale('peta', 'P', 1E15),
-	Scale('exa', 'E', 1E18)
+	Scale('kilo', 'K', 1E3, ['thousand']),
+	Scale('mega', 'M', 1E6, ['million']),
+	Scale('giga', 'B', 1E9, ['billion']),
+	Scale('tera', 'T', 1E12, ['trillion']),
+	Scale('peta', 'P', 1E15, ['quadrillion']),
+	Scale('exa', 'E', 1E18, ['quintillion'])
 ]
 
 SCALE = sorted(SCALE)
 REVERSED_SCALE = sorted(SCALE, reverse = True)
 
+def get_scale(value:Union[str,int,float])->Scale:
+	""" Returns the Scale object that represents the given value."""
+
+	if isinstance(value, str):
+		for scale in SCALE:
+			scale_alias, score = process.extractOne(value.lower(), scale.alias)
+			if score > 90:
+				base = scale.suffix
+				break
+		else:
+			base = None
+	else:
+		base = get_base(value)
+
+	if base is None:
+		message = f"Could not find a `Scale` object for the given value: `{value}`"
+		raise ValueError(message)
+
+	return [i for i in SCALE if i.suffix == base][0]
 
 def is_null(number: Any) -> bool:
 	""" Checks if a value represents a null value."""

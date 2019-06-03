@@ -83,3 +83,16 @@ def test_to_number(value,expected):
 
 	assert result == expected
 
+@pytest.mark.parametrize(
+	"value, expected_prefix",
+	[
+		('billion', 'giga'),
+		('Millions', 'mega'),
+		('kilo', 'kilo'),
+		(1234, 'kilo'),
+		(1E-4, 'micro')
+	]
+)
+def test_get_scale(value, expected_prefix):
+	result = numbertools.get_scale(value)
+	assert result.prefix == expected_prefix
