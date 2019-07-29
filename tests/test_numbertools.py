@@ -90,9 +90,12 @@ def test_to_number(value,expected):
 		('Millions', 'mega'),
 		('kilo', 'kilo'),
 		(1234, 'kilo'),
-		(1E-4, 'micro')
+		(1E-4, 'micro'),
+		('K', 'kilo'),
+		('u', 'micro')
 	]
 )
 def test_get_scale(value, expected_prefix):
 	result = numbertools.get_scale(value)
 	assert result.prefix == expected_prefix
+

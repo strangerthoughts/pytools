@@ -5,12 +5,11 @@
 import math
 from numbers import Number
 from fuzzywuzzy import process
-from typing import List, Union, SupportsAbs, Any, Sequence
+from typing import List, Union, SupportsAbs, Any, Sequence, Optional
 from dataclasses import dataclass, field
 
 NumberType = Union[int, float]
 MU = "μ"
-
 
 @dataclass
 class Scale:
@@ -20,6 +19,8 @@ class Scale:
 	multiplier: float
 	alias: List[str] = field(default_factory = list)  # Alternative methods of referring to this multiplier.
 
+	def __mul__(self, other)->float:
+		return other * self.multiplier
 	def __post_init__(self):
 		self.alias.append(self.prefix)
 
@@ -32,6 +33,16 @@ class Scale:
 	def __eq__(self, other):
 		return self.multiplier == other
 
+	def is_match(self, value:str)->bool:
+		""" Returns True if the passed string corresponds to this scale."""
+		selected_scale = False
+		if self.prefix == value or self.suffix == value:
+			selected_scale = True
+		else:
+			scale_alias, score = process.extractOne(value.lower(), self.alias)
+			if score > 90:
+				selected_scale = True
+		return selected_scale
 
 SCALE: List[Scale] = [
 	Scale('atto', 'a', 1E-18),
@@ -56,25 +67,20 @@ SCALE: List[Scale] = [
 SCALE = sorted(SCALE)
 REVERSED_SCALE = sorted(SCALE, reverse = True)
 
-def get_scale(value:Union[str,int,float])->Scale:
+def get_scale(value:Union[str,int,float])->Optional[Scale]:
 	""" Returns the Scale object that represents the given value."""
 
 	if isinstance(value, str):
 		for scale in SCALE:
-			scale_alias, score = process.extractOne(value.lower(), scale.alias)
-			if score > 90:
-				base = scale.suffix
-				break
+			is_match = scale.is_match(value)
+			if is_match:
+				return scale
 		else:
-			base = None
+			return None
 	else:
 		base = get_base(value)
+		return get_scale(base)
 
-	if base is None:
-		message = f"Could not find a `Scale` object for the given value: `{value}`"
-		raise ValueError(message)
-
-	return [i for i in SCALE if i.suffix == base][0]
 
 def is_null(number: Any) -> bool:
 	""" Checks if a value represents a null value."""
