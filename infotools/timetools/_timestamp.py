@@ -5,9 +5,11 @@
 	Ex. pandas.Timestamp is not compatible with pendulum.datetime.
 """
 
-import pendulum
-from typing import Any, Dict, Tuple, Union, Optional
 import re
+from typing import Any, Dict, Tuple, Union, Optional
+
+import pendulum
+
 STuple = Tuple[int, ...]
 TTuple = Tuple[int, int, int]
 
@@ -154,14 +156,15 @@ class Timestamp(pendulum.DateTime):
 		return cls.from_dict(**keys)
 
 	@classmethod
-	def from_verbal_date(cls, value: str)->Optional["Timestamp"]:
+	def from_verbal_date(cls, value: str) -> Optional["Timestamp"]:
 		# 17 Dec 2012
 		verbal_regex_month_first = "(?P<month>[a-z]+)\s(?P<day>[\d]+)[\s,]+(?P<year>[\d]{4})"
 		verbal_regex_day_first = "(?P<day>[\d]+)[\s,]+(?P<month>[a-z]+)\s(?P<year>[\d]{4})"
 		value = value.lower()
 
 		short_months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
-		long_months = ["january", "february", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+		long_months = ["january", "february", "april", "may", "june", "july", "august", "september", "october",
+			"november", "december"]
 
 		match = re.search(verbal_regex_month_first, value)
 		if not match:
@@ -187,15 +190,16 @@ class Timestamp(pendulum.DateTime):
 	def from_string(cls, value: str) -> 'Timestamp':
 		try:
 			obj = pendulum.parse(value)
-		except (ValueError):
+		except ValueError:
 			try:
 				obj = cls.from_american_date(value)
-			except:
+			except ValueError:
 				obj = cls.from_verbal_date(value)
 		return cls.from_object(obj)
 
 	@classmethod
-	def from_values(cls, year, month, day, hour = 0, minute = 0, second = 0, microsecond = 0, timezone = None) -> 'Timestamp':
+	def from_values(cls, year, month, day, hour = 0, minute = 0, second = 0, microsecond = 0,
+			timezone = None) -> 'Timestamp':
 		result = dict(
 			year = year,
 			month = month,

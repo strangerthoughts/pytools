@@ -1,7 +1,10 @@
 from pathlib import Path
 from typing import Union
+
 import pandas
-def read_table(file_name: Union[str,Path], **kwargs):
+
+
+def read_table(file_name: Union[str, Path], **kwargs):
 	""" Returns a dataframe of the suppled file
 	"""
 	file_name = Path(file_name)

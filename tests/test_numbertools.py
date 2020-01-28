@@ -6,33 +6,6 @@ import pytest
 from infotools import numbertools
 
 
-@pytest.mark.parametrize(
-	"number,expected",
-	[
-		(1000, 'K'),
-		(1E-9, 'n'),
-		(0, ''),
-		(1234, 'K'),
-		(123E-5, 'm'),
-		(3.14159, '')
-	]
-)
-def test_get_base(number, expected):
-	assert expected == numbertools.get_base(number)
-
-
-@pytest.mark.parametrize("string,expected",
-	[
-		('n', 1E-9),
-		('K', 1000),
-		('T', 1E12),
-		('', 1)
-	]
-)
-def test_get_multiplier(string, expected):
-	assert expected == numbertools.get_multiplier(string)
-
-
 @pytest.mark.parametrize("value,expected",
 	[
 		(123.456, True),
@@ -56,6 +29,7 @@ def test_is_number(value, expected):
 def test_human_readable(number, precision, expected):
 	assert numbertools.human_readable(number, precision = precision) == expected
 
+
 @pytest.mark.parametrize(
 	"value,expected",
 	[
@@ -65,9 +39,11 @@ def test_human_readable(number, precision, expected):
 	]
 )
 def test_convert_string_to_number(value, expected):
-	result = numbertools._convert_string_to_number(value, default = None)
+	result = numbertools.to_number(value, default = None)
 
 	assert result == expected
+
+
 @pytest.mark.parametrize(
 	"value,expected",
 	[
@@ -77,25 +53,43 @@ def test_convert_string_to_number(value, expected):
 		(['7.8/10', '99'], [0.78, 99])
 	]
 )
-
-def test_to_number(value,expected):
+def test_to_number(value, expected):
 	result = numbertools.to_number(value, None)
 
 	assert result == expected
 
+
 @pytest.mark.parametrize(
-	"value, expected_prefix",
+	"value",
 	[
-		('billion', 'giga'),
-		('Millions', 'mega'),
-		('kilo', 'kilo'),
-		(1234, 'kilo'),
-		(1E-4, 'micro'),
-		('K', 'kilo'),
-		('u', 'micro')
+		"kilo", "micro"
 	]
 )
-def test_get_scale(value, expected_prefix):
-	result = numbertools.get_scale(value)
-	assert result.prefix == expected_prefix
+def test_get_magnitude_from_prefix(value):
+	result = numbertools.scale.get_magnitude_from_prefix(value)
+	assert result.prefix == value
 
+
+@pytest.mark.parametrize(
+	"value,expected",
+	[
+		(1234, 'kilo'),
+		(1E-4, 'micro'),
+	]
+)
+def test_get_magnitude_from_value(value, expected):
+	result = numbertools.scale.get_magnitude_from_value(value)
+	assert result.prefix == expected
+
+
+@pytest.mark.parametrize(
+	"value,expected",
+	[
+		('billion', 'giga'),
+		('Millions', 'mega')
+	]
+)
+def test_get_magnitude_from_alias(value, expected):
+	result = numbertools.scale.get_magnitude_from_alias(value)
+
+	assert result.prefix == expected

@@ -1,7 +1,8 @@
-from dataclasses import dataclass, field
-from typing import List, SupportsAbs
-from fuzzywuzzy import process
 import math
+from dataclasses import dataclass, field
+from typing import List, SupportsAbs, Optional
+
+from fuzzywuzzy import process
 
 
 @dataclass
@@ -115,9 +116,9 @@ class Scale:
 		if value == 0.0 or self.is_null(value):
 			return self._get_unit_magnitude(system)
 
-		for scale in system[::-1]:
-			if value >= scale.multiplier:
-				magnitude = scale
+		for _scale in system[::-1]:
+			if value >= _scale.multiplier:
+				magnitude = _scale
 				break
 		else:
 			message = f"'{value}' does not have a defined base."
@@ -125,9 +126,28 @@ class Scale:
 
 		return magnitude
 
-	def get_magnitude_from_prefix(self, prefix: str) -> Magnitude:
-		pass
+	def get_magnitude_from_prefix(self, prefix: str, system: str = "decimal") -> Optional[Magnitude]:
+		system = self._select_system(system)
+		try:
+			candidates = [i for i in system if i.prefix == prefix]
+			return candidates[0]
+		except IndexError:
+			return None
 
+	def get_magnitude_from_alias(self, alias: str) -> Optional[Magnitude]:
+
+		for element in self.decimal_system + self.binary_system:
+			if not element.alias:
+				# Don't bother with empty aliases.
+				continue
+			candidate, score = process.extractOne(alias.lower(), element.alias)
+			if score > 90:
+				return element
+		# Added to make it clear the method should return `None`
+		return None
+
+
+scale = Scale()
 
 if __name__ == "__main__":
 	pass
