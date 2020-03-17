@@ -9,9 +9,10 @@ setup(
 	author = 'proginoskes',
 	author_email = 'chrisdeitrick1@gmail.com',
 	description = 'A collection of tools to make common tasks simpler.',
-	classifiers=[
-			"Programming Language :: Python :: 3",
-			"License :: OSI Approved :: MIT License",
-			"Operating System :: OS Independent",
-		], install_requires = ['pendulum', 'fuzzywuzzy', 'loguru', 'psutil', 'pandas', 'tqdm']
+	classifiers = [
+		"Programming Language :: Python :: 3",
+		"License :: OSI Approved :: MIT License",
+		"Operating System :: OS Independent",
+	], install_requires = ['pendulum', 'fuzzywuzzy', 'loguru', 'psutil', 'pandas', 'tqdm'],
+	tests_requires = ['pytest']
 )

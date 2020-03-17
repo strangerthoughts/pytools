@@ -7,7 +7,7 @@
 
 import datetime
 from dataclasses import dataclass
-from typing import Any, Tuple, Dict
+from typing import Any, Dict, Tuple
 
 import pendulum
 
@@ -284,8 +284,3 @@ class Duration(pendulum.Duration):
 	def to_yaml(self) -> str:
 		""" Returns a yaml representation of `self`"""
 		return self.to_json()
-
-
-if __name__ == "__main__":
-	D = Duration("P13DT5S")
-	print(repr(D))

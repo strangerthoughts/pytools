@@ -1,11 +1,14 @@
 """
 	A suite of tests to ensure timetools.Timestamp is operating properly.
 """
-from infotools import timetools
 import datetime
+
 import pandas
-import pytest
 import pendulum
+import pytest
+
+from infotools import timetools
+
 
 @pytest.fixture
 def timestamp():
@@ -45,10 +48,15 @@ def test_parse_timestamp_datetime(data, timestamp):
 	result = timetools.Timestamp(data)
 	assert result == timestamp
 
+
 def test_to_float():
-	ts = timetools.Timestamp((2019,2,13))
-	expected = 2019 + (44/365)
+	ts = timetools.Timestamp((2019, 2, 13))
+	expected = 2019 + (44 / 365)
 	assert float(ts) == expected
 
+
 def test_toiso(timestamp):
-	assert timetools.Timestamp(timestamp.to_iso8601_string()).to_iso() == timestamp.to_iso8601_string().split('+')[0]
+	expected = timestamp.to_iso8601_string().split('+')[0][:-1]  # Remove the timezone
+	result = timetools.Timestamp(timestamp.to_iso8601_string()).to_iso()
+
+	assert result == expected
