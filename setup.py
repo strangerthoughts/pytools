@@ -13,6 +13,6 @@ setup(
 		"Programming Language :: Python :: 3",
 		"License :: OSI Approved :: MIT License",
 		"Operating System :: OS Independent",
-	], install_requires = ['pendulum', 'fuzzywuzzy', 'loguru', 'psutil', 'pandas', 'tqdm'],
+	], install_requires = ['pendulum', 'rapidfuzz', 'loguru', 'psutil', 'pandas', 'tqdm'],
 	tests_requires = ['pytest']
 )

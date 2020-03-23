@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass, field
 from typing import List, Optional, SupportsAbs
 
-from fuzzywuzzy import process
+from rapidfuzz import process
 
 
 @dataclass
