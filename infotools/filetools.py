@@ -51,7 +51,7 @@ def memory_usage(show = True, units = 'MB'):
 		return usage
 
 
-def checkdir(path: Pathlike)->Path:
+def checkdir(path: Pathlike) -> Path:
 	""" Creates a folder if it doesn't already exist.
 		Parameters
 		----------
@@ -62,7 +62,8 @@ def checkdir(path: Pathlike)->Path:
 		Path: The path that was checked.
 	"""
 	path = Path(path)
-	if path.is_dir() and not path.exists():
+	# if path.is_dir() and not path.exists():
+	if not path.exists():
 		path.mkdir()
 	return path
 

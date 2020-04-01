@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass, field
-from typing import List, SupportsAbs, Optional
+from typing import List, Optional, SupportsAbs
 
 from fuzzywuzzy import process
 
@@ -13,19 +13,45 @@ class Magnitude:
 	multiplier: float
 	alias: List[str] = field(default_factory = list)  # Alternative methods of referring to this multiplier.
 
-	def __mul__(self, other) -> float:
-		return other * self.multiplier
+	@staticmethod
+	def _get_other(other):
+		""" Returns the value in `other` that the dunder methods need to compare.
+		"""
+		if hasattr(other, 'multiplier'):
+			return other.multiplier
+		else:
+			return other
+
+	def __float__(self) -> float:
+		return float(self.multiplier)
 
 	def __post_init__(self):
 		self.alias.append(self.prefix)
 
+	def __mul__(self, other) -> float:
+		return self._get_other(other) * self.multiplier
+
+	def __rmul__(self, other) -> float:
+		return self.__mul__(other)
+
 	def __ge__(self, other):
-		return self.multiplier >= other.multiplier
+		other = self._get_other(other)
+		return self.multiplier >= other
+
+	def __gt__(self, other) -> bool:
+		other = self._get_other(other)
+		return self.multiplier > other
 
 	def __lt__(self, other):
-		return self.multiplier < other.multiplier
+		other = self._get_other(other)
+		return self.multiplier < other
+
+	def __le__(self, other):
+		other = self._get_other(other)
+		return self.multiplier <= other
 
 	def __eq__(self, other):
+		other = self._get_other(other)
 		return self.multiplier == other
 
 	def is_match(self, value: str) -> bool:
@@ -135,7 +161,6 @@ class Scale:
 			return None
 
 	def get_magnitude_from_alias(self, alias: str) -> Optional[Magnitude]:
-
 		for element in self.decimal_system + self.binary_system:
 			if not element.alias:
 				# Don't bother with empty aliases.

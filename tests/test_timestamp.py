@@ -1,12 +1,15 @@
 """
 	A suite of tests to ensure timetools.Timestamp is operating properly.
 """
-from infotools import timetools
 import datetime
+
 import pandas
-import pytest
 import pendulum
-from loguru import logger
+import pytest
+
+from infotools import timetools
+
+
 @pytest.fixture
 def timestamp():
 	key = "2019-05-06 00:14:26.246155"
@@ -45,22 +48,15 @@ def test_parse_timestamp_datetime(data, timestamp):
 	result = timetools.Timestamp(data)
 	assert result == timestamp
 
+
 def test_to_float():
-	ts = timetools.Timestamp((2019,2,13))
-	expected = 2019 + (44/365)
+	ts = timetools.Timestamp((2019, 2, 13))
+	expected = 2019 + (44 / 365)
 	assert float(ts) == expected
 
+
 def test_toiso(timestamp):
-	assert timetools.Timestamp(timestamp.to_iso8601_string()).to_iso() == timestamp.to_iso8601_string().split('+')[0]
+	expected = timestamp.to_iso8601_string().split('+')[0][:-1]  # Remove the timezone
+	result = timetools.Timestamp(timestamp.to_iso8601_string()).to_iso()
 
-@pytest.mark.parametrize(
-	"value, expected",
-	[
-		("03/01/20", "2020-03-01")
-	]
-)
-def test_parse_string(value, expected):
-
-	result = timetools.Timestamp.from_string(value)
-	logger.debug(f"{result.to_iso()} - {expected}")
-	assert result.to_iso().split('T')[0] == expected
+	assert result == expected

@@ -1,7 +1,10 @@
-from pathlib import Path
-from infotools import datatools
 import math
+
 import pandas
+
+from infotools import datatools
+
+
 def test_to_squareform():
 	data = {
 		('a', 'b'): 'ab',

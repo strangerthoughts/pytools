@@ -5,19 +5,19 @@ import pandas
 
 
 def read_table(file_name: Union[str, Path], **kwargs):
-	""" Returns a dataframe of the suppled file
+	""" Reads the table and returns a dataframe. This is basically just a short script that lets
+		users import data without having to worry about filetype.
 	"""
 	file_name = Path(file_name)
 	extension = file_name.suffix
 	default_args = {
 		'.csv': {'delimiter': ','},
-		'.tsv': {'delimiter': '\t'},
-		'.fsv': {'delimiter': '\f'}
+		'.tsv': {'delimiter': '\t'}
 	}
 
 	# arguments = self._cleanArguments(extension, arguments)
 	file_name = str(file_name.absolute())
-	if extension in {'.xls', '.xlsx', '.xlsm'}:
+	if extension in {'.xls', '.xlsx', '.xlsm'}:  # .xlsm is not a typo.
 
 		df = pandas.read_excel(file_name, **kwargs)
 	elif extension in {'.csv', '.tsv', '.fsv', '.txt'}:
