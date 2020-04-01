@@ -51,7 +51,7 @@ def memory_usage(show = True, units = 'MB'):
 		return usage
 
 
-def checkdir(path: Path):
+def checkdir(path: Pathlike)->Path:
 	""" Creates a folder if it doesn't already exist.
 		Parameters
 		----------
@@ -59,15 +59,15 @@ def checkdir(path: Path):
 				Path to a folder.
 		Returns
 		-------
-			status: bool
-				Whether the folder was successfully created.
+		Path: The path that was checked.
 	"""
+	path = Path(path)
 	if path.is_dir() and not path.exists():
 		path.mkdir()
-	return path.exists()
+	return path
 
 
-def generate_md5(filename: str, blocksize: int = 2 ** 20) -> str:
+def generate_md5(filename: Union[str, Path], blocksize: int = 2 ** 20) -> str:
 	""" Generates the md5sum of a file. Does
 		not require a lot of memory.
 		Parameters
@@ -83,7 +83,7 @@ def generate_md5(filename: str, blocksize: int = 2 ** 20) -> str:
 				The md5sum string.
 	"""
 	m = hashlib.md5()
-	with open(filename, "rb") as f:
+	with open(str(filename), "rb") as f:
 		while True:
 			buf = f.read(blocksize)
 			if not buf: break

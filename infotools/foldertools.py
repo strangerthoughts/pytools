@@ -61,9 +61,4 @@ def get_filetype_subfolders(folder: Path, recursive: bool = True, byfiletype: bo
 	return df
 
 
-if __name__ == "__main__":
-	_folder = Path("/home/proginoskes/Downloads/")
-	result = get_filetypes(_folder)
-	from pprint import pprint
 
-	pprint(result)

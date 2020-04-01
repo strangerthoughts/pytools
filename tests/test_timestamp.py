@@ -6,7 +6,7 @@ import datetime
 import pandas
 import pytest
 import pendulum
-
+from loguru import logger
 @pytest.fixture
 def timestamp():
 	key = "2019-05-06 00:14:26.246155"
@@ -52,3 +52,15 @@ def test_to_float():
 
 def test_toiso(timestamp):
 	assert timetools.Timestamp(timestamp.to_iso8601_string()).to_iso() == timestamp.to_iso8601_string().split('+')[0]
+
+@pytest.mark.parametrize(
+	"value, expected",
+	[
+		("03/01/20", "2020-03-01")
+	]
+)
+def test_parse_string(value, expected):
+
+	result = timetools.Timestamp.from_string(value)
+	logger.debug(f"{result.to_iso()} - {expected}")
+	assert result.to_iso().split('T')[0] == expected
