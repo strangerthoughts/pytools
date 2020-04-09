@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
 	name = 'infotools',
 	version = '0.5.2',
-	packages = ['infotools', 'infotools.timetools', 'infotools.timetools'],
+	packages = ['infotools', 'infotools.timetools', 'infotools.numbertools'],
 	url = 'https://github.com/Kokitis/infotools',
 	license = 'MIT',
 	author = 'proginoskes',
