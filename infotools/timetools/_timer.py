@@ -5,8 +5,8 @@ import statistics
 import time
 from typing import Callable, Union, Dict, Tuple
 
-from infotools import numbertools
-from infotools.timetools import Duration
+from .. import numbertools
+from ..timetools import Duration
 
 Number = Union[int, float]
 
