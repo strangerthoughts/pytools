@@ -9,7 +9,7 @@ import re
 from typing import *
 from loguru import logger
 import pendulum
-
+import datetime
 STuple = Tuple[int, ...]
 TTuple = Tuple[int, int, int]
 
@@ -46,7 +46,6 @@ class Timestamp(pendulum.DateTime):
 
 	@classmethod
 	def parse(cls, value: Any) -> 'Timestamp':
-		logger.debug(f"parse({value})")
 		if isinstance(value, str):
 			result = cls.from_string(value)
 		elif isinstance(value, (list, tuple)):
@@ -104,7 +103,6 @@ class Timestamp(pendulum.DateTime):
 		-------
 		Timestamp
 		"""
-		logger.debug(f"from_object({obj})")
 		year = obj.year
 		month = obj.month
 		day = obj.day
@@ -197,7 +195,6 @@ class Timestamp(pendulum.DateTime):
 
 	@classmethod
 	def from_string(cls, value: str) -> 'Timestamp':
-		logger.debug(f"from_string({value})")
 		try:
 			obj = pendulum.parse(value)
 		except ValueError:
@@ -224,6 +221,11 @@ class Timestamp(pendulum.DateTime):
 	def to_iso(self) -> str:
 		return self.to_iso8601_string()
 
+	def to_datetime(self)->datetime.datetime:
+		return datetime.datetime(
+			year = self.year, month = self.month, day = self.day,
+			hour = self.hour, minute = self.minute, second = self.second, microsecond = self.microsecond
+		)
 
 if __name__ == "__main__":
 	pass
