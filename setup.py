@@ -1,9 +1,12 @@
 from setuptools import setup
-
+"""
+python setup.py sdist bdist_wheel
+twine upload -repository pypi dist/*
+"""
 setup(
 	name = 'infotools',
-	version = '0.5.1',
-	packages = ['infotools', 'infotools.timetools'],
+	version = '0.5.7',
+	packages = ['infotools', 'infotools.timetools', 'infotools.numbertools'],
 	url = 'https://github.com/Kokitis/infotools',
 	license = 'MIT',
 	author = 'proginoskes',
