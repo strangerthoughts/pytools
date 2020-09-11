@@ -3,6 +3,12 @@ from setuptools import setup
 python setup.py sdist bdist_wheel
 twine upload -repository pypi dist/*
 """
+
+import infotools
+if infotools.DEBUG:
+	message = f"The module is still in debug mode!"
+	raise ValueError(message)
+
 setup(
 	name = 'infotools',
 	version = '0.5.7',
