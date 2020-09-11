@@ -34,6 +34,13 @@ class Timestamp(pendulum.DateTime):
 			return cls.parse(value)
 		result = super().__new__(cls, **kwargs)
 		return result
+	def __repr__(self)->str:
+		""" This changes what repr() returns for Timestamp objects so they are shown with ISO timestamps.
+		ex. "Timestamp(2013, 10, 23, 0, 0, 0)" -> "Timestamp('2013-10-23T00:00:00')"
+		"""
+		iso_string = self.to_iso()
+		result = f"Timestamp('{iso_string}')"
+		return result
 
 	def __eq__(self, other):
 		return self.year == other.year and self.month == other.month and self.day == other.day and self.hour == other.hour and self.minute == other.minute and self.second == other.second
