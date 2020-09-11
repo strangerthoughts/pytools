@@ -43,7 +43,7 @@ def save_isolate_table(tables: Dict[str, pandas.DataFrame], filename: Path) -> P
 
 	Returns
 	-------
-
+	Path: The output filename
 	"""
 	writer = pandas.ExcelWriter(str(filename))
 	include_index = False
