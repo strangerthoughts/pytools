@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 
 import pandas
 
@@ -29,3 +29,27 @@ def read_table(file_name: Union[str, Path], **kwargs):
 	else:
 		raise NameError("{} does not have a valid extension!".format(file_name))
 	return df
+
+def to_spreadsheet(tables: Dict[str, pandas.DataFrame], filename: Path) -> Path:
+	"""
+		Saves the table as an Excel spreadsheet, where multiple tables can be given..
+	Parameters
+	----------
+	tables: Dict[str,pandas.DataFrame]
+		A mapping of sheet names to dataframes.
+
+	filename: str, pathlib.Path
+		The output file.
+
+	Returns
+	-------
+	Path: The output filename
+	"""
+	writer = pandas.ExcelWriter(str(filename))
+	include_index = False
+	# python 3.5 or 3.6 made all dicts ordered by default, so the sheets will be ordered in the same order they were defined in `tables`
+	for sheet_label, df in tables.items():
+		if df is None: continue
+		df.to_excel(writer, sheet_label, index = include_index)
+	writer.save()  # otherwise color_table_cells will not be able to load the file
+	return filename

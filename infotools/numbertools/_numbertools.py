@@ -6,7 +6,10 @@ import math
 from numbers import Number
 from typing import List, Union, Any, Iterable
 
-from ._scale import scale
+#from ._scale import scale
+from . import _scale
+
+default_scale = _scale.DecimalScale()
 
 NumberType = Union[int, float]
 
@@ -35,7 +38,7 @@ def human_readable(value: NumberType, precision: int = 2) -> str:
 			The reformatted number.
 	"""
 	template = '{0:.' + str(int(precision)) + 'f}{1}'
-	magnitude = scale.get_magnitude_from_value(value)
+	magnitude = default_scale.get_magnitude_from_value(value)
 	human_readable_number = value / magnitude.multiplier
 	string = template.format(human_readable_number, magnitude.suffix)
 
@@ -109,6 +112,3 @@ def to_number(value: Union[Any, Iterable[Any]], default: Any = math.nan) -> Unio
 	return converted_number
 
 
-if __name__ == "__main__":
-	print(to_number('123.456'))
-	print(to_number('123.000'))

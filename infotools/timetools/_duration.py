@@ -77,8 +77,9 @@ class Duration(pendulum.Duration):
 
 		"""
 		if isinstance(value, str):
-			result = pendulum.parse(value)
-			result = cls.from_object(result)
+			#result = pendulum.parse(value)
+			#result = cls.from_object(result)
+			result = cls.from_string(value)
 		elif isinstance(value, dict):
 			result = cls.from_keys(value)
 
@@ -226,7 +227,8 @@ class Duration(pendulum.Duration):
 		# Since timedelta objects subtract positive numbers from the largest unit for negative timestamps, need to convert back,
 
 		return longdict
-
+	def to_iso2(self)->str:
+		iso_string = "P{year:>02}Y{month:>02}M{days:_02}DT{hours:>02}{minutes:>02}M{seconds:>02}"
 	def to_iso(self, compact: bool = True) -> str:
 		""" Converts the timedelta to an ISO Duration string. By default,
 			weeks are used instead of months, so the original duration string
@@ -239,26 +241,30 @@ class Duration(pendulum.Duration):
 		"""
 		is_negative = self.total_seconds() < 0
 		values = self.tolongdict()
-		datetime_map = [
-			'P', ('years', 'Y'), ('months', 'M'), ('weeks', 'W'), ('days', 'D'),
-			'T', ('hours', 'H'), ('minutes', 'M'), ('seconds', 'S')]
-		datetime_values = list()
+		if not compact:
+			string = "P{years:>02}Y{weeks:>02}W{days:>02}DT{hours:>02}H{minutes:>02}M{seconds:>02}S"
+			return string.format(**values)
 
-		for key in datetime_map:
-			if isinstance(key, tuple):
-				element = (values.get(key[0], 0), key[1])
-				if compact and element[0] == 0: continue
-				datetime_values.append(element)
-			else:
-				datetime_values.append(("", key))
+		suffix_map = [
+			('years', 'Y'), ('months', 'M'), ('weeks', 'W'), ('days', 'D'),
+			('hours', 'H'), ('minutes', 'M'), ('seconds', 'S')
+		]
+		suffix_map = dict(suffix_map)
 
-		isostring = "".join("{}{}".format(i, j) for i, j in datetime_values)
+		large_keys = ['years','weeks', 'days']
+		small_keys = ['hours', 'minutes', 'seconds']
+		# Modify the "seconds" value so it has two digits before the decimal point.
+		if values["seconds"] <10:
+			values["seconds"] = "0"+str(values['seconds'])
+
+		large_values = "P" + "".join(["{0:>02}{1}".format(values[key], suffix_map[key]) for key in large_keys if values[key] != 0])
+		small_values = "T" + "".join(["{0:>02}{1}".format(values[key], suffix_map[key]) for key in small_keys if values[key] != 0])
+
+		isostring = large_values + small_values
 
 		if compact:
 			if isostring == 'PT' and not compact:  # Duration of 0 seconds
 				isostring = 'PT0S'
-		# isostring[0] == 'P' and isostring[1] == 'T': isostring = isostring[1:]
-		# elif isostring[-1] == 'T': isostring = isostring[:1]
 
 		if is_negative:
 			isostring = '-' + isostring
@@ -267,6 +273,17 @@ class Duration(pendulum.Duration):
 	def to_timedelta(self) -> datetime.timedelta:
 		""" Returns a timedelta equivilant to `self`"""
 		return self.as_timedelta()
+
+	def to_standard(self)->str:
+		"""
+			Returns the duration formatted as HH:MM:SS.SS. Currently only designed for timedeltas less than a day.
+		"""
+		hours = self.hours
+		minutes = self.minutes
+		seconds = self.remaining_seconds + (self.microseconds / 1E6)
+
+		result = f"{hours:>02}:{minutes:>02}:{seconds:>05.2f}"
+		return result
 
 	def total_years(self) -> float:
 		"""

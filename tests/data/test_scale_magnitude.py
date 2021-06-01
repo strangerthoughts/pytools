@@ -4,8 +4,8 @@ from infotools import numbertools
 
 
 @pytest.fixture
-def scale() -> numbertools._scale.Scale:
-	return numbertools.scale
+def scale() -> numbertools.DecimalScale:
+	return numbertools.DecimalScale()
 
 
 def test_multiply(scale):

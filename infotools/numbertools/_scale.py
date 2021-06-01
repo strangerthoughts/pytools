@@ -1,8 +1,10 @@
 import math
 from dataclasses import dataclass, field
-from typing import List, Optional, SupportsAbs
+from typing import *
 
 from fuzzywuzzy import process
+
+NumberType = Union[int, float]
 
 
 @dataclass
@@ -66,64 +68,7 @@ class Magnitude:
 		return selected_scale
 
 
-class Scale:
-	def __init__(self):
-		self.decimal_base = 10
-		self.binary_base = 1024
-
-		self.decimal_system = self._load_decimal_system()
-		self.binary_system = self._load_binary_system()
-
-	def _get_unit_magnitude(self, system) -> Magnitude:
-		system = self._select_system(system)
-		if system == 'decimal':
-			return system[6]
-		else:
-			# Invalid systems should be handled by self._select_system.
-			return system[0]
-
-	def _load_decimal_system(self) -> List[Magnitude]:
-		system = [
-			Magnitude('atto', 'a', self.decimal_base ** -18),
-			Magnitude('femto', 'f', self.decimal_base ** -15),
-			Magnitude('pico', 'p', self.decimal_base ** -12),
-			Magnitude('nano', 'n', self.decimal_base ** -9),
-			Magnitude('micro', 'u', self.decimal_base ** -6, ["μ", 'millionths']),
-			Magnitude('milli', 'm', self.decimal_base ** -3, ['thousandths']),
-			Magnitude('', '', 1, ['unit', 'one']),
-			Magnitude('kilo', 'K', self.decimal_base ** 3, ['thousand']),
-			Magnitude('mega', 'M', self.decimal_base ** 6, ['million']),
-			Magnitude('giga', 'B', self.decimal_base ** 9, ['billion']),
-			Magnitude('tera', 'T', self.decimal_base ** 12, ['trillion']),
-			Magnitude('peta', 'P', self.decimal_base ** 15, ['quadrillion']),
-			Magnitude('exa', 'E', self.decimal_base ** 18, ['quintillion'])
-		]
-
-		return system
-
-	def _load_binary_system(self) -> List[Magnitude]:
-		system = [
-			Magnitude('', '', self.binary_base ** 0, ['unit', '']),
-			Magnitude('kibi', 'K', self.binary_base ** 1, ['thousand']),
-			Magnitude('mebi', 'M', self.binary_base ** 2, ['million']),
-			Magnitude('gibi', 'B', self.binary_base ** 2, ['billion']),
-			Magnitude('tebi', 'T', self.binary_base ** 4, ['trillion']),
-			Magnitude('pebi', 'P', self.binary_base ** 5, ['quadrillion']),
-			Magnitude('exbi', 'E', self.binary_base ** 6, ['quintillion']),
-			Magnitude('zebi', 'Z', self.binary_base ** 7, []),
-			Magnitude('yobi', 'Y', self.binary_base ** 8, [])
-		]
-
-		return system
-
-	def _select_system(self, system: str) -> List[Magnitude]:
-		if system == 'decimal':
-			return self.decimal_system
-		elif system == 'binary':
-			return self.binary_system
-		else:
-			message = f"'{system}' is not a valid system."
-			raise ValueError(message)
+class AbstractScale:
 
 	@staticmethod
 	def is_null(value) -> bool:
@@ -135,14 +80,16 @@ class Scale:
 
 		return result
 
-	def get_magnitude_from_value(self, value: SupportsAbs, system = 'decimal') -> Magnitude:
+	def get_unit_magnitude(self):
+		raise NotImplementedError
+
+	def get_magnitude_from_value(self, value: SupportsAbs) -> Magnitude:
 		value = abs(value)
-		system = self._select_system(system)
 
 		if value == 0.0 or self.is_null(value):
-			return self._get_unit_magnitude(system)
+			return self.get_unit_magnitude()
 
-		for _scale in system[::-1]:
+		for _scale in self.system[::-1]:
 			if value >= _scale.multiplier:
 				magnitude = _scale
 				break
@@ -152,16 +99,15 @@ class Scale:
 
 		return magnitude
 
-	def get_magnitude_from_prefix(self, prefix: str, system: str = "decimal") -> Optional[Magnitude]:
-		system = self._select_system(system)
+	def get_magnitude_from_prefix(self, prefix: str) -> Optional[Magnitude]:
 		try:
-			candidates = [i for i in system if i.prefix == prefix]
+			candidates = [i for i in self.system if i.prefix == prefix]
 			return candidates[0]
 		except IndexError:
 			return None
 
 	def get_magnitude_from_alias(self, alias: str) -> Optional[Magnitude]:
-		for element in self.decimal_system + self.binary_system:
+		for element in self.system:
 			if not element.alias:
 				# Don't bother with empty aliases.
 				continue
@@ -172,7 +118,48 @@ class Scale:
 		return None
 
 
-scale = Scale()
+
+class DecimalScale(AbstractScale):
+	def __init__(self):
+		self.base = 10
+		self.system = [
+			Magnitude('atto', 'a', self.base ** -18),
+			Magnitude('femto', 'f', self.base ** -15),
+			Magnitude('pico', 'p', self.base ** -12),
+			Magnitude('nano', 'n', self.base ** -9),
+			Magnitude('micro', 'u', self.base ** -6, ["μ", 'millionths']),
+			Magnitude('milli', 'm', self.base ** -3, ['thousandths']),
+			Magnitude('', '', 1, ['unit', 'one']),
+			Magnitude('kilo', 'K', self.base ** 3, ['thousand']),
+			Magnitude('mega', 'M', self.base ** 6, ['million']),
+			Magnitude('giga', 'B', self.base ** 9, ['billion']),
+			Magnitude('tera', 'T', self.base ** 12, ['trillion']),
+			Magnitude('peta', 'P', self.base ** 15, ['quadrillion']),
+			Magnitude('exa', 'E', self.base ** 18, ['quintillion'])
+		]
+
+	def get_unit_magnitude(self) -> Magnitude:
+		return self.system[6]
+
+
+class BinaryScale(AbstractScale):
+	def __init__(self):
+		self.base = 1024
+		self.system = [
+			Magnitude('', '', self.base ** 0, ['unit', '']),
+			Magnitude('kibi', 'K', self.base ** 1, ['thousand']),
+			Magnitude('mebi', 'M', self.base ** 2, ['million']),
+			Magnitude('gibi', 'B', self.base ** 2, ['billion']),
+			Magnitude('tebi', 'T', self.base ** 4, ['trillion']),
+			Magnitude('pebi', 'P', self.base ** 5, ['quadrillion']),
+			Magnitude('exbi', 'E', self.base ** 6, ['quintillion']),
+			Magnitude('zebi', 'Z', self.base ** 7, []),
+			Magnitude('yobi', 'Y', self.base ** 8, [])
+		]
+
+	def get_unit_magnitude(self):
+		return self.system[0]
+
 
 if __name__ == "__main__":
 	pass

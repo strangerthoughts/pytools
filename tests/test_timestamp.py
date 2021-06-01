@@ -60,3 +60,27 @@ def test_toiso(timestamp):
 	result = timetools.Timestamp(timestamp.to_iso8601_string()).to_iso()
 
 	assert result == expected
+
+@pytest.mark.parametrize("value, expected",
+	[
+		("03/01/20", "2020-03-01")
+	]
+)
+
+
+def test_misc(value, expected):
+	result = timetools.Timestamp(value)
+
+	assert result.to_iso().split('T')[0] == expected
+
+@pytest.mark.parametrize(
+	"string, expected",
+	[
+		('2016-11-16 22:32:05', datetime.datetime(2016, 11, 16, 22, 32, 5)),
+		('2010-11-12', datetime.datetime(year = 2010, month = 11, day = 12))
+	]
+)
+def test_to_datetime(string, expected):
+	# '2016-11-16 22:32:05'
+	result = timetools.Timestamp(string).to_datetime()
+	assert result == expected

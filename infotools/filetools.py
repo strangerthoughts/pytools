@@ -63,9 +63,13 @@ def checkdir(path: Pathlike) -> Path:
 	"""
 	path = Path(path)
 	# if path.is_dir() and not path.exists():
-	if not path.exists():
+	if path.is_dir() and not path.exists():
 		path.mkdir()
 	return path
+
+def copyfile(source:Path, target:Path)->Path:
+	target.write_bytes(source.read_bytes())
+	return target
 
 
 def generate_md5(filename: Union[str, Path], blocksize: int = 2 ** 20) -> str:
