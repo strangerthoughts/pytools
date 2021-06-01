@@ -64,7 +64,7 @@ def test_duration_attributes():
 	# PT8H37M8.070428S 31028.070428 31028
 	total_seconds = 31029.070428
 	obj = Duration(seconds = total_seconds)
-	assert obj.to_iso() == "PT8H37M9.070428S"
+	assert obj.to_iso() == "PT08H37M09.070428S"
 	assert obj.days == 0
 	assert obj.hours == 8
 	assert obj.minutes == 37
@@ -109,9 +109,9 @@ def test_duration_repr(duration):
 	expected = {'years': 0, 'weeks': 1, 'days': 5, 'hours': 0, 'minutes': 20, 'seconds': 45.000123}
 	assert duration.tolongdict() == expected
 
-	expected = "P1W5DT20M45.000123S"
+	expected = "P01W05DT20M45.000123S"
 	assert duration.to_iso() == expected
-	expected = "P0Y0M1W5DT0H20M45.000123S"
+	expected = "P00Y01W05DT00H20M45.000123S"
 	assert duration.to_iso(compact = False) == expected
 
 	td = datetime.timedelta(days = 12, seconds = 1245, microseconds = 123)
@@ -132,6 +132,14 @@ def test_to_dict(seconds, expected):
 	duration = Duration(seconds = seconds)
 	assert duration.to_dict() == expected
 
+@pytest.mark.parametrize(
+	"seconds, expected",
+	[
+		(10, 'PT10.0S'),
+		(86401.0123, "P01DT01.0123S")
+	]
+
+)
 def test_to_iso(seconds, expected):
-	result = Duration(seconds = seconds).to_iso()
+	result = Duration(seconds = seconds).to_iso(compact = True)
 	assert result == expected
