@@ -11,7 +11,7 @@ if infotools.DEBUG:
 
 setup(
 	name = 'infotools',
-	version = '0.6.1',
+	version = '0.7',
 	packages = ['infotools', 'infotools.timetools', 'infotools.numbertools'],
 	url = 'https://github.com/Kokitis/infotools',
 	license = 'MIT',
