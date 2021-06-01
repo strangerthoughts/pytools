@@ -268,6 +268,17 @@ class Duration(pendulum.Duration):
 		""" Returns a timedelta equivilant to `self`"""
 		return self.as_timedelta()
 
+	def to_standard(self)->str:
+		"""
+			Returns the duration formatted as HH:MM:SS.SS. Currently only designed for timedeltas less than a day.
+		"""
+		hours = self.hours
+		minutes = self.minutes
+		seconds = self.remaining_seconds + (self.microseconds / 1E6)
+
+		result = f"{hours:>02}:{minutes:>02}:{seconds:>05.2f}"
+		return result
+
 	def total_years(self) -> float:
 		"""
 			Returns the total number of years contained in the duration as a float.

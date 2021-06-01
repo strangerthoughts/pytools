@@ -30,7 +30,7 @@ def read_table(file_name: Union[str, Path], **kwargs):
 		raise NameError("{} does not have a valid extension!".format(file_name))
 	return df
 
-def save_isolate_table(tables: Dict[str, pandas.DataFrame], filename: Path) -> Path:
+def to_spreadsheet(tables: Dict[str, pandas.DataFrame], filename: Path) -> Path:
 	"""
 		Saves the table as an Excel spreadsheet, where multiple tables can be given..
 	Parameters
