@@ -4,9 +4,9 @@
 
 import math
 from numbers import Number
-from typing import List, Union, Any, Iterable
+from typing import Any, Iterable, List, Union
 
-#from ._scale import scale
+# from ._scale import scale
 from . import _scale
 
 default_scale = _scale.DecimalScale()

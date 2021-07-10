@@ -1,6 +1,9 @@
-from typing import *
-import pandas
 import itertools
+from typing import *
+
+import pandas
+
+
 def to_squareform(pairwise_values: Dict[Tuple[str,str], Any], default:Any = None)->pandas.DataFrame:
 	"""
 		Converts a dictionary of pariwise values (ex. a representation of pairwise distances)

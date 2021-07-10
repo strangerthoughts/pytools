@@ -1,9 +1,10 @@
-from infotools.timetools import Duration
-
 import datetime
-import pendulum
 from dataclasses import dataclass
+
+import pendulum
 import pytest
+
+from infotools.timetools import Duration
 
 
 @pytest.fixture
@@ -64,7 +65,7 @@ def test_duration_attributes():
 	# PT8H37M8.070428S 31028.070428 31028
 	total_seconds = 31029.070428
 	obj = Duration(seconds = total_seconds)
-	assert obj.to_iso() == "PT08H37M09.070428S"
+	assert obj.to_iso() == "PT08H37M09S"
 	assert obj.days == 0
 	assert obj.hours == 8
 	assert obj.minutes == 37
@@ -106,12 +107,12 @@ def test_duration_repr(duration):
 	expected = {'days': 12, 'seconds': 1245, 'microseconds': 123}
 	assert duration.to_dict() == expected
 
-	expected = {'years': 0, 'weeks': 1, 'days': 5, 'hours': 0, 'minutes': 20, 'seconds': 45.000123}
+	expected = {'years': 0, 'weeks': 1, 'days': 5, 'hours': 0, 'minutes': 20, 'seconds': 45, 'microseconds': 123}
 	assert duration.tolongdict() == expected
 
-	expected = "P01W05DT20M45.000123S"
+	expected = "P00Y01W05DT00H20M45S"
 	assert duration.to_iso() == expected
-	expected = "P00Y01W05DT00H20M45.000123S"
+	expected = "P00Y01W05DT00H20M45S"
 	assert duration.to_iso(compact = False) == expected
 
 	td = datetime.timedelta(days = 12, seconds = 1245, microseconds = 123)
@@ -132,14 +133,43 @@ def test_to_dict(seconds, expected):
 	duration = Duration(seconds = seconds)
 	assert duration.to_dict() == expected
 
+
 @pytest.mark.parametrize(
 	"seconds, expected",
 	[
-		(10, 'PT10.0S'),
-		(86401.0123, "P01DT01.0123S")
+		(10, 'PT10S'),
+		(86401, "P01DT01S")
 	]
 
 )
-def test_to_iso(seconds, expected):
+def test_to_iso_compact(seconds, expected):
 	result = Duration(seconds = seconds).to_iso(compact = True)
+	assert result == expected
+
+
+@pytest.mark.parametrize(
+	"seconds, expected",
+	[
+		(10, 'PT00H00M10S'),
+		(86401.0123, "P00Y00W01DT00H00M01S")
+	]
+
+)
+def test_to_iso_full(seconds, expected):
+	result = Duration(seconds = seconds).to_iso(compact = False)
+	assert result == expected
+
+
+@pytest.mark.parametrize(
+	"seconds, expected",
+	[
+		(10, 'PT00H00M10S'),
+		(86401.0123, "P00Y00W01DT00H00M01.0123S"),
+		(3601, "PT01H00M01S"),
+		(0, "PT00H00M00S")
+	]
+
+)
+def test_to_iso_medium(seconds, expected):
+	result = Duration(seconds = seconds).to_iso(compact = False, include_microseconds = True)
 	assert result == expected

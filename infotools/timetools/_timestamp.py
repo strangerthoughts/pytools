@@ -5,11 +5,13 @@
 	Ex. pandas.Timestamp is not compatible with pendulum.datetime.
 """
 
+import datetime
 import re
 from typing import *
-from loguru import logger
+
 import pendulum
-import datetime
+from loguru import logger
+
 STuple = Tuple[int, ...]
 TTuple = Tuple[int, int, int]
 
