@@ -3,7 +3,7 @@
 """
 import statistics
 import time
-from typing import Callable, Union, Dict, Tuple
+from typing import Callable, Dict, Tuple, Union
 
 try:
 	from infotools.timetools import Duration

@@ -1,7 +1,11 @@
-from infotools import filetools
-import pytest
 from pathlib import Path
+
+import pytest
 from loguru import logger
+
+from infotools import filetools
+
+
 @pytest.mark.parametrize(
 	"filename, expected",
 	[

@@ -7,7 +7,7 @@
 
 import datetime
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple
+from typing import *
 
 import pendulum
 
@@ -222,14 +222,14 @@ class Duration(pendulum.Duration):
 		seconds = original['seconds']
 		longdict['hours'], seconds = divmod(seconds, 3600)
 		longdict['minutes'], longdict['seconds'] = divmod(seconds, 60)
-		longdict['seconds'] += original['microseconds'] / 1000000
+		# longdict['seconds'] += original['microseconds'] / 1000000
+		longdict['microseconds'] = original['microseconds']
 
 		# Since timedelta objects subtract positive numbers from the largest unit for negative timestamps, need to convert back,
 
 		return longdict
-	def to_iso2(self)->str:
-		iso_string = "P{year:>02}Y{month:>02}M{days:_02}DT{hours:>02}{minutes:>02}M{seconds:>02}"
-	def to_iso(self, compact: bool = True) -> str:
+
+	def to_iso(self, compact: bool = False, include_microseconds: bool = False) -> str:
 		""" Converts the timedelta to an ISO Duration string. By default,
 			weeks are used instead of months, so the original duration string
 			used to create to Duration object may differ (but will be equivilant to)
@@ -237,13 +237,26 @@ class Duration(pendulum.Duration):
 			Parameters
 			----------
 				compact: bool; default False
-					Whether to omit emty fields.
+					Whether to omit empty fields.
 		"""
 		is_negative = self.total_seconds() < 0
 		values = self.tolongdict()
+
 		if not compact:
 			string = "P{years:>02}Y{weeks:>02}W{days:>02}DT{hours:>02}H{minutes:>02}M{seconds:>02}S"
-			return string.format(**values)
+			result = string.format(**values)
+			if include_microseconds and values['microseconds'] > 0:
+				seconds = values['seconds'] + (values['microseconds'] / 1E6)
+
+				second_string = str(seconds) + 'S'
+				if len(second_string.split('.')[0]) == 1:
+					second_string = '0' + second_string
+
+				result = result.split('M')[0] + 'M' + second_string
+
+			if self.total_seconds() < 86400:
+				result = 'PT' + result.split('T')[-1]
+			return result
 
 		suffix_map = [
 			('years', 'Y'), ('months', 'M'), ('weeks', 'W'), ('days', 'D'),
@@ -251,7 +264,7 @@ class Duration(pendulum.Duration):
 		]
 		suffix_map = dict(suffix_map)
 
-		large_keys = ['years','weeks', 'days']
+		large_keys = ['years', 'weeks', 'days']
 		small_keys = ['hours', 'minutes', 'seconds']
 		# Modify the "seconds" value so it has two digits before the decimal point.
 		if values["seconds"] <10:
@@ -263,8 +276,8 @@ class Duration(pendulum.Duration):
 		isostring = large_values + small_values
 
 		if compact:
-			if isostring == 'PT' and not compact:  # Duration of 0 seconds
-				isostring = 'PT0S'
+			if isostring == 'PT':  # Duration of 0 seconds
+				isostring = 'PT00S'
 
 		if is_negative:
 			isostring = '-' + isostring

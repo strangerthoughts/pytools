@@ -2,22 +2,25 @@
 	Suite of tests for numbertools
 """
 
-import pytest
-from infotools import numbertools
-import hypothesis
-import hypothesis.strategies as st
 import random
 
-@pytest.fixture
-def decimal()->numbertools.DecimalScale:
-	return numbertools.DecimalScale()
+import hypothesis
+import hypothesis.strategies as st
+import pytest
+
+from infotools import numbertools
+
 
 @pytest.fixture
-def binary()->numbertools.BinaryScale:
+def decimal() -> numbertools.DecimalScale:
+	return numbertools.DecimalScale()
+
+
+@pytest.fixture
+def binary() -> numbertools.BinaryScale:
 	return numbertools.BinaryScale()
 
 
-from loguru import logger
 @st.composite
 def numerical_values(draw):
 	x = draw(st.integers())
